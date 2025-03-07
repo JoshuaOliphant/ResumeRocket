@@ -2,11 +2,10 @@ import os
 import logging
 from flask import Flask, render_template, request, jsonify
 from flask_login import LoginManager, login_required, current_user
-from flask_jwt_extended import JWTManager, jwt_required, get_jwt_identity
+from flask_jwt_extended import JWTManager
 from services.ats_analyzer import ATSAnalyzer
 from services.ai_suggestions import AISuggestions
 from services.file_parser import FileParser
-import logging
 from extensions import db
 
 # Configure logging

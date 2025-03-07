@@ -1,73 +1,45 @@
 import requests
-from bs4 import BeautifulSoup
 import logging
 import re
+import os
 
 logger = logging.getLogger(__name__)
 
 class JobDescriptionProcessor:
     def __init__(self):
+        self.jina_api_key = os.environ.get('JINA_API_KEY')
+        if not self.jina_api_key:
+            raise ValueError('JINA_API_KEY environment variable must be set')
+
         self.headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+            'Authorization': f'Bearer {self.jina_api_key}'
         }
 
     def extract_from_url(self, url):
         """
-        Extract job description from a given URL
+        Extract job description from a given URL using Jina Reader API
         """
         try:
-            response = requests.get(url, headers=self.headers, timeout=10)
+            jina_url = f"https://r.jina.ai/{url}"
+            response = requests.get(jina_url, headers=self.headers, timeout=10)
             response.raise_for_status()
-            
-            soup = BeautifulSoup(response.text, 'html.parser')
-            
-            # Remove script and style elements
-            for script in soup(['script', 'style']):
-                script.decompose()
 
-            # Try to find the job title
-            title = None
-            title_candidates = [
-                soup.find('h1'),  # Most common location for job titles
-                soup.find('title'),
-                soup.find(class_=re.compile(r'job.*title', re.I)),
-                soup.find(id=re.compile(r'job.*title', re.I))
-            ]
-            
-            for candidate in title_candidates:
-                if candidate and candidate.text.strip():
-                    title = candidate.text.strip()
-                    break
+            content = response.text
 
-            # Try to find the main job description content
-            content = None
-            content_candidates = [
-                soup.find(class_=re.compile(r'job.*description', re.I)),
-                soup.find(id=re.compile(r'job.*description', re.I)),
-                soup.find(class_=re.compile(r'description', re.I)),
-                soup.find('article'),
-                soup.find('main')
-            ]
+            # Extract title and content from Jina's markdown response
+            title_match = re.search(r'Title:\s*(.+?)(?:\n|$)', content)
+            title = title_match.group(1) if title_match else "Job Posting"
 
-            for candidate in content_candidates:
-                if candidate and candidate.text.strip():
-                    content = candidate.text.strip()
-                    break
-
-            if not content:
-                # Fallback to body content if no specific job description found
-                content = soup.body.text.strip()
-
-            # Clean up the content
-            content = re.sub(r'\s+', ' ', content)  # Replace multiple spaces with single space
-            content = re.sub(r'\n\s*\n', '\n\n', content)  # Remove multiple empty lines
-
-            if not title:
-                title = "Job Posting"  # Default title if none found
+            # Remove the Title and URL Source lines from content
+            content_lines = content.split('\n')
+            content_lines = [line for line in content_lines 
+                           if not line.startswith('Title:') and 
+                           not line.startswith('URL Source:')]
+            cleaned_content = '\n'.join(content_lines).strip()
 
             return {
                 'title': title,
-                'content': content,
+                'content': cleaned_content,
                 'url': url
             }
 
@@ -82,7 +54,7 @@ class JobDescriptionProcessor:
         try:
             # Clean up the text
             cleaned_text = re.sub(r'\s+', ' ', text).strip()
-            
+
             # If no title provided, try to extract from first line
             if not title:
                 lines = cleaned_text.split('\n')
