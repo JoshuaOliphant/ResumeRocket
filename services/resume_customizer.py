@@ -6,15 +6,18 @@ from services.ai_suggestions import AISuggestions
 
 logger = logging.getLogger(__name__)
 
+
 class ResumeCustomizer:
+
     def __init__(self):
         self.anthropic_key = os.environ.get('ANTHROPIC_API_KEY')
         if not self.anthropic_key:
-            raise ValueError('ANTHROPIC_API_KEY environment variable must be set')
+            raise ValueError(
+                'ANTHROPIC_API_KEY environment variable must be set')
 
         self.client = Anthropic(api_key=self.anthropic_key)
-        # the newest Anthropic model is "claude-3-5-sonnet-20241022" which was released October 22, 2024
-        self.model = "claude-3-5-sonnet-20241022"
+        # the newest Anthropic model is "claude-3-7-sonnet-20250219" which was released February 19, 2025
+        self.model = "claude-3-7-sonnet-20250219"
         self.ats_analyzer = ATSAnalyzer()
         self.ai_suggestions = AISuggestions()
 
@@ -24,8 +27,10 @@ class ResumeCustomizer:
         """
         try:
             # Get ATS analysis and suggestions first
-            ats_score = self.ats_analyzer.analyze(resume_content, job_description)
-            suggestions = self.ai_suggestions.get_suggestions(resume_content, job_description)
+            ats_score = self.ats_analyzer.analyze(resume_content,
+                                                  job_description)
+            suggestions = self.ai_suggestions.get_suggestions(
+                resume_content, job_description)
 
             # Construct the prompt for resume customization
             prompt = f"""
@@ -57,19 +62,18 @@ class ResumeCustomizer:
             Focus on highlighting relevant experience and incorporating missing keywords naturally.
             """
 
-            response = self.client.messages.create(
-                model=self.model,
-                max_tokens=4000,
-                messages=[{
-                    "role": "user",
-                    "content": prompt
-                }]
-            )
+            response = self.client.messages.create(model=self.model,
+                                                   max_tokens=4000,
+                                                   messages=[{
+                                                       "role": "user",
+                                                       "content": prompt
+                                                   }])
 
             customized_content = response.content[0].text.strip()
-            
+
             # Get new ATS score for the customized version
-            new_ats_score = self.ats_analyzer.analyze(customized_content, job_description)
+            new_ats_score = self.ats_analyzer.analyze(customized_content,
+                                                      job_description)
 
             return {
                 'customized_content': customized_content,

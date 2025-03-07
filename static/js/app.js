@@ -7,6 +7,9 @@ document.addEventListener('DOMContentLoaded', function() {
         placeholder: "Paste your resume in Markdown format...",
     });
 
+    let currentJobDescriptionId = null;
+    let currentResumeContent = null;
+
     // Handle resume upload type toggle
     const uploadTypeRadios = document.querySelectorAll('input[name="uploadType"]');
     const textInputSection = document.getElementById('textInputSection');
@@ -41,6 +44,61 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
+    // Handle customize resume button click
+    document.getElementById('customizeResumeBtn').addEventListener('click', function() {
+        if (!currentJobDescriptionId || !currentResumeContent) {
+            alert('Please analyze a resume first');
+            return;
+        }
+
+        const options = {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                resume_content: currentResumeContent,
+                job_description_id: currentJobDescriptionId
+            })
+        };
+
+        fetch('/api/customize-resume', options)
+            .then(response => {
+                if (!response.ok) {
+                    return response.json().then(errorData => {
+                        throw new Error(errorData.error || 'Server error occurred');
+                    });
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.error) {
+                    alert(data.error);
+                    return;
+                }
+
+                // Show customized resume section
+                const customizedSection = document.getElementById('customizedResumeSection');
+                customizedSection.style.display = 'block';
+
+                // Update content
+                const contentDiv = document.getElementById('customizedResumeContent');
+                contentDiv.innerHTML = marked(data.customized_resume.customized_content);
+
+                // Update score improvement
+                const improvement = data.improvement.toFixed(1);
+                document.getElementById('scoreImprovement').textContent = `+${improvement}%`;
+
+                // Highlight the improvement in green if positive
+                const improvementSpan = document.getElementById('scoreImprovement');
+                improvementSpan.className = improvement > 0 ? 'text-success' : 'text-warning';
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert(error.message || 'There was an error customizing your resume. Please try again.');
+            });
+    });
+
     // Handle form submission
     document.getElementById('resumeForm').addEventListener('submit', function(event) {
         event.preventDefault();
@@ -73,6 +131,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const resumeContent = resumeEditor.value().trim();
             console.log('Resume content length:', resumeContent.length);
             formData.append('resume', resumeContent);
+            currentResumeContent = resumeContent;
         } else {
             const file = document.getElementById('resume_file').files[0];
             if (file.size > 5 * 1024 * 1024) { // 5MB
@@ -117,6 +176,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     alert(data.error);
                     return;
                 }
+                currentJobDescriptionId = data.job.id;
                 updateUI(data);
             })
             .catch(error => {
@@ -131,6 +191,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 alert(response.error);
                 return;
             }
+
+            // Show customize button
+            document.getElementById('customizeResumeBtn').style.display = 'block';
+
+            // Hide customized resume section until customization is performed
+            document.getElementById('customizedResumeSection').style.display = 'none';
 
             // Update ATS Score
             const scoreDiv = document.getElementById('atsScore');
