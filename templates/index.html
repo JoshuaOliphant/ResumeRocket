@@ -101,8 +101,52 @@
                     <div id="aiSuggestions" class="list-group list-group-flush bg-dark">
                     </div>
                 </div>
+
+                <div class="mt-4">
+                    <button id="customize-btn" class="btn btn-success" style="display: none;" onclick="customizeResume(currentResumeId, currentJobId)">
+                        Customize Resume for Job
+                    </button>
+                </div>
             </div>
         </div>
     </div>
 </div>
+
+<script>
+let currentResumeId = null;
+let currentJobId = null;
+
+// Update the success handler in your form submission code
+document.getElementById('resumeForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    // ... existing form submission code ...
+
+    fetch('/api/job/text', {
+        method: 'POST',
+        // ... other fetch options ...
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.job && data.job.id) {
+            currentJobId = data.job.id;
+            // Show customize button only when we have both IDs
+            if (currentResumeId !== null) {
+                document.getElementById('customize-btn').style.display = 'block';
+            }
+        }
+    });
+});
+
+// Update your resume upload success handler
+function handleResumeUploadSuccess(data) {
+    if (data.resume_id !== undefined) {
+        currentResumeId = data.resume_id;
+        // Show customize button only when we have both IDs
+        if (currentJobId !== null) {
+            document.getElementById('customize-btn').style.display = 'block';
+        }
+    }
+    // ... rest of your success handling code ...
+}
+</script>
 {% endblock %}
