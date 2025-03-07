@@ -9,13 +9,13 @@ from services.ai_suggestions import AISuggestions
 import logging
 
 logger = logging.getLogger(__name__)
-jobs_bp = Blueprint('jobs', __name__)
+jobs_bp = Blueprint('jobs', __name__, url_prefix='/api')  # Add url_prefix
 job_processor = JobDescriptionProcessor()
 resume_customizer = ResumeCustomizer()
 ats_analyzer = ATSAnalyzer()
 ai_suggestions = AISuggestions()
 
-@jobs_bp.route('/api/job/url', methods=['POST'])
+@jobs_bp.route('/job/url', methods=['POST'])
 @login_required
 def submit_job_url():
     try:
@@ -98,19 +98,7 @@ def submit_job_url():
         logger.error(f"Error submitting job URL: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
-@jobs_bp.route('/jobs', methods=['GET'])
-@login_required
-def get_jobs():
-    try:
-        jobs = JobDescription.query.filter_by(user_id=current_user.id).order_by(JobDescription.created_at.desc()).all()
-        return jsonify({
-            'jobs': [job.to_dict() for job in jobs]
-        })
-    except Exception as e:
-        logger.error(f"Error fetching jobs: {str(e)}")
-        return jsonify({'error': 'Failed to fetch jobs'}), 500
-
-@jobs_bp.route('/api/customize-resume', methods=['POST'])
+@jobs_bp.route('/customize-resume', methods=['POST'])
 @login_required
 def customize_resume():
     try:

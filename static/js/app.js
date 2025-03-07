@@ -76,16 +76,15 @@ document.addEventListener('DOMContentLoaded', function() {
                 formData.append('resume_file', file);
             }
 
-            let endpoint;
+            let endpoint = '/api/job/url';
             if (jobDescriptionType === 'text') {
                 const jobDescription = document.getElementById('jobDescription').value.trim();
                 if (!jobDescription) {
                     alert('Please enter a job description');
                     return;
                 }
+                formData.append('url', 'manual_entry');
                 formData.append('content', jobDescription);
-                endpoint = '/api/job/url';  // Using URL endpoint for both cases for consistency
-                formData.append('url', 'manual_entry');  // Dummy URL for text input
             } else {
                 const jobUrl = document.getElementById('jobUrl').value.trim();
                 if (!jobUrl) {
@@ -93,10 +92,9 @@ document.addEventListener('DOMContentLoaded', function() {
                     return;
                 }
                 formData.append('url', jobUrl);
-                endpoint = '/api/job/url';
             }
 
-            console.log('Sending form request to:', endpoint);
+            console.log('Sending request to:', endpoint);
             console.log('Form data has resume:', formData.has('resume'));
             console.log('Form data has resume_file:', formData.has('resume_file'));
 
@@ -106,8 +104,13 @@ document.addEventListener('DOMContentLoaded', function() {
             });
 
             if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.error || 'Server error occurred');
+                const contentType = response.headers.get('content-type');
+                if (contentType && contentType.includes('application/json')) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || 'Server error occurred');
+                } else {
+                    throw new Error('Server error occurred');
+                }
             }
 
             const data = await response.json();
@@ -116,7 +119,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 throw new Error(data.error);
             }
 
-            // Store job description ID
+            // Store current job description ID
             currentJobDescriptionId = data.job.id;
 
             // Store resume content if available
@@ -187,8 +190,13 @@ document.addEventListener('DOMContentLoaded', function() {
             });
 
             if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.error || 'Server error occurred');
+                const contentType = response.headers.get('content-type');
+                if (contentType && contentType.includes('application/json')) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || 'Server error occurred');
+                } else {
+                    throw new Error('Server error occurred');
+                }
             }
 
             const data = await response.json();
