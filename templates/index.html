@@ -141,6 +141,7 @@ document.getElementById('resumeForm').addEventListener('submit', async function(
         // Now submit the job description
         const jobDescriptionType = document.querySelector('input[name="jobDescriptionType"]:checked').value;
         const endpoint = jobDescriptionType === 'url' ? '/api/job/url' : '/api/job/text';
+        const jobDescription = formData.get('job_description');
 
         const jobResponse = await fetch(endpoint, {
             method: 'POST',
@@ -149,7 +150,8 @@ document.getElementById('resumeForm').addEventListener('submit', async function(
             },
             body: JSON.stringify({
                 title: 'Job Description',
-                content: formData.get('job_description')
+                content: jobDescription,
+                resume_id: window.currentResumeId
             })
         });
         const jobData = await jobResponse.json();
@@ -197,6 +199,10 @@ function updateAnalysisResults(data) {
     aiSuggestionsDiv.innerHTML = data.suggestions
         .map(suggestion => `<div class="list-group-item bg-dark text-light">${suggestion}</div>`)
         .join('');
+
+    // Log IDs for debugging
+    console.log('Resume ID:', window.currentResumeId);
+    console.log('Job ID:', window.currentJobId);
 }
 </script>
 {% endblock %}

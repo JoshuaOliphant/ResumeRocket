@@ -39,11 +39,17 @@ def submit_job_text():
         db.session.add(job)
         db.session.commit()
 
-        # Get resume analysis
-        resume_content = request.form.get('resume')
-        if resume_content:
-            ats_score = ats_analyzer.analyze(resume_content, processed['content'])
-            suggestions = ai_suggestions.get_suggestions(resume_content, processed['content'])
+        # Get resume analysis if resume_id is provided
+        resume_id = data.get('resume_id')
+        if resume_id is not None:
+            from app import resumes
+            if resume_id in resumes:
+                resume_content = resumes[resume_id]['content']
+                ats_score = ats_analyzer.analyze(resume_content, processed['content'])
+                suggestions = ai_suggestions.get_suggestions(resume_content, processed['content'])
+            else:
+                ats_score = {'score': 0, 'matching_keywords': [], 'missing_keywords': []}
+                suggestions = []
         else:
             ats_score = {'score': 0, 'matching_keywords': [], 'missing_keywords': []}
             suggestions = []
