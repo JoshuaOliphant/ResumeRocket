@@ -7,7 +7,7 @@ document.addEventListener('DOMContentLoaded', function() {
         placeholder: "Paste your resume in Markdown format...",
     });
 
-    // Handle upload type toggle
+    // Handle resume upload type toggle
     const uploadTypeRadios = document.querySelectorAll('input[name="uploadType"]');
     const textInputSection = document.getElementById('textInputSection');
     const fileInputSection = document.getElementById('fileInputSection');
@@ -24,12 +24,29 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
+    // Handle job description type toggle
+    const jobDescriptionTypeRadios = document.querySelectorAll('input[name="jobDescriptionType"]');
+    const jobTextSection = document.getElementById('jobTextSection');
+    const jobUrlSection = document.getElementById('jobUrlSection');
+
+    jobDescriptionTypeRadios.forEach(radio => {
+        radio.addEventListener('change', function() {
+            if (this.value === 'text') {
+                jobTextSection.style.display = 'block';
+                jobUrlSection.style.display = 'none';
+            } else {
+                jobTextSection.style.display = 'none';
+                jobUrlSection.style.display = 'block';
+            }
+        });
+    });
+
     // Handle form submission
     document.getElementById('resumeForm').addEventListener('submit', function(event) {
         event.preventDefault();
 
         const uploadType = document.querySelector('input[name="uploadType"]:checked').value;
-        const jobDescription = document.getElementById('jobDescription').value;
+        const jobDescriptionType = document.querySelector('input[name="jobDescriptionType"]:checked').value;
 
         // Validate inputs
         if (uploadType === 'text' && !resumeEditor.value().trim()) {
@@ -40,15 +57,18 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
-        if (!jobDescription.trim()) {
+        if (jobDescriptionType === 'text' && !document.getElementById('jobDescription').value.trim()) {
             alert('Please provide a job description');
+            return;
+        } else if (jobDescriptionType === 'url' && !document.getElementById('jobUrl').value.trim()) {
+            alert('Please provide a job posting URL');
             return;
         }
 
         // Create FormData and append appropriate data
         const formData = new FormData();
-        formData.append('job_description', jobDescription);
 
+        // Add resume data
         if (uploadType === 'text') {
             formData.append('resume', resumeEditor.value());
         } else {
@@ -60,18 +80,36 @@ document.addEventListener('DOMContentLoaded', function() {
             formData.append('resume_file', file);
         }
 
-        // Send request
-        fetch('/upload', {
+        // Add job description data
+        if (jobDescriptionType === 'text') {
+            formData.append('job_description', document.getElementById('jobDescription').value.trim());
+            // Send to text endpoint
+            sendRequest('/api/job/text', formData);
+        } else {
+            const jobUrl = document.getElementById('jobUrl').value.trim();
+            // Send to URL endpoint
+            sendRequest('/api/job/url', new URLSearchParams({ url: jobUrl }));
+        }
+    });
+
+    function sendRequest(endpoint, data) {
+        fetch(endpoint, {
             method: 'POST',
-            body: formData
+            body: data
         })
         .then(response => response.json())
-        .then(data => updateUI(data))
+        .then(data => {
+            if (data.error) {
+                alert(data.error);
+                return;
+            }
+            updateUI(data);
+        })
         .catch(error => {
             console.error('Error:', error);
-            alert('There was an error processing your resume. Please try again.');
+            alert('There was an error processing your request. Please try again.');
         });
-    });
+    }
 
     function updateUI(response) {
         try {
@@ -115,7 +153,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         } catch (error) {
             console.error('Error processing response:', error);
-            alert('There was an error processing your resume. Please try again.');
+            alert('There was an error processing your request. Please try again.');
         }
     }
 });
