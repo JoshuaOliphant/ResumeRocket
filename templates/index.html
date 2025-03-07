@@ -103,7 +103,7 @@
                 </div>
 
                 <div class="mt-4">
-                    <button id="customize-btn" class="btn btn-success" onclick="customizeResume(window.currentResumeId, window.currentJobId)">
+                    <button id="customize-btn" class="btn btn-primary" style="display: none;">
                         Customize Resume for Job
                     </button>
                 </div>
@@ -141,20 +141,28 @@ document.getElementById('resumeForm').addEventListener('submit', async function(
         // Now submit the job description
         const jobDescriptionType = document.querySelector('input[name="jobDescriptionType"]:checked').value;
         const endpoint = jobDescriptionType === 'url' ? '/api/job/url' : '/api/job/text';
-        const jobDescription = formData.get('job_description');
+        let jobData;
 
-        const jobResponse = await fetch(endpoint, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                title: 'Job Description',
-                content: jobDescription,
-                resume_id: window.currentResumeId
-            })
-        });
-        const jobData = await jobResponse.json();
+        if (jobDescriptionType === 'url') {
+            const jobResponse = await fetch(endpoint, {
+                method: 'POST',
+                body: formData
+            });
+            jobData = await jobResponse.json();
+        } else {
+            const jobResponse = await fetch(endpoint, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    title: 'Job Description',
+                    content: formData.get('job_description'),
+                    resume_id: window.currentResumeId
+                })
+            });
+            jobData = await jobResponse.json();
+        }
 
         if (jobData.error) {
             throw new Error(jobData.error);
@@ -167,7 +175,13 @@ document.getElementById('resumeForm').addEventListener('submit', async function(
         updateAnalysisResults(resumeData);
 
         // Show customize button if we have both IDs
-        document.getElementById('customize-btn').style.display = 'block';
+        const customizeBtn = document.getElementById('customize-btn');
+        if (window.currentResumeId && window.currentJobId) {
+            customizeBtn.style.display = 'block';
+            customizeBtn.onclick = function() {
+                customizeResume(window.currentResumeId, window.currentJobId);
+            };
+        }
 
         // Log IDs for debugging
         console.log('Resume ID:', window.currentResumeId);
