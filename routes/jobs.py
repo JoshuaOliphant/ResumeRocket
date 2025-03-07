@@ -1,8 +1,9 @@
 from flask import Blueprint, request, jsonify
 from flask_login import login_required, current_user
 from extensions import db
-from models import JobDescription
+from models import JobDescription, CustomizedResume
 from services.job_description_processor import JobDescriptionProcessor
+from services.resume_customizer import ResumeCustomizer
 from services.ats_analyzer import ATSAnalyzer
 from services.ai_suggestions import AISuggestions
 import logging
@@ -10,6 +11,7 @@ import logging
 logger = logging.getLogger(__name__)
 jobs_bp = Blueprint('jobs', __name__)
 job_processor = JobDescriptionProcessor()
+resume_customizer = ResumeCustomizer()
 ats_analyzer = ATSAnalyzer()
 ai_suggestions = AISuggestions()
 
@@ -136,3 +138,55 @@ def get_jobs():
     except Exception as e:
         logger.error(f"Error fetching jobs: {str(e)}")
         return jsonify({'error': 'Failed to fetch jobs'}), 500
+
+@jobs_bp.route('/customize-resume', methods=['POST'])
+@login_required
+def customize_resume():
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'No data provided'}), 400
+
+        resume_content = data.get('resume_content')
+        job_description_id = data.get('job_description_id')
+
+        if not resume_content or not job_description_id:
+            return jsonify({'error': 'Resume content and job description ID are required'}), 400
+
+        # Get the job description
+        job_description = JobDescription.query.get(job_description_id)
+        if not job_description:
+            return jsonify({'error': 'Job description not found'}), 404
+
+        # Verify ownership
+        if job_description.user_id != current_user.id:
+            return jsonify({'error': 'Unauthorized access'}), 403
+
+        logger.debug(f"Customizing resume for job description ID: {job_description_id}")
+
+        # Generate customized resume
+        result = resume_customizer.customize_resume(resume_content, job_description.content)
+
+        # Store the customized resume
+        customized_resume = CustomizedResume(
+            original_content=resume_content,
+            customized_content=result['customized_content'],
+            ats_score=result['new_ats_score'],
+            user_id=current_user.id,
+            job_description_id=job_description_id
+        )
+
+        db.session.add(customized_resume)
+        db.session.commit()
+
+        return jsonify({
+            'message': 'Resume customized successfully',
+            'customized_resume': customized_resume.to_dict(),
+            'original_ats_score': result['original_ats_score'],
+            'new_ats_score': result['new_ats_score'],
+            'improvement': result['improvement']
+        }), 201
+
+    except Exception as e:
+        logger.error(f"Error customizing resume: {str(e)}")
+        return jsonify({'error': str(e)}), 500
