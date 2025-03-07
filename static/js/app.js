@@ -176,7 +176,15 @@ document.addEventListener('DOMContentLoaded', function() {
                     alert(data.error);
                     return;
                 }
+
+                // Store current job description ID
                 currentJobDescriptionId = data.job.id;
+
+                // If file was uploaded, store the parsed content
+                if (formData.has('resume_file')) {
+                    currentResumeContent = data.resume_content;
+                }
+
                 updateUI(data);
             })
             .catch(error => {
