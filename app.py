@@ -76,28 +76,38 @@ def upload_resume():
             }), 400
 
         # Get resume content either from file or form
+        resume_content = None
         if 'resume_file' in request.files:
             file = request.files['resume_file']
-            # Validate file
-            is_valid, error_message = FileParser.allowed_file(file)
-            if not is_valid:
-                return jsonify({
-                    'error': error_message,
-                    'ats_score': {'score': 0, 'matching_keywords': [], 'missing_keywords': []},
-                    'suggestions': []
-                }), 400
+            if file.filename:
+                # Validate file
+                is_valid, error_message = FileParser.allowed_file(file)
+                if not is_valid:
+                    logger.error(f"File validation failed: {error_message}")
+                    return jsonify({
+                        'error': error_message,
+                        'ats_score': {'score': 0, 'matching_keywords': [], 'missing_keywords': []},
+                        'suggestions': []
+                    }), 400
 
-            try:
-                resume_content = FileParser.parse_to_markdown(file)
-            except Exception as e:
-                logger.error(f"Error parsing file: {str(e)}")
-                return jsonify({
-                    'error': 'Error parsing resume file',
-                    'ats_score': {'score': 0, 'matching_keywords': [], 'missing_keywords': []},
-                    'suggestions': []
-                }), 400
+                try:
+                    resume_content = FileParser.parse_to_markdown(file)
+                except Exception as e:
+                    logger.error(f"Error parsing file: {str(e)}")
+                    return jsonify({
+                        'error': f'Error parsing resume file: {str(e)}',
+                        'ats_score': {'score': 0, 'matching_keywords': [], 'missing_keywords': []},
+                        'suggestions': []
+                    }), 400
         else:
             resume_content = request.form.get('resume', '').strip()
+
+        if not resume_content:
+            return jsonify({
+                'error': 'No resume content provided',
+                'ats_score': {'score': 0, 'matching_keywords': [], 'missing_keywords': []},
+                'suggestions': []
+            }), 400
 
         logger.debug("Resume content length: %d", len(resume_content))
         logger.debug("Job description length: %d", len(job_description))
