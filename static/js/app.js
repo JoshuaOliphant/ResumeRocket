@@ -24,14 +24,24 @@ document.addEventListener('DOMContentLoaded', function() {
         // Update the hidden textarea with SimpleMDE content
         document.getElementById('resume').value = resumeContent;
 
-        // Trigger htmx request
-        htmx.trigger('#resumeForm', 'submit');
+        // Trigger htmx request manually
+        const form = document.getElementById('resumeForm');
+        const formData = new FormData(form);
+
+        fetch('/upload', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => updateUI(data))
+        .catch(error => {
+            console.error('Error:', error);
+            alert('There was an error processing your resume. Please try again.');
+        });
     });
 
-    document.getElementById('resumeForm').addEventListener('htmx:afterRequest', function(event) {
+    function updateUI(response) {
         try {
-            const response = JSON.parse(event.detail.xhr.response);
-
             if (response.error) {
                 alert(response.error);
                 return;
@@ -60,7 +70,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const aiSuggestions = document.getElementById('aiSuggestions');
             if (response.suggestions && response.suggestions.length > 0) {
                 const suggestions = response.suggestions.map(suggestion => {
-                    // Check if it's a heading (starts with number and dot)
+                    // Add bold styling for headings (lines starting with numbers)
                     if (/^\d+\./.test(suggestion)) {
                         return `<li class="list-group-item bg-dark text-light fw-bold">${suggestion}</li>`;
                     }
@@ -74,5 +84,5 @@ document.addEventListener('DOMContentLoaded', function() {
             console.error('Error processing response:', error);
             alert('There was an error processing your resume. Please try again.');
         }
-    });
+    }
 });
