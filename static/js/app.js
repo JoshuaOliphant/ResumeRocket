@@ -65,12 +65,12 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
-        // Create FormData and append appropriate data
+        // Create FormData for both text and file submissions
         const formData = new FormData();
 
         // Add resume data
         if (uploadType === 'text') {
-            formData.append('resume', resumeEditor.value());
+            formData.append('resume', resumeEditor.value().trim());
         } else {
             const file = document.getElementById('resume_file').files[0];
             if (file.size > 5 * 1024 * 1024) { // 5MB
@@ -83,30 +83,19 @@ document.addEventListener('DOMContentLoaded', function() {
         // Add job description data
         if (jobDescriptionType === 'text') {
             formData.append('job_description', document.getElementById('jobDescription').value.trim());
-            // Send to text endpoint
             sendRequest('/api/job/text', formData);
         } else {
             const jobUrl = document.getElementById('jobUrl').value.trim();
-            // Send to URL endpoint
-            sendRequest('/api/job/url', new URLSearchParams({ url: jobUrl }));
+            formData.append('url', jobUrl);
+            sendRequest('/api/job/url', formData);
         }
     });
 
-    function sendRequest(endpoint, data) {
+    function sendRequest(endpoint, formData) {
         const options = {
-            method: 'POST'
+            method: 'POST',
+            body: formData
         };
-
-        if (data instanceof URLSearchParams) {
-            // For URL submissions, send as JSON
-            options.headers = {
-                'Content-Type': 'application/json'
-            };
-            options.body = JSON.stringify({ url: data.get('url') });
-        } else {
-            // For form data (resume uploads), send as is
-            options.body = data;
-        }
 
         fetch(endpoint, options)
             .then(response => {

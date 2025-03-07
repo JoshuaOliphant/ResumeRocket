@@ -2,6 +2,7 @@ import requests
 import logging
 import re
 import os
+import trafilatura
 
 logger = logging.getLogger(__name__)
 
@@ -17,10 +18,36 @@ class JobDescriptionProcessor:
 
     def extract_from_url(self, url):
         """
-        Extract job description from a given URL using Jina Reader API
+        Extract job description from a given URL using Trafilatura first, then falling back to Jina Reader API
         """
         try:
-            # Construct Jina URL by directly appending the target URL
+            logger.debug(f"Attempting to extract content from URL: {url}")
+
+            # Try trafilatura first
+            logger.debug("Attempting extraction with trafilatura...")
+            downloaded = trafilatura.fetch_url(url)
+
+            if downloaded:
+                extracted_text = trafilatura.extract(downloaded)
+                if extracted_text and len(extracted_text.strip()) > 0:
+                    logger.debug("Successfully extracted content with trafilatura")
+                    # Try to find a title in the first few lines
+                    lines = extracted_text.split('\n')
+                    title = next((line for line in lines[:10] if len(line.strip()) > 0 and len(line.strip()) < 100), "Job Posting")
+
+                    logger.debug(f"Extracted title from trafilatura: {title}")
+                    return {
+                        'title': title.strip(),
+                        'content': extracted_text,
+                        'url': url
+                    }
+                else:
+                    logger.debug("Trafilatura extracted empty content, falling back to Jina API")
+            else:
+                logger.debug("Trafilatura failed to fetch URL, falling back to Jina API")
+
+            # Fall back to Jina API
+            logger.debug("Using Jina API as fallback...")
             jina_url = f"https://r.jina.ai/{url}"
             logger.debug(f"Sending request to Jina API with URL: {jina_url}")
 
@@ -28,26 +55,28 @@ class JobDescriptionProcessor:
             response.raise_for_status()
 
             content = response.text
-            logger.debug(f"Received response from Jina API: {content[:200]}...")  # Log first 200 chars
+            logger.debug(f"Received response from Jina API: {content[:200]}...")
 
-            # Extract title and content from Jina's markdown response
+            # Extract title and content
             title_match = re.search(r'Title:\s*(.+?)(?:\n|$)', content)
             title = title_match.group(1) if title_match else "Job Posting"
 
-            # Remove the Title and URL Source lines from content
+            # Split content into lines
             content_lines = content.split('\n')
-            content_lines = [line for line in content_lines 
-                           if not line.startswith('Title:') and 
-                           not line.startswith('URL Source:')]
 
-            # Get the content after "Markdown Content:" line
+            # Get content after "Markdown Content:" marker
             try:
                 markdown_start = content_lines.index('Markdown Content:')
                 content_lines = content_lines[markdown_start + 1:]
+                logger.debug("Found Markdown Content marker in Jina response")
             except ValueError:
-                logger.warning("Markdown Content marker not found, using full content")
+                logger.warning("Markdown Content marker not found in Jina response")
+                # Remove header lines
+                content_lines = [line for line in content_lines 
+                               if not line.startswith('Title:') and 
+                               not line.startswith('URL Source:')]
 
-            # Clean up markdown content
+            # Clean up the content
             cleaned_content = []
             for line in content_lines:
                 # Skip image lines
@@ -55,15 +84,18 @@ class JobDescriptionProcessor:
                     continue
                 # Remove markdown links but keep the text
                 line = re.sub(r'\[([^\]]+)\]\([^\)]+\)', r'\1', line)
-                cleaned_content.append(line)
+                # Remove multiple spaces and newlines
+                line = re.sub(r'\s+', ' ', line).strip()
+                if line:
+                    cleaned_content.append(line)
 
             cleaned_content = '\n'.join(cleaned_content).strip()
 
             if not cleaned_content:
                 raise Exception("No content was extracted from the job posting URL")
 
-            logger.debug(f"Extracted title: {title}")
-            logger.debug(f"Extracted content length: {len(cleaned_content)}")
+            logger.debug(f"Extracted title from Jina: {title}")
+            logger.debug(f"Extracted content length from Jina: {len(cleaned_content)}")
 
             return {
                 'title': title,

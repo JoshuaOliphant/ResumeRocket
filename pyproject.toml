@@ -21,4 +21,5 @@ dependencies = [
     "requests>=2.32.3",
     "beautifulsoup4>=4.13.3",
     "sqlalchemy>=2.0.38",
+    "trafilatura>=2.0.0",
 ]
