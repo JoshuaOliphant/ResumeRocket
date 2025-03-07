@@ -42,13 +42,13 @@ document.addEventListener('DOMContentLoaded', function() {
             const matchingKeywords = document.getElementById('matchingKeywords');
             matchingKeywords.innerHTML = response.ats_score.matching_keywords
                 .map(keyword => `<span class="badge bg-success">${keyword}</span>`)
-                .join('');
+                .join(' ');
 
             // Update missing keywords
             const missingKeywords = document.getElementById('missingKeywords');
             missingKeywords.innerHTML = response.ats_score.missing_keywords
                 .map(keyword => `<span class="badge bg-danger">${keyword}</span>`)
-                .join('');
+                .join(' ');
 
             // Update AI suggestions
             const aiSuggestions = document.getElementById('aiSuggestions');
@@ -57,7 +57,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 .join('');
         } catch (error) {
             console.error('Error processing response:', error);
-            alert('An error occurred while processing the response');
+            alert('There was an error processing your resume. Please try again.');
         }
     });
 });
