@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-6">
+        <div class="card bg-dark border-secondary mb-4">
+            <div class="card-header">
+                <h5 class="card-title">Upload Resume</h5>
+            </div>
+            <div class="card-body">
+                <form id="resumeForm" hx-post="/upload" hx-target="#results">
+                    <div class="mb-3">
+                        <label for="resume" class="form-label">Resume (Markdown)</label>
+                        <textarea id="resume" name="resume" class="form-control"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label for="jobDescription" class="form-label">Job Description</label>
+                        <textarea id="jobDescription" name="job_description" class="form-control" rows="5"></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary">
+                        Analyze Resume
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div id="results" class="card bg-dark border-secondary">
+            <div class="card-header">
+                <h5 class="card-title">Analysis Results</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-4">
+                    <h6>ATS Score</h6>
+                    <div class="progress">
+                        <div id="atsScore" class="progress-bar" role="progressbar" style="width: 0%">0%</div>
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <h6>Matching Keywords</h6>
+                    <div id="matchingKeywords" class="d-flex flex-wrap gap-2">
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <h6>Missing Keywords</h6>
+                    <div id="missingKeywords" class="d-flex flex-wrap gap-2">
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <h6>AI Suggestions</h6>
+                    <ul id="aiSuggestions" class="list-group list-group-flush">
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
