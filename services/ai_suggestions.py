@@ -22,12 +22,31 @@ class AISuggestions:
         """
         try:
             prompt = f"""
-            As an ATS expert, analyze this resume and job description and provide specific suggestions for improvement.
-            Focus on:
-            1. Content relevance
-            2. Key skills alignment
-            3. Specific improvements
-            4. Format optimization
+            As an ATS expert, analyze this resume and job description to provide detailed feedback.
+            Format your response with the following structure using Markdown headings:
+
+            # Resume Analysis for [Position]
+
+            ## Overall Assessment
+            Provide a concise overview of how well the resume matches the job requirements.
+
+            ## Specific Improvement Suggestions
+            Break down key areas for improvement.
+
+            ### 1. Content Relevance & Key Skills Alignment
+            - Detail specific skills that match or need emphasis
+            - Identify missing keywords and experiences
+            - Suggest modifications to better align with job requirements
+
+            ### 2. Format and Organization
+            - Evaluate resume structure and readability
+            - Suggest improvements to layout and organization
+            - Identify any formatting issues
+
+            ### 3. Technical Focus Areas
+            - Highlight relevant technical skills and experiences
+            - Suggest ways to better showcase technical capabilities
+            - Identify missing technical competencies
 
             Resume:
             {resume_text}
@@ -35,11 +54,11 @@ class AISuggestions:
             Job Description:
             {job_description}
 
-            Provide 3-5 specific, actionable suggestions.
+            Provide your analysis in the exact format specified above, maintaining markdown heading hierarchy.
             """
 
             response = self.client.messages.create(model=self.model,
-                                                   max_tokens=500,
+                                                   max_tokens=1000,
                                                    messages=[{
                                                        "role": "user",
                                                        "content": prompt
@@ -48,7 +67,7 @@ class AISuggestions:
             suggestions = response.content[0].text.split('\n')
             # Clean up and format suggestions
             suggestions = [s.strip() for s in suggestions if s.strip()]
-            return suggestions[:5]  # Return top 5 suggestions
+            return suggestions
 
         except Exception as e:
             raise Exception(f"Failed to get AI suggestions: {str(e)}")
