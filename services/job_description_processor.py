@@ -21,11 +21,10 @@ class JobDescriptionProcessor:
         Extract job description from a given URL using Jina Reader API
         """
         try:
-            # Properly encode the target URL and append it to Jina's base URL
-            encoded_url = quote(url, safe='')
-            jina_url = f"https://r.jina.ai/{encoded_url}"
+            # Construct Jina URL by directly appending the target URL
+            jina_url = f"https://r.jina.ai/{url}"
+            logger.debug(f"Sending request to Jina API with URL: {jina_url}")
 
-            logger.debug(f"Sending request to Jina API for URL: {url}")
             response = requests.get(jina_url, headers=self.headers, timeout=10)
             response.raise_for_status()
 
