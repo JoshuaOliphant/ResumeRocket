@@ -73,7 +73,7 @@ def submit_job_url():
 
     except Exception as e:
         logger.error(f"Error submitting job URL: {str(e)}")
-        return jsonify({'error': 'Failed to process job URL'}), 500
+        return jsonify({'error': str(e)}), 500
 
 @jobs_bp.route('/jobs', methods=['GET'])
 @login_required
