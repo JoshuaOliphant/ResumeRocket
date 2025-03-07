@@ -43,9 +43,21 @@ class JobDescriptionProcessor:
             # Get the content after "Markdown Content:" line
             try:
                 markdown_start = content_lines.index('Markdown Content:')
-                cleaned_content = '\n'.join(content_lines[markdown_start + 1:]).strip()
+                content_lines = content_lines[markdown_start + 1:]
             except ValueError:
-                cleaned_content = '\n'.join(content_lines).strip()
+                logger.warning("Markdown Content marker not found, using full content")
+
+            # Clean up markdown content
+            cleaned_content = []
+            for line in content_lines:
+                # Skip image lines
+                if line.startswith('![') or line.startswith('[!['):
+                    continue
+                # Remove markdown links but keep the text
+                line = re.sub(r'\[([^\]]+)\]\([^\)]+\)', r'\1', line)
+                cleaned_content.append(line)
+
+            cleaned_content = '\n'.join(cleaned_content).strip()
 
             if not cleaned_content:
                 raise Exception("No content was extracted from the job posting URL")
