@@ -2,6 +2,7 @@ import requests
 import logging
 import re
 import os
+from urllib.parse import quote
 
 logger = logging.getLogger(__name__)
 
@@ -20,11 +21,16 @@ class JobDescriptionProcessor:
         Extract job description from a given URL using Jina Reader API
         """
         try:
-            jina_url = f"https://r.jina.ai/{url}"
+            # Properly encode the target URL and append it to Jina's base URL
+            encoded_url = quote(url, safe='')
+            jina_url = f"https://r.jina.ai/{encoded_url}"
+
+            logger.debug(f"Sending request to Jina API for URL: {url}")
             response = requests.get(jina_url, headers=self.headers, timeout=10)
             response.raise_for_status()
 
             content = response.text
+            logger.debug(f"Received response from Jina API: {content[:200]}...")  # Log first 200 chars
 
             # Extract title and content from Jina's markdown response
             title_match = re.search(r'Title:\s*(.+?)(?:\n|$)', content)
@@ -43,6 +49,9 @@ class JobDescriptionProcessor:
                 'url': url
             }
 
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Request error extracting job description from URL {url}: {str(e)}")
+            raise Exception(f"Failed to extract job description due to request error: {str(e)}")
         except Exception as e:
             logger.error(f"Error extracting job description from URL {url}: {str(e)}")
             raise Exception(f"Failed to extract job description: {str(e)}")

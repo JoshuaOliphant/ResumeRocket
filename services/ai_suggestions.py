@@ -2,17 +2,20 @@ import os
 import anthropic
 from anthropic import Anthropic
 
+
 class AISuggestions:
+
     def __init__(self):
         # Initialize Anthropic client
         self.anthropic_key = os.environ.get('ANTHROPIC_API_KEY')
         if not self.anthropic_key:
-            raise ValueError('ANTHROPIC_API_KEY environment variable must be set')
-            
+            raise ValueError(
+                'ANTHROPIC_API_KEY environment variable must be set')
+
         self.client = Anthropic(api_key=self.anthropic_key)
-        # the newest Anthropic model is "claude-3-5-sonnet-20241022" which was released October 22, 2024
-        self.model = "claude-3-5-sonnet-20241022"
-    
+        # the newest Anthropic model is "claude-3-7-sonnet-20250219" which was released February 19, 2025
+        self.model = "claude-3-7-sonnet-20250219"
+
     def get_suggestions(self, resume_text, job_description):
         """
         Get AI-powered suggestions for resume improvement
@@ -35,14 +38,12 @@ class AISuggestions:
             Provide 3-5 specific, actionable suggestions.
             """
 
-            response = self.client.messages.create(
-                model=self.model,
-                max_tokens=500,
-                messages=[{
-                    "role": "user",
-                    "content": prompt
-                }]
-            )
+            response = self.client.messages.create(model=self.model,
+                                                   max_tokens=500,
+                                                   messages=[{
+                                                       "role": "user",
+                                                       "content": prompt
+                                                   }])
 
             suggestions = response.content[0].text.split('\n')
             # Clean up and format suggestions
