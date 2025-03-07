@@ -52,7 +52,8 @@ def submit_job_text():
             'message': 'Job description saved successfully',
             'job': job.to_dict(),
             'ats_score': ats_score,
-            'suggestions': suggestions
+            'suggestions': suggestions,
+            'resume_content': resume_content
         }), 201
 
     except Exception as e:
@@ -120,7 +121,8 @@ def submit_job_url():
             'message': 'Job description saved successfully',
             'job': job.to_dict(),
             'ats_score': ats_score,
-            'suggestions': suggestions
+            'suggestions': suggestions,
+            'resume_content': resume_content
         }), 201
 
     except Exception as e:
@@ -139,11 +141,14 @@ def get_jobs():
         logger.error(f"Error fetching jobs: {str(e)}")
         return jsonify({'error': 'Failed to fetch jobs'}), 500
 
-@jobs_bp.route('/customize-resume', methods=['POST'])
+@jobs_bp.route('/api/customize-resume', methods=['POST'])
 @login_required
 def customize_resume():
     try:
+        logger.debug("Customizing resume, received data:")
         data = request.get_json()
+        logger.debug(f"Request data: {data}")
+
         if not data:
             return jsonify({'error': 'No data provided'}), 400
 
@@ -151,6 +156,7 @@ def customize_resume():
         job_description_id = data.get('job_description_id')
 
         if not resume_content or not job_description_id:
+            logger.error(f"Missing required data - resume_content: {bool(resume_content)}, job_description_id: {job_description_id}")
             return jsonify({'error': 'Resume content and job description ID are required'}), 400
 
         # Get the job description
@@ -163,9 +169,12 @@ def customize_resume():
             return jsonify({'error': 'Unauthorized access'}), 403
 
         logger.debug(f"Customizing resume for job description ID: {job_description_id}")
+        logger.debug(f"Resume content length: {len(resume_content)}")
+        logger.debug(f"Job description content length: {len(job_description.content)}")
 
         # Generate customized resume
         result = resume_customizer.customize_resume(resume_content, job_description.content)
+        logger.debug(f"Resume customization completed, result length: {len(result['customized_content'])}")
 
         # Store the customized resume
         customized_resume = CustomizedResume(
@@ -178,6 +187,7 @@ def customize_resume():
 
         db.session.add(customized_resume)
         db.session.commit()
+        logger.debug("Customized resume saved to database")
 
         return jsonify({
             'message': 'Resume customized successfully',

@@ -63,7 +63,7 @@ class ResumeCustomizer:
             """
 
             response = self.client.messages.create(model=self.model,
-                                                   max_tokens=4000,
+                                                   max_tokens=8192,
                                                    messages=[{
                                                        "role": "user",
                                                        "content": prompt

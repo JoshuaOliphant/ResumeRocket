@@ -46,6 +46,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Handle customize resume button click
     document.getElementById('customizeResumeBtn').addEventListener('click', function() {
+        console.log('Customize button clicked');
+        console.log('Current job description ID:', currentJobDescriptionId);
+        console.log('Current resume content length:', currentResumeContent ? currentResumeContent.length : 0);
+
         if (!currentJobDescriptionId || !currentResumeContent) {
             alert('Please analyze a resume first');
             return;
@@ -105,23 +109,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
         const uploadType = document.querySelector('input[name="uploadType"]:checked').value;
         const jobDescriptionType = document.querySelector('input[name="jobDescriptionType"]:checked').value;
-
-        // Validate inputs
-        if (uploadType === 'text' && !resumeEditor.value().trim()) {
-            alert('Please enter your resume content');
-            return;
-        } else if (uploadType === 'file' && !document.getElementById('resume_file').files[0]) {
-            alert('Please select a file to upload');
-            return;
-        }
-
-        if (jobDescriptionType === 'text' && !document.getElementById('jobDescription').value.trim()) {
-            alert('Please provide a job description');
-            return;
-        } else if (jobDescriptionType === 'url' && !document.getElementById('jobUrl').value.trim()) {
-            alert('Please provide a job posting URL');
-            return;
-        }
 
         // Create FormData for both text and file submissions
         const formData = new FormData();
@@ -228,49 +215,11 @@ document.addEventListener('DOMContentLoaded', function() {
             // Update AI suggestions
             const aiSuggestions = document.getElementById('aiSuggestions');
             if (response.suggestions && response.suggestions.length > 0) {
-                let sections = {};
-                let currentSection = '';
-
-                response.suggestions.forEach(suggestion => {
-                    if (suggestion.startsWith('#')) {
-                        // Main heading
-                        currentSection = suggestion;
-                        sections[currentSection] = [];
-                    } else if (suggestion.startsWith('##')) {
-                        // Subheading
-                        currentSection = suggestion;
-                        sections[currentSection] = [];
-                    } else if (suggestion.startsWith('###')) {
-                        // Sub-subheading
-                        currentSection = suggestion;
-                        sections[currentSection] = [];
-                    } else {
-                        // Content
-                        if (currentSection) {
-                            sections[currentSection].push(suggestion);
-                        }
-                    }
-                });
-
-                // Generate HTML for sections
-                let html = '';
-                Object.entries(sections).forEach(([heading, content]) => {
-                    const headingLevel = heading.startsWith('###') ? 'h6' : 
-                                       heading.startsWith('##') ? 'h5' : 'h4';
-                    const headingText = heading.replace(/^#+\s/, '');
-
-                    html += `<div class="mb-3">
-                        <${headingLevel} class="border-bottom pb-2">${headingText}</${headingLevel}>
-                        <div class="ps-3">
-                            ${content.map(text => `<p class="mb-2">${text}</p>`).join('')}
-                        </div>
-                    </div>`;
-                });
-
-                aiSuggestions.innerHTML = html || '<li class="list-group-item bg-dark text-light">No suggestions available.</li>';
+                aiSuggestions.innerHTML = marked(response.suggestions.join('\n'));
             } else {
                 aiSuggestions.innerHTML = '<li class="list-group-item bg-dark text-light">No suggestions available at this time.</li>';
             }
+
         } catch (error) {
             console.error('Error processing response:', error);
             alert('There was an error processing your request. Please try again.');
