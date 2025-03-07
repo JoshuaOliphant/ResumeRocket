@@ -15,6 +15,88 @@ resume_customizer = ResumeCustomizer()
 ats_analyzer = ATSAnalyzer()
 ai_suggestions = AISuggestions()
 
+@jobs_bp.route('/job/url', methods=['POST'])
+@login_required
+def submit_job_url():
+    try:
+        logger.debug("Processing job URL submission")
+        logger.debug(f"Form data received: {request.form}")
+
+        # Get URL from form data
+        url = request.form.get('url')
+        if not url:
+            return jsonify({'error': 'Job posting URL is required'}), 400
+
+        # Get resume content from form data
+        resume_content = request.form.get('resume', '')
+        resume_file = request.files.get('resume_file')
+
+        if resume_file:
+            from services.file_parser import FileParser
+            is_valid, error_message = FileParser.allowed_file(resume_file)
+            if not is_valid:
+                return jsonify({'error': error_message}), 400
+            try:
+                resume_content = FileParser.parse_to_markdown(resume_file)
+                logger.debug(f"Successfully parsed resume file to markdown, length: {len(resume_content)}")
+            except Exception as e:
+                logger.error(f"Error parsing resume file: {str(e)}")
+                return jsonify({'error': 'Failed to parse resume file. Please ensure it is a valid document.'}), 400
+
+        logger.debug(f"Received URL: {url}")
+        logger.debug(f"Resume content received: {bool(resume_content)} (length: {len(resume_content) if resume_content else 0})")
+
+        # Extract job description from URL
+        logger.debug("Extracting job description from URL...")
+        try:
+            processed = job_processor.extract_from_url(url)
+            logger.debug(f"Job description extracted, title: {processed['title']}, content length: {len(processed['content'])}")
+        except Exception as e:
+            logger.error(f"Error extracting job description from URL: {str(e)}")
+            return jsonify({'error': 'Failed to extract job description from URL. Please ensure the URL is valid and accessible.'}), 400
+
+        # Create new job description
+        job = JobDescription(
+            title=processed['title'],
+            content=processed['content'],
+            url=url,
+            user_id=current_user.id
+        )
+
+        db.session.add(job)
+        db.session.commit()
+        logger.debug(f"Job description saved to database with ID: {job.id}")
+
+        # Get resume analysis if resume content is provided
+        if resume_content:
+            logger.debug("Analyzing resume against job description...")
+            try:
+                ats_score = ats_analyzer.analyze(resume_content, processed['content'])
+                logger.debug(f"ATS analysis complete, score: {ats_score['score']}")
+
+                logger.debug("Getting AI suggestions...")
+                suggestions = ai_suggestions.get_suggestions(resume_content, processed['content'])
+                logger.debug(f"AI suggestions generated, count: {len(suggestions)}")
+            except Exception as e:
+                logger.error(f"Error during resume analysis: {str(e)}")
+                return jsonify({'error': 'Failed to analyze resume. Please try again.'}), 500
+        else:
+            logger.debug("No resume content provided, skipping analysis")
+            ats_score = {'score': 0, 'matching_keywords': [], 'missing_keywords': []}
+            suggestions = []
+
+        return jsonify({
+            'message': 'Job description saved successfully',
+            'job': job.to_dict(),
+            'ats_score': ats_score,
+            'suggestions': suggestions,
+            'resume_content': resume_content
+        }), 201
+
+    except Exception as e:
+        logger.error(f"Error submitting job URL: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
 @jobs_bp.route('/job/text', methods=['POST'])
 @login_required
 def submit_job_text():
@@ -58,75 +140,6 @@ def submit_job_text():
 
     except Exception as e:
         logger.error(f"Error submitting job description text: {str(e)}")
-        return jsonify({'error': str(e)}), 500
-
-@jobs_bp.route('/job/url', methods=['POST'])
-@login_required
-def submit_job_url():
-    try:
-        logger.debug("Processing job URL submission")
-        logger.debug(f"Form data received: {request.form}")
-
-        # Get URL from form data
-        url = request.form.get('url')
-        if not url:
-            return jsonify({'error': 'Job posting URL is required'}), 400
-
-        # Get resume content from form data
-        resume_content = request.form.get('resume', '')
-        resume_file = request.files.get('resume_file')
-
-        if resume_file:
-            from services.file_parser import FileParser
-            is_valid, error_message = FileParser.allowed_file(resume_file)
-            if not is_valid:
-                return jsonify({'error': error_message}), 400
-            resume_content = FileParser.parse_to_markdown(resume_file)
-
-        logger.debug(f"Received URL: {url}")
-        logger.debug(f"Resume content received: {bool(resume_content)} (length: {len(resume_content) if resume_content else 0})")
-
-        # Extract job description from URL
-        logger.debug("Extracting job description from URL...")
-        processed = job_processor.extract_from_url(url)
-        logger.debug(f"Job description extracted, title: {processed['title']}, content length: {len(processed['content'])}")
-
-        # Create new job description
-        job = JobDescription(
-            title=processed['title'],
-            content=processed['content'],
-            url=url,
-            user_id=current_user.id
-        )
-
-        db.session.add(job)
-        db.session.commit()
-        logger.debug(f"Job description saved to database with ID: {job.id}")
-
-        # Get resume analysis if resume content is provided
-        if resume_content:
-            logger.debug("Analyzing resume against job description...")
-            ats_score = ats_analyzer.analyze(resume_content, processed['content'])
-            logger.debug(f"ATS analysis complete, score: {ats_score['score']}")
-
-            logger.debug("Getting AI suggestions...")
-            suggestions = ai_suggestions.get_suggestions(resume_content, processed['content'])
-            logger.debug(f"AI suggestions generated, count: {len(suggestions)}")
-        else:
-            logger.debug("No resume content provided, skipping analysis")
-            ats_score = {'score': 0, 'matching_keywords': [], 'missing_keywords': []}
-            suggestions = []
-
-        return jsonify({
-            'message': 'Job description saved successfully',
-            'job': job.to_dict(),
-            'ats_score': ats_score,
-            'suggestions': suggestions,
-            'resume_content': resume_content
-        }), 201
-
-    except Exception as e:
-        logger.error(f"Error submitting job URL: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
 @jobs_bp.route('/jobs', methods=['GET'])
