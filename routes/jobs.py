@@ -15,6 +15,61 @@ resume_customizer = ResumeCustomizer()
 ats_analyzer = ATSAnalyzer()
 ai_suggestions = AISuggestions()
 
+@jobs_bp.route('/api/job/text', methods=['POST'])
+@login_required
+def submit_job_text():
+    try:
+        logger.debug("Processing job text submission")
+        data = request.get_json()
+        logger.debug(f"Received data: {data}")
+
+        if not data or not data.get('content'):
+            return jsonify({'error': 'Job description content is required'}), 400
+
+        # Process the job description
+        processed = job_processor.process_text(data['content'])
+        logger.debug(f"Processed job description, length: {len(processed['content'])}")
+
+        # Create new job description
+        job = JobDescription(
+            title=processed['title'] if 'title' in processed else 'Untitled Position',
+            content=processed['content'],
+            user_id=current_user.id
+        )
+
+        db.session.add(job)
+        db.session.commit()
+        logger.debug(f"Job description saved with ID: {job.id}")
+
+        # Get resume analysis if provided
+        resume_content = data.get('resume', '').strip()
+        if resume_content:
+            logger.debug("Analyzing resume...")
+            try:
+                ats_score = ats_analyzer.analyze(resume_content, processed['content'])
+                logger.debug(f"ATS analysis complete, score: {ats_score['score']}")
+
+                suggestions = ai_suggestions.get_suggestions(resume_content, processed['content'])
+                logger.debug(f"AI suggestions generated, count: {len(suggestions)}")
+            except Exception as e:
+                logger.error(f"Error during analysis: {str(e)}")
+                return jsonify({'error': 'Failed to analyze resume. Please try again.'}), 500
+        else:
+            ats_score = {'score': 0, 'matching_keywords': [], 'missing_keywords': []}
+            suggestions = []
+
+        return jsonify({
+            'message': 'Job description saved successfully',
+            'job': job.to_dict(),
+            'ats_score': ats_score,
+            'suggestions': suggestions,
+            'resume_content': resume_content
+        }), 201
+
+    except Exception as e:
+        logger.error(f"Error processing job text: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
 @jobs_bp.route('/job/url', methods=['POST'])
 @login_required
 def submit_job_url():
@@ -95,51 +150,6 @@ def submit_job_url():
 
     except Exception as e:
         logger.error(f"Error submitting job URL: {str(e)}")
-        return jsonify({'error': str(e)}), 500
-
-@jobs_bp.route('/job/text', methods=['POST'])
-@login_required
-def submit_job_text():
-    try:
-        data = request.get_json()
-        if not data or not data.get('content'):
-            return jsonify({'error': 'Job description content is required'}), 400
-
-        title = data.get('title')
-        content = data.get('content')
-
-        # Process the job description
-        processed = job_processor.process_text(content, title)
-
-        # Create new job description
-        job = JobDescription(
-            title=processed['title'],
-            content=processed['content'],
-            user_id=current_user.id
-        )
-
-        db.session.add(job)
-        db.session.commit()
-
-        # Get resume analysis
-        resume_content = request.form.get('resume')
-        if resume_content:
-            ats_score = ats_analyzer.analyze(resume_content, processed['content'])
-            suggestions = ai_suggestions.get_suggestions(resume_content, processed['content'])
-        else:
-            ats_score = {'score': 0, 'matching_keywords': [], 'missing_keywords': []}
-            suggestions = []
-
-        return jsonify({
-            'message': 'Job description saved successfully',
-            'job': job.to_dict(),
-            'ats_score': ats_score,
-            'suggestions': suggestions,
-            'resume_content': resume_content
-        }), 201
-
-    except Exception as e:
-        logger.error(f"Error submitting job description text: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
 @jobs_bp.route('/jobs', methods=['GET'])
