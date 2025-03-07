@@ -6,6 +6,8 @@ from flask_login import LoginManager, login_required
 from flask_jwt_extended import JWTManager, jwt_required, get_jwt_identity
 from services.ats_analyzer import ATSAnalyzer
 from services.ai_suggestions import AISuggestions
+from services.file_parser import FileParser
+import logging
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
@@ -57,18 +59,48 @@ def upload_resume():
         # Debug logging
         logger.debug("Form data received: %s", request.form)
 
-        resume_content = request.form.get('resume', '').strip()
-        job_description = request.form.get('job_description', '').strip()
-
-        logger.debug("Resume content length: %d", len(resume_content))
-        logger.debug("Job description length: %d", len(job_description))
-
-        if not resume_content or not job_description:
+        # Check if file is present
+        if 'resume_file' not in request.files and 'resume' not in request.form:
             return jsonify({
-                'error': 'Resume and job description are required',
+                'error': 'No resume file or content provided',
                 'ats_score': {'score': 0, 'matching_keywords': [], 'missing_keywords': []},
                 'suggestions': []
             }), 400
+
+        job_description = request.form.get('job_description', '').strip()
+        if not job_description:
+            return jsonify({
+                'error': 'Job description is required',
+                'ats_score': {'score': 0, 'matching_keywords': [], 'missing_keywords': []},
+                'suggestions': []
+            }), 400
+
+        # Get resume content either from file or form
+        if 'resume_file' in request.files:
+            file = request.files['resume_file']
+            # Validate file
+            is_valid, error_message = FileParser.allowed_file(file)
+            if not is_valid:
+                return jsonify({
+                    'error': error_message,
+                    'ats_score': {'score': 0, 'matching_keywords': [], 'missing_keywords': []},
+                    'suggestions': []
+                }), 400
+
+            try:
+                resume_content = FileParser.parse_to_markdown(file)
+            except Exception as e:
+                logger.error(f"Error parsing file: {str(e)}")
+                return jsonify({
+                    'error': 'Error parsing resume file',
+                    'ats_score': {'score': 0, 'matching_keywords': [], 'missing_keywords': []},
+                    'suggestions': []
+                }), 400
+        else:
+            resume_content = request.form.get('resume', '').strip()
+
+        logger.debug("Resume content length: %d", len(resume_content))
+        logger.debug("Job description length: %d", len(job_description))
 
         # Store resume in memory with user ID
         resume_id = len(resumes)

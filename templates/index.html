@@ -8,12 +8,35 @@
                 <h5 class="card-title">Upload Resume</h5>
             </div>
             <div class="card-body">
-                <form id="resumeForm" hx-post="/upload" hx-target="#results" hx-trigger="submit">
+                <form id="resumeForm" method="post" enctype="multipart/form-data">
                     <div class="mb-3">
+                        <label class="form-label">Resume Upload Method</label>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="uploadType" id="textInput" value="text" checked>
+                            <label class="form-check-label" for="textInput">
+                                Enter Text (Markdown)
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="uploadType" id="fileInput" value="file">
+                            <label class="form-check-label" for="fileInput">
+                                Upload File (PDF, DOCX, MD)
+                            </label>
+                        </div>
+                    </div>
+
+                    <div id="textInputSection" class="mb-3">
                         <label for="resume" class="form-label">Resume (Markdown)</label>
                         <textarea id="resume" name="resume" class="form-control" style="display: none;"></textarea>
                         <div id="editor"></div>
                     </div>
+
+                    <div id="fileInputSection" class="mb-3" style="display: none;">
+                        <label for="resume_file" class="form-label">Resume File</label>
+                        <input type="file" class="form-control" id="resume_file" name="resume_file" accept=".pdf,.docx,.md">
+                        <small class="text-muted">Maximum file size: 5MB</small>
+                    </div>
+
                     <div class="mb-3">
                         <label for="jobDescription" class="form-label">Job Description</label>
                         <textarea id="jobDescription" name="job_description" class="form-control" rows="5"></textarea>

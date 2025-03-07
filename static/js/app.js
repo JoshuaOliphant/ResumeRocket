@@ -7,27 +7,60 @@ document.addEventListener('DOMContentLoaded', function() {
         placeholder: "Paste your resume in Markdown format...",
     });
 
+    // Handle upload type toggle
+    const uploadTypeRadios = document.querySelectorAll('input[name="uploadType"]');
+    const textInputSection = document.getElementById('textInputSection');
+    const fileInputSection = document.getElementById('fileInputSection');
+
+    uploadTypeRadios.forEach(radio => {
+        radio.addEventListener('change', function() {
+            if (this.value === 'text') {
+                textInputSection.style.display = 'block';
+                fileInputSection.style.display = 'none';
+            } else {
+                textInputSection.style.display = 'none';
+                fileInputSection.style.display = 'block';
+            }
+        });
+    });
+
     // Handle form submission
     document.getElementById('resumeForm').addEventListener('submit', function(event) {
         event.preventDefault();
 
-        // Get the current value from SimpleMDE
-        const resumeContent = resumeEditor.value();
+        const uploadType = document.querySelector('input[name="uploadType"]:checked').value;
         const jobDescription = document.getElementById('jobDescription').value;
 
         // Validate inputs
-        if (!resumeContent.trim() || !jobDescription.trim()) {
-            alert('Please provide both resume content and job description.');
+        if (uploadType === 'text' && !resumeEditor.value().trim()) {
+            alert('Please enter your resume content');
+            return;
+        } else if (uploadType === 'file' && !document.getElementById('resume_file').files[0]) {
+            alert('Please select a file to upload');
             return;
         }
 
-        // Update the hidden textarea with SimpleMDE content
-        document.getElementById('resume').value = resumeContent;
+        if (!jobDescription.trim()) {
+            alert('Please provide a job description');
+            return;
+        }
 
-        // Trigger htmx request manually
-        const form = document.getElementById('resumeForm');
-        const formData = new FormData(form);
+        // Create FormData and append appropriate data
+        const formData = new FormData();
+        formData.append('job_description', jobDescription);
 
+        if (uploadType === 'text') {
+            formData.append('resume', resumeEditor.value());
+        } else {
+            const file = document.getElementById('resume_file').files[0];
+            if (file.size > 5 * 1024 * 1024) { // 5MB
+                alert('File size exceeds 5MB limit');
+                return;
+            }
+            formData.append('resume_file', file);
+        }
+
+        // Send request
         fetch('/upload', {
             method: 'POST',
             body: formData
