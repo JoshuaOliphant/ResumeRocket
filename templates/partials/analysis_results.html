@@ -1,3 +1,6 @@
+{% if error %}
+<div class="alert alert-danger">{{ error }}</div>
+{% else %}
 <div class="mb-4">
     <h6>ATS Score</h6>
     <div class="progress">
@@ -34,10 +37,10 @@
     </div>
 </div>
 
+{% if resume_id is defined and job_id is defined %}
 <div class="mt-4">
     <form hx-post="/api/customize-resume" 
-          hx-target="body"
-          hx-push-url="true">
+          hx-target="body">
         <input type="hidden" name="resume_id" value="{{ resume_id }}">
         <input type="hidden" name="job_id" value="{{ job_id }}">
         <button type="submit" class="btn btn-primary">
@@ -45,3 +48,5 @@
         </button>
     </form>
 </div>
+{% endif %}
+{% endif %}

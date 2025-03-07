@@ -31,8 +31,7 @@
 
                     <div id="textInputSection" class="mb-3">
                         <label for="resume" class="form-label">Resume (Markdown)</label>
-                        <textarea id="resume" name="resume" class="form-control" style="display: none;"></textarea>
-                        <div id="editor"></div>
+                        <textarea id="resume" name="resume" class="form-control" rows="10"></textarea>
                     </div>
 
                     <div id="fileInputSection" class="mb-3" style="display: none;">
@@ -76,7 +75,7 @@
     </div>
 
     <div class="col-md-6">
-        <div id="results" class="card bg-dark border-secondary">
+        <div class="card bg-dark border-secondary">
             <div class="card-header">
                 <h5 class="card-title">Analysis Results</h5>
             </div>
@@ -88,14 +87,7 @@
 </div>
 
 <script>
-// Only keep the editor initialization code
 document.addEventListener('DOMContentLoaded', function() {
-    const simplemde = new SimpleMDE({
-        element: document.getElementById("resume"),
-        spellChecker: false,
-        status: false
-    });
-
     // Handle upload type toggle
     document.querySelectorAll('input[name="uploadType"]').forEach(radio => {
         radio.addEventListener('change', function() {

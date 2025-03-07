@@ -79,7 +79,17 @@ def upload_resume():
                                 ats_score={'score': 0, 'matching_keywords': [], 'missing_keywords': []},
                                 suggestions=[])
 
-        job_description = request.form.get('job_description', '').strip()
+        # Get job description from form
+        job_description = None
+        job_url = request.form.get('job_url', '').strip()
+        if job_url:
+            # If URL is provided, fetch job description
+            from services.job_description_processor import JobDescriptionProcessor
+            processor = JobDescriptionProcessor()
+            job_description = processor.extract_from_url(job_url)
+        else:
+            job_description = request.form.get('job_description', '').strip()
+
         if not job_description:
             return render_template('partials/analysis_results.html',
                                 error='Job description is required',
@@ -140,10 +150,12 @@ def upload_resume():
         # Get AI suggestions
         try:
             suggestions = ai_suggestions.get_suggestions(resume_content, job_description)
+            logger.debug(f"Generated {len(suggestions)} AI suggestions")
         except Exception as e:
             logger.error(f"Error getting AI suggestions: {str(e)}")
             suggestions = ["Error getting AI suggestions. Please try again later."]
 
+        logger.debug(f"Rendering template with resume_id={resume_id}, job_id={job.id}")
         return render_template('partials/analysis_results.html',
                             resume_id=resume_id,
                             job_id=job.id,
