@@ -103,7 +103,7 @@
                 </div>
 
                 <div class="mt-4">
-                    <button id="customize-btn" class="btn btn-success" style="display: none;" onclick="customizeResume(window.currentResumeId, window.currentJobId)">
+                    <button id="customize-btn" class="btn btn-success" onclick="customizeResume(window.currentResumeId, window.currentJobId)">
                         Customize Resume for Job
                     </button>
                 </div>
@@ -167,9 +167,11 @@ document.getElementById('resumeForm').addEventListener('submit', async function(
         updateAnalysisResults(resumeData);
 
         // Show customize button if we have both IDs
-        if (window.currentResumeId !== null && window.currentJobId !== null) {
-            document.getElementById('customize-btn').style.display = 'block';
-        }
+        document.getElementById('customize-btn').style.display = 'block';
+
+        // Log IDs for debugging
+        console.log('Resume ID:', window.currentResumeId);
+        console.log('Job ID:', window.currentJobId);
 
     } catch (error) {
         alert('Error: ' + error.message);
@@ -199,10 +201,6 @@ function updateAnalysisResults(data) {
     aiSuggestionsDiv.innerHTML = data.suggestions
         .map(suggestion => `<div class="list-group-item bg-dark text-light">${suggestion}</div>`)
         .join('');
-
-    // Log IDs for debugging
-    console.log('Resume ID:', window.currentResumeId);
-    console.log('Job ID:', window.currentJobId);
 }
 </script>
 {% endblock %}
