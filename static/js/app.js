@@ -44,65 +44,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // Handle customize resume button click
-    document.getElementById('customizeResumeBtn').addEventListener('click', function() {
-        console.log('Customize button clicked');
-        console.log('Current job description ID:', currentJobDescriptionId);
-        console.log('Current resume content length:', currentResumeContent ? currentResumeContent.length : 0);
-
-        if (!currentJobDescriptionId || !currentResumeContent) {
-            alert('Please analyze a resume first');
-            return;
-        }
-
-        const options = {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                resume_content: currentResumeContent,
-                job_description_id: currentJobDescriptionId
-            })
-        };
-
-        fetch('/api/customize-resume', options)
-            .then(response => {
-                if (!response.ok) {
-                    return response.json().then(errorData => {
-                        throw new Error(errorData.error || 'Server error occurred');
-                    });
-                }
-                return response.json();
-            })
-            .then(data => {
-                if (data.error) {
-                    alert(data.error);
-                    return;
-                }
-
-                // Show customized resume section
-                const customizedSection = document.getElementById('customizedResumeSection');
-                customizedSection.style.display = 'block';
-
-                // Update content
-                const contentDiv = document.getElementById('customizedResumeContent');
-                contentDiv.innerHTML = marked(data.customized_resume.customized_content);
-
-                // Update score improvement
-                const improvement = data.improvement.toFixed(1);
-                document.getElementById('scoreImprovement').textContent = `+${improvement}%`;
-
-                // Highlight the improvement in green if positive
-                const improvementSpan = document.getElementById('scoreImprovement');
-                improvementSpan.className = improvement > 0 ? 'text-success' : 'text-warning';
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert(error.message || 'There was an error customizing your resume. Please try again.');
-            });
-    });
-
     // Handle form submission
     document.getElementById('resumeForm').addEventListener('submit', async function(event) {
         event.preventDefault();
@@ -113,9 +54,13 @@ document.addEventListener('DOMContentLoaded', function() {
             const jobDescriptionType = document.querySelector('input[name="jobDescriptionType"]:checked').value;
             const formData = new FormData();
 
-            // Handle resume content
+            // Add resume data
             if (uploadType === 'text') {
                 const resumeContent = resumeEditor.value().trim();
+                if (!resumeContent) {
+                    alert('Please enter your resume content');
+                    return;
+                }
                 formData.append('resume', resumeContent);
                 currentResumeContent = resumeContent;
             } else {
@@ -131,7 +76,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 formData.append('resume_file', file);
             }
 
-            // Handle job description
+            let endpoint;
             if (jobDescriptionType === 'text') {
                 const jobDescription = document.getElementById('jobDescription').value.trim();
                 if (!jobDescription) {
@@ -139,7 +84,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     return;
                 }
                 formData.append('content', jobDescription);
-                await sendFormRequest('/api/job/text', formData);
+                endpoint = '/api/job/url';  // Using URL endpoint for both cases for consistency
+                formData.append('url', 'manual_entry');  // Dummy URL for text input
             } else {
                 const jobUrl = document.getElementById('jobUrl').value.trim();
                 if (!jobUrl) {
@@ -147,20 +93,13 @@ document.addEventListener('DOMContentLoaded', function() {
                     return;
                 }
                 formData.append('url', jobUrl);
-                await sendFormRequest('/api/job/url', formData);
+                endpoint = '/api/job/url';
             }
-        } catch (error) {
-            console.error('Error submitting form:', error);
-            alert('There was an error processing your request. Please try again.');
-        }
-    });
 
-    async function sendFormRequest(endpoint, formData) {
-        console.log('Sending form request to:', endpoint);
-        console.log('Form data has resume:', formData.has('resume'));
-        console.log('Form data has resume_file:', formData.has('resume_file'));
+            console.log('Sending form request to:', endpoint);
+            console.log('Form data has resume:', formData.has('resume'));
+            console.log('Form data has resume_file:', formData.has('resume_file'));
 
-        try {
             const response = await fetch(endpoint, {
                 method: 'POST',
                 body: formData
@@ -172,26 +111,17 @@ document.addEventListener('DOMContentLoaded', function() {
             }
 
             const data = await response.json();
-            await handleResponse(data);
-        } catch (error) {
-            console.error('Error:', error);
-            throw error;
-        }
-    }
 
-    async function handleResponse(response) {
-        try {
-            if (response.error) {
-                alert(response.error);
-                return;
+            if (data.error) {
+                throw new Error(data.error);
             }
 
-            // Store current job description ID
-            currentJobDescriptionId = response.job.id;
+            // Store job description ID
+            currentJobDescriptionId = data.job.id;
 
             // Store resume content if available
-            if (response.resume_content) {
-                currentResumeContent = response.resume_content;
+            if (data.resume_content) {
+                currentResumeContent = data.resume_content;
             }
 
             // Show customize button
@@ -202,33 +132,90 @@ document.addEventListener('DOMContentLoaded', function() {
 
             // Update ATS Score
             const scoreDiv = document.getElementById('atsScore');
-            const score = response.ats_score.score || 0;
+            const score = data.ats_score.score || 0;
             scoreDiv.style.width = `${score}%`;
             scoreDiv.textContent = `${score}%`;
             scoreDiv.className = `progress-bar ${score > 70 ? 'bg-success' : score > 40 ? 'bg-warning' : 'bg-danger'}`;
 
             // Update matching keywords
             const matchingKeywords = document.getElementById('matchingKeywords');
-            matchingKeywords.innerHTML = (response.ats_score.matching_keywords || [])
+            matchingKeywords.innerHTML = (data.ats_score.matching_keywords || [])
                 .map(keyword => `<span class="badge bg-success m-1">${keyword}</span>`)
                 .join('') || '<span class="text-muted">No matching keywords found</span>';
 
             // Update missing keywords
             const missingKeywords = document.getElementById('missingKeywords');
-            missingKeywords.innerHTML = (response.ats_score.missing_keywords || [])
+            missingKeywords.innerHTML = (data.ats_score.missing_keywords || [])
                 .map(keyword => `<span class="badge bg-danger m-1">${keyword}</span>`)
                 .join('') || '<span class="text-muted">No missing keywords found</span>';
 
             // Update AI suggestions
             const aiSuggestions = document.getElementById('aiSuggestions');
-            if (response.suggestions && response.suggestions.length > 0) {
-                aiSuggestions.innerHTML = marked(response.suggestions.join('\n'));
+            if (data.suggestions && data.suggestions.length > 0) {
+                aiSuggestions.innerHTML = marked(data.suggestions.join('\n'));
             } else {
                 aiSuggestions.innerHTML = '<li class="list-group-item bg-dark text-light">No suggestions available at this time.</li>';
             }
+
         } catch (error) {
-            console.error('Error processing response:', error);
-            throw error;
+            console.error('Error:', error);
+            alert(error.message || 'There was an error processing your request. Please try again.');
         }
-    }
+    });
+
+    // Handle customize resume button click
+    document.getElementById('customizeResumeBtn').addEventListener('click', async function() {
+        console.log('Customize button clicked');
+        console.log('Current job description ID:', currentJobDescriptionId);
+        console.log('Current resume content length:', currentResumeContent ? currentResumeContent.length : 0);
+
+        if (!currentJobDescriptionId || !currentResumeContent) {
+            alert('Please analyze a resume first');
+            return;
+        }
+
+        try {
+            const response = await fetch('/api/customize-resume', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    resume_content: currentResumeContent,
+                    job_description_id: currentJobDescriptionId
+                })
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Server error occurred');
+            }
+
+            const data = await response.json();
+
+            if (data.error) {
+                throw new Error(data.error);
+            }
+
+            // Show customized resume section
+            const customizedSection = document.getElementById('customizedResumeSection');
+            customizedSection.style.display = 'block';
+
+            // Update content
+            const contentDiv = document.getElementById('customizedResumeContent');
+            contentDiv.innerHTML = marked(data.customized_resume.customized_content);
+
+            // Update score improvement
+            const improvement = data.improvement.toFixed(1);
+            document.getElementById('scoreImprovement').textContent = `+${improvement}%`;
+
+            // Highlight the improvement in green if positive
+            const improvementSpan = document.getElementById('scoreImprovement');
+            improvementSpan.className = improvement > 0 ? 'text-success' : 'text-warning';
+
+        } catch (error) {
+            console.error('Error:', error);
+            alert(error.message || 'There was an error customizing your resume. Please try again.');
+        }
+    });
 });

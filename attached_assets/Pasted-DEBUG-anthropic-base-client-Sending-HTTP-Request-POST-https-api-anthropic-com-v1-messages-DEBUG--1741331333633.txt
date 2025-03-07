@@ -1,0 +1,19 @@
+DEBUG:anthropic._base_client:Sending HTTP Request: POST https://api.anthropic.com/v1/messages
+DEBUG:httpcore.connection:connect_tcp.started host='api.anthropic.com' port=443 local_address=None timeout=5.0 socket_options=[(1, 9, True), (6, 5, 60), (6, 6, 5), (6, 4, 60)]
+DEBUG:httpcore.connection:connect_tcp.complete return_value=<httpcore._backends.sync.SyncStream object at 0x7f941c179e50>
+DEBUG:httpcore.connection:start_tls.started ssl_context=<ssl.SSLContext object at 0x7f941cb4f920> server_hostname='api.anthropic.com' timeout=5.0
+DEBUG:httpcore.connection:start_tls.complete return_value=<httpcore._backends.sync.SyncStream object at 0x7f941cb339d0>
+DEBUG:httpcore.http11:send_request_headers.started request=<Request [b'POST']>
+DEBUG:httpcore.http11:send_request_headers.complete
+DEBUG:httpcore.http11:send_request_body.started request=<Request [b'POST']>
+DEBUG:httpcore.http11:send_request_body.complete
+DEBUG:httpcore.http11:receive_response_headers.started request=<Request [b'POST']>
+DEBUG:httpcore.http11:receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'Date', b'Fri, 07 Mar 2025 07:08:12 GMT'), (b'Content-Type', b'application/json'), (b'Transfer-Encoding', b'chunked'), (b'Connection', b'keep-alive'), (b'anthropic-ratelimit-requests-limit', b'1000'), (b'anthropic-ratelimit-requests-remaining', b'999'), (b'anthropic-ratelimit-requests-reset', b'2025-03-07T07:07:50Z'), (b'anthropic-ratelimit-input-tokens-limit', b'40000'), (b'anthropic-ratelimit-input-tokens-remaining', b'37000'), (b'anthropic-ratelimit-input-tokens-reset', b'2025-03-07T07:07:55Z'), (b'anthropic-ratelimit-output-tokens-limit', b'16000'), (b'anthropic-ratelimit-output-tokens-remaining', b'16000'), (b'anthropic-ratelimit-output-tokens-reset', b'2025-03-07T07:08:12Z'), (b'anthropic-ratelimit-tokens-limit', b'56000'), (b'anthropic-ratelimit-tokens-remaining', b'53000'), (b'anthropic-ratelimit-tokens-reset', b'2025-03-07T07:07:55Z'), (b'request-id', b'req_01Njo1xdhgMQSASMJ4X3WyRt'), (b'anthropic-organization-id', b'df476545-6878-4521-a732-d3560cdb1aed'), (b'via', b'1.1 google'), (b'cf-cache-status', b'DYNAMIC'), (b'X-Robots-Tag', b'none'), (b'Server', b'cloudflare'), (b'CF-RAY', b'91c842160e91df2f-SEA'), (b'Content-Encoding', b'gzip')])
+INFO:httpx:HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+DEBUG:httpcore.http11:receive_response_body.started request=<Request [b'POST']>
+DEBUG:httpcore.http11:receive_response_body.complete
+DEBUG:httpcore.http11:response_closed.started
+DEBUG:httpcore.http11:response_closed.complete
+DEBUG:anthropic._base_client:HTTP Response: POST https://api.anthropic.com/v1/messages "200 OK" Headers({'date': 'Fri, 07 Mar 2025 07:08:12 GMT', 'content-type': 'application/json', 'transfer-encoding': 'chunked', 'connection': 'keep-alive', 'anthropic-ratelimit-requests-limit': '1000', 'anthropic-ratelimit-requests-remaining': '999', 'anthropic-ratelimit-requests-reset': '2025-03-07T07:07:50Z', 'anthropic-ratelimit-input-tokens-limit': '40000', 'anthropic-ratelimit-input-tokens-remaining': '37000', 'anthropic-ratelimit-input-tokens-reset': '2025-03-07T07:07:55Z', 'anthropic-ratelimit-output-tokens-limit': '16000', 'anthropic-ratelimit-output-tokens-remaining': '16000', 'anthropic-ratelimit-output-tokens-reset': '2025-03-07T07:08:12Z', 'anthropic-ratelimit-tokens-limit': '56000', 'anthropic-ratelimit-tokens-remaining': '53000', 'anthropic-ratelimit-tokens-reset': '2025-03-07T07:07:55Z', 'request-id': 'req_01Njo1xdhgMQSASMJ4X3WyRt', 'anthropic-organization-id': 'df476545-6878-4521-a732-d3560cdb1aed', 'via': '1.1 google', 'cf-cache-status': 'DYNAMIC', 'x-robots-tag': 'none', 'server': 'cloudflare', 'cf-ray': '91c842160e91df2f-SEA', 'content-encoding': 'gzip'})
+DEBUG:anthropic._base_client:request_id: req_01Njo1xdhgMQSASMJ4X3WyRt
+DEBUG:routes.jobs:AI suggestions generated, count: 56
