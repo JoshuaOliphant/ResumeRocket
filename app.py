@@ -194,5 +194,29 @@ def export_resume():
         logger.error(f"Error exporting resume: {str(e)}")
         return jsonify({'error': 'Failed to export resume'}), 500
 
+@app.route('/customized-resume/<int:resume_id>')
+@login_required
+def view_customized_resume(resume_id):
+    try:
+        # Get the customized resume from database
+        from models import CustomizedResume, JobDescription #Import models here to avoid circular import
+        customized_resume = CustomizedResume.query.get_or_404(resume_id)
+
+        # Check if the resume belongs to the current user
+        if customized_resume.user_id != current_user.id:
+            return render_template('error.html', message='Unauthorized access'), 403
+
+        # Get the associated job description
+        job = JobDescription.query.get(customized_resume.job_description_id)
+
+        return render_template('customized_resume.html',
+                             resume=customized_resume,
+                             job=job,
+                             title='Customized Resume')
+    except Exception as e:
+        logger.error(f"Error viewing customized resume: {str(e)}")
+        return render_template('error.html', message='Failed to load customized resume'), 500
+
+
 with app.app_context():
     db.create_all()

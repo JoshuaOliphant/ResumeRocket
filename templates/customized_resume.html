@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-12">
+            <h2 class="mb-4">Customized Resume</h2>
+            <div class="card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Job Details</h5>
+                    <span class="badge bg-primary">ATS Score: {{ resume.ats_score }}%</span>
+                </div>
+                <div class="card-body">
+                    <h6>Job Title: {{ job.title }}</h6>
+                    <small class="text-muted">Created: {{ resume.created_at }}</small>
+                </div>
+            </div>
+
+            <div class="row mb-4">
+                <div class="col-md-6">
+                    <div class="card h-100">
+                        <div class="card-header">
+                            <h5 class="mb-0">Matching Keywords</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="d-flex flex-wrap gap-2">
+                                {% for keyword in resume.matching_keywords %}
+                                    <span class="badge bg-success">{{ keyword }}</span>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card h-100">
+                        <div class="card-header">
+                            <h5 class="mb-0">Missing Keywords</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="d-flex flex-wrap gap-2">
+                                {% for keyword in resume.missing_keywords %}
+                                    <span class="badge bg-warning">{{ keyword }}</span>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Original Resume</h5>
+                </div>
+                <div class="card-body">
+                    <div class="markdown-content">
+                        {{ resume.original_content | safe }}
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Customized Resume</h5>
+                </div>
+                <div class="card-body">
+                    <div class="markdown-content">
+                        {{ resume.customized_content | safe }}
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-4">
+                <a href="#" class="btn btn-primary" onclick="window.print()">Print Resume</a>
+                <a href="{{ url_for('export_resume', resume_id=resume.id) }}" class="btn btn-secondary">Export</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.markdown-content {
+    white-space: pre-wrap;
+    font-family: 'Source Sans Pro', sans-serif;
+    line-height: 1.6;
+}
+</style>
+{% endblock %}
