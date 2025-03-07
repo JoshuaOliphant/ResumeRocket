@@ -17,6 +17,14 @@ app.secret_key = os.environ.get("SESSION_SECRET")
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get("DATABASE_URL", "sqlite:///app.db")
 app.config['JWT_SECRET_KEY'] = os.environ.get("JWT_SECRET_KEY", app.secret_key)
 
+# Configure SQLAlchemy for better connection handling
+app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+    "pool_pre_ping": True,  # Enable pre-ping
+    "pool_recycle": 300,    # Recycle connections every 5 minutes
+    "pool_timeout": 30,     # Timeout after 30 seconds
+    "max_overflow": 15      # Allow up to 15 extra connections
+}
+
 # Initialize extensions
 db.init_app(app)
 jwt = JWTManager(app)
