@@ -77,12 +77,12 @@ class ATSAnalyzer:
     def _process_text(self, text):
         """Process text by tokenizing and removing stop words"""
         try:
-            # Convert text to lowercase and tokenize
-            tokens = word_tokenize(text.lower())
+            # Manually split text into words to avoid NLTK tokenizer issues
+            words = text.lower().split()
             # Keep only alphanumeric tokens and remove stop words
             tokens = [
-                token for token in tokens 
-                if token.isalnum() and token not in self.stop_words
+                word for word in words 
+                if any(c.isalnum() for c in word) and word not in self.stop_words
             ]
             return tokens
         except Exception as e:
