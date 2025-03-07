@@ -1,13 +1,13 @@
 import os
 import logging
 from flask import Flask, render_template, request, jsonify
-from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, login_required, current_user
 from flask_jwt_extended import JWTManager, jwt_required, get_jwt_identity
 from services.ats_analyzer import ATSAnalyzer
 from services.ai_suggestions import AISuggestions
 from services.file_parser import FileParser
 import logging
+from extensions import db
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
@@ -19,7 +19,7 @@ app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get("DATABASE_URL", "sqlite:/
 app.config['JWT_SECRET_KEY'] = os.environ.get("JWT_SECRET_KEY", app.secret_key)
 
 # Initialize extensions
-db = SQLAlchemy(app)
+db.init_app(app)
 jwt = JWTManager(app)
 login_manager = LoginManager(app)
 login_manager.login_view = 'auth.login'
@@ -38,7 +38,9 @@ def load_user(user_id):
 
 # Register blueprints
 from routes.auth import auth_bp
+from routes.jobs import jobs_bp
 app.register_blueprint(auth_bp, url_prefix='/auth')
+app.register_blueprint(jobs_bp, url_prefix='/api')
 
 @app.route('/login')
 def login():
