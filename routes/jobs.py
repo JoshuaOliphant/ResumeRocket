@@ -20,14 +20,16 @@ ai_suggestions = AISuggestions()
 def submit_job_text():
     try:
         logger.debug("Processing job text submission")
-        data = request.get_json()
-        logger.debug(f"Received data: {data}")
+        logger.debug(f"Form data received: {request.form}")
+        logger.debug(f"Files received: {request.files}")
 
-        if not data or not data.get('content'):
+        # Get job description from form data
+        content = request.form.get('content')
+        if not content:
             return jsonify({'error': 'Job description content is required'}), 400
 
         # Process the job description
-        processed = job_processor.process_text(data['content'])
+        processed = job_processor.process_text(content)
         logger.debug(f"Processed job description, length: {len(processed['content'])}")
 
         # Create new job description
@@ -41,8 +43,21 @@ def submit_job_text():
         db.session.commit()
         logger.debug(f"Job description saved with ID: {job.id}")
 
-        # Get resume analysis if provided
-        resume_content = data.get('resume', '').strip()
+        # Get resume content
+        resume_content = request.form.get('resume', '').strip()
+        resume_file = request.files.get('resume_file')
+
+        if resume_file:
+            logger.debug("Processing uploaded resume file")
+            from services.file_parser import FileParser
+            try:
+                resume_content = FileParser.parse_to_markdown(resume_file)
+                logger.debug(f"Successfully parsed resume file to markdown, length: {len(resume_content)}")
+            except Exception as e:
+                logger.error(f"Error parsing resume file: {str(e)}")
+                return jsonify({'error': 'Failed to parse resume file. Please ensure it is a valid document.'}), 400
+
+        # Analyze resume if provided
         if resume_content:
             logger.debug("Analyzing resume...")
             try:

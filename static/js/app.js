@@ -104,62 +104,50 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // Handle form submission
-    document.getElementById('resumeForm').addEventListener('submit', function(event) {
+    document.getElementById('resumeForm').addEventListener('submit', async function(event) {
         event.preventDefault();
         console.log('Form submitted');
 
-        const uploadType = document.querySelector('input[name="uploadType"]:checked').value;
-        const jobDescriptionType = document.querySelector('input[name="jobDescriptionType"]:checked').value;
-
         try {
-            if (jobDescriptionType === 'text') {
-                // Handle text submission
-                const jobDescription = document.getElementById('jobDescription').value.trim();
-                const resumeContent = uploadType === 'text' ? resumeEditor.value().trim() : '';
+            const uploadType = document.querySelector('input[name="uploadType"]:checked').value;
+            const jobDescriptionType = document.querySelector('input[name="jobDescriptionType"]:checked').value;
+            const formData = new FormData();
 
+            // Handle resume content
+            if (uploadType === 'text') {
+                const resumeContent = resumeEditor.value().trim();
+                formData.append('resume', resumeContent);
+                currentResumeContent = resumeContent;
+            } else {
+                const file = document.getElementById('resume_file').files[0];
+                if (!file) {
+                    alert('Please select a resume file');
+                    return;
+                }
+                if (file.size > 5 * 1024 * 1024) {
+                    alert('File size exceeds 5MB limit');
+                    return;
+                }
+                formData.append('resume_file', file);
+            }
+
+            // Handle job description
+            if (jobDescriptionType === 'text') {
+                const jobDescription = document.getElementById('jobDescription').value.trim();
                 if (!jobDescription) {
                     alert('Please enter a job description');
                     return;
                 }
-
-                const options = {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        content: jobDescription,
-                        resume: resumeContent
-                    })
-                };
-
-                sendJSONRequest('/api/job/text', options);
+                formData.append('content', jobDescription);
+                await sendFormRequest('/api/job/text', formData);
             } else {
-                // Handle URL submission
-                const formData = new FormData();
-
-                if (uploadType === 'text') {
-                    const resumeContent = resumeEditor.value().trim();
-                    formData.append('resume', resumeContent);
-                    currentResumeContent = resumeContent;
-                } else {
-                    const file = document.getElementById('resume_file').files[0];
-                    if (file && file.size > 5 * 1024 * 1024) {
-                        alert('File size exceeds 5MB limit');
-                        return;
-                    }
-                    if (file) {
-                        formData.append('resume_file', file);
-                    }
-                }
-
                 const jobUrl = document.getElementById('jobUrl').value.trim();
                 if (!jobUrl) {
                     alert('Please enter a job posting URL');
                     return;
                 }
                 formData.append('url', jobUrl);
-                sendFormRequest('/api/job/url', formData);
+                await sendFormRequest('/api/job/url', formData);
             }
         } catch (error) {
             console.error('Error submitting form:', error);
@@ -167,59 +155,41 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    function sendJSONRequest(endpoint, options) {
-        console.log('Sending JSON request to:', endpoint);
-        console.log('Request options:', options);
-
-        fetch(endpoint, options)
-            .then(response => {
-                if (!response.ok) {
-                    return response.json().then(errorData => {
-                        throw new Error(errorData.error || 'Server error occurred');
-                    });
-                }
-                return response.json();
-            })
-            .then(data => handleResponse(data))
-            .catch(error => {
-                console.error('Error:', error);
-                alert(error.message || 'There was an error processing your request. Please try again.');
-            });
-    }
-
-    function sendFormRequest(endpoint, formData) {
+    async function sendFormRequest(endpoint, formData) {
         console.log('Sending form request to:', endpoint);
         console.log('Form data has resume:', formData.has('resume'));
         console.log('Form data has resume_file:', formData.has('resume_file'));
 
-        fetch(endpoint, {
-            method: 'POST',
-            body: formData
-        })
-            .then(response => {
-                if (!response.ok) {
-                    return response.json().then(errorData => {
-                        throw new Error(errorData.error || 'Server error occurred');
-                    });
-                }
-                return response.json();
-            })
-            .then(data => handleResponse(data))
-            .catch(error => {
-                console.error('Error:', error);
-                alert(error.message || 'There was an error processing your request. Please try again.');
+        try {
+            const response = await fetch(endpoint, {
+                method: 'POST',
+                body: formData
             });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Server error occurred');
+            }
+
+            const data = await response.json();
+            await handleResponse(data);
+        } catch (error) {
+            console.error('Error:', error);
+            throw error;
+        }
     }
 
-    function handleResponse(response) {
+    async function handleResponse(response) {
         try {
             if (response.error) {
                 alert(response.error);
                 return;
             }
 
-            // Store current job description ID and resume content
+            // Store current job description ID
             currentJobDescriptionId = response.job.id;
+
+            // Store resume content if available
             if (response.resume_content) {
                 currentResumeContent = response.resume_content;
             }
@@ -256,10 +226,9 @@ document.addEventListener('DOMContentLoaded', function() {
             } else {
                 aiSuggestions.innerHTML = '<li class="list-group-item bg-dark text-light">No suggestions available at this time.</li>';
             }
-
         } catch (error) {
             console.error('Error processing response:', error);
-            alert('There was an error processing your request. Please try again.');
+            throw error;
         }
     }
 });
