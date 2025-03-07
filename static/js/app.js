@@ -9,8 +9,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Handle form submission
     document.getElementById('resumeForm').addEventListener('htmx:beforeRequest', function(event) {
-        // Get the current value from SimpleMDE and set it in the form
-        const resumeContent = resumeEditor.value();
+        // Get the current value from SimpleMDE
+        const resumeTextarea = document.getElementById('resume');
+        resumeTextarea.value = resumeEditor.value(); // Update the textarea with SimpleMDE content
+
+        const resumeContent = resumeTextarea.value;
         const jobDescription = document.getElementById('jobDescription').value;
 
         // Validate inputs
@@ -19,11 +22,6 @@ document.addEventListener('DOMContentLoaded', function() {
             event.preventDefault();
             return;
         }
-
-        // Update the form data with the current SimpleMDE content
-        const formData = new FormData(event.detail.elt);
-        formData.set('resume', resumeContent);
-        event.detail.xhr.send(formData);
     });
 
     document.getElementById('resumeForm').addEventListener('htmx:afterRequest', function(event) {

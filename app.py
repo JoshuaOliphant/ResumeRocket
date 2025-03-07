@@ -25,8 +25,14 @@ def index():
 @app.route('/upload', methods=['POST'])
 def upload_resume():
     try:
+        # Debug logging
+        logger.debug("Form data received: %s", request.form)
+
         resume_content = request.form.get('resume', '').strip()
         job_description = request.form.get('job_description', '').strip()
+
+        logger.debug("Resume content length: %d", len(resume_content))
+        logger.debug("Job description length: %d", len(job_description))
 
         if not resume_content or not job_description:
             return jsonify({'error': 'Resume and job description are required'}), 400
@@ -63,11 +69,11 @@ def analyze_resume():
         resume_id = request.form.get('resume_id')
         if resume_id is None or int(resume_id) not in resumes:
             return jsonify({'error': 'Invalid resume ID'}), 400
-            
+
         resume = resumes[int(resume_id)]
         ats_score = ats_analyzer.analyze(resume['content'], resume['job_description'])
         suggestions = ai_suggestions.get_suggestions(resume['content'], resume['job_description'])
-        
+
         return jsonify({
             'ats_score': ats_score,
             'suggestions': suggestions
@@ -82,7 +88,7 @@ def export_resume():
         resume_id = request.form.get('resume_id')
         if resume_id is None or int(resume_id) not in resumes:
             return jsonify({'error': 'Invalid resume ID'}), 400
-            
+
         resume = resumes[int(resume_id)]
         return jsonify({
             'content': resume['content']
