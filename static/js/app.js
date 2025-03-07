@@ -154,14 +154,46 @@ document.addEventListener('DOMContentLoaded', function() {
             // Update AI suggestions
             const aiSuggestions = document.getElementById('aiSuggestions');
             if (response.suggestions && response.suggestions.length > 0) {
-                const suggestions = response.suggestions.map(suggestion => {
-                    // Add bold styling for headings (lines starting with numbers)
-                    if (/^\d+\./.test(suggestion)) {
-                        return `<li class="list-group-item bg-dark text-light fw-bold">${suggestion}</li>`;
+                let sections = {};
+                let currentSection = '';
+
+                response.suggestions.forEach(suggestion => {
+                    if (suggestion.startsWith('#')) {
+                        // Main heading
+                        currentSection = suggestion;
+                        sections[currentSection] = [];
+                    } else if (suggestion.startsWith('##')) {
+                        // Subheading
+                        currentSection = suggestion;
+                        sections[currentSection] = [];
+                    } else if (suggestion.startsWith('###')) {
+                        // Sub-subheading
+                        currentSection = suggestion;
+                        sections[currentSection] = [];
+                    } else {
+                        // Content
+                        if (currentSection) {
+                            sections[currentSection].push(suggestion);
+                        }
                     }
-                    return `<li class="list-group-item bg-dark text-light">${suggestion}</li>`;
                 });
-                aiSuggestions.innerHTML = suggestions.join('');
+
+                // Generate HTML for sections
+                let html = '';
+                Object.entries(sections).forEach(([heading, content]) => {
+                    const headingLevel = heading.startsWith('###') ? 'h6' : 
+                                       heading.startsWith('##') ? 'h5' : 'h4';
+                    const headingText = heading.replace(/^#+\s/, '');
+
+                    html += `<div class="mb-3">
+                        <${headingLevel} class="border-bottom pb-2">${headingText}</${headingLevel}>
+                        <div class="ps-3">
+                            ${content.map(text => `<p class="mb-2">${text}</p>`).join('')}
+                        </div>
+                    </div>`;
+                });
+
+                aiSuggestions.innerHTML = html || '<li class="list-group-item bg-dark text-light">No suggestions available.</li>';
             } else {
                 aiSuggestions.innerHTML = '<li class="list-group-item bg-dark text-light">No suggestions available at this time.</li>';
             }
