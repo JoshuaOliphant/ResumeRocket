@@ -62,6 +62,7 @@ def submit_job_text():
 def submit_job_url():
     try:
         logger.debug("Processing job URL submission")
+        logger.debug(f"Form data received: {request.form}")
 
         # Get URL from form data
         url = request.form.get('url')
@@ -69,10 +70,18 @@ def submit_job_url():
             return jsonify({'error': 'Job posting URL is required'}), 400
 
         # Get resume content from form data
-        resume_content = request.form.get('resume', '').strip()
+        resume_content = request.form.get('resume', '')
+        resume_file = request.files.get('resume_file')
+
+        if resume_file:
+            from services.file_parser import FileParser
+            is_valid, error_message = FileParser.allowed_file(resume_file)
+            if not is_valid:
+                return jsonify({'error': error_message}), 400
+            resume_content = FileParser.parse_to_markdown(resume_file)
 
         logger.debug(f"Received URL: {url}")
-        logger.debug(f"Resume content received: {bool(resume_content)} (length: {len(resume_content)})")
+        logger.debug(f"Resume content received: {bool(resume_content)} (length: {len(resume_content) if resume_content else 0})")
 
         # Extract job description from URL
         logger.debug("Extracting job description from URL...")

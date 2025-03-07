@@ -70,7 +70,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Add resume data
         if (uploadType === 'text') {
-            formData.append('resume', resumeEditor.value().trim());
+            const resumeContent = resumeEditor.value().trim();
+            console.log('Resume content length:', resumeContent.length);
+            formData.append('resume', resumeContent);
         } else {
             const file = document.getElementById('resume_file').files[0];
             if (file.size > 5 * 1024 * 1024) { // 5MB
@@ -92,6 +94,10 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     function sendRequest(endpoint, formData) {
+        console.log('Sending request to:', endpoint);
+        console.log('Form data has resume:', formData.has('resume'));
+        console.log('Form data has resume_file:', formData.has('resume_file'));
+
         const options = {
             method: 'POST',
             body: formData
