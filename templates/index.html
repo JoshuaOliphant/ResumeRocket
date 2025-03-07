@@ -8,7 +8,11 @@
                 <h5 class="card-title">Upload Resume</h5>
             </div>
             <div class="card-body">
-                <form id="resumeForm" method="post" enctype="multipart/form-data">
+                <form id="resumeForm" 
+                      hx-post="/upload"
+                      hx-target="#results-content"
+                      hx-swap="innerHTML"
+                      enctype="multipart/form-data">
                     <div class="mb-3">
                         <label class="form-label">Resume Upload Method</label>
                         <div class="form-check">
@@ -76,145 +80,41 @@
             <div class="card-header">
                 <h5 class="card-title">Analysis Results</h5>
             </div>
-            <div class="card-body">
-                <div class="mb-4">
-                    <h6>ATS Score</h6>
-                    <div class="progress">
-                        <div id="atsScore" class="progress-bar" role="progressbar" style="width: 0%">0%</div>
-                    </div>
-                </div>
-
-                <div class="mb-4">
-                    <h6>Matching Keywords</h6>
-                    <div id="matchingKeywords" class="d-flex flex-wrap gap-2">
-                    </div>
-                </div>
-
-                <div class="mb-4">
-                    <h6>Missing Keywords</h6>
-                    <div id="missingKeywords" class="d-flex flex-wrap gap-2">
-                    </div>
-                </div>
-
-                <div class="mb-4">
-                    <h6>AI Suggestions</h6>
-                    <div id="aiSuggestions" class="list-group list-group-flush bg-dark">
-                    </div>
-                </div>
-
-                <div class="mt-4">
-                    <button id="customize-btn" class="btn btn-primary" style="display: none;">
-                        Customize Resume for Job
-                    </button>
-                </div>
+            <div id="results-content" class="card-body">
+                <!-- Results will be loaded here by HTMX -->
             </div>
         </div>
     </div>
 </div>
 
 <script>
-// Store IDs in window object to ensure global access
-window.currentResumeId = null;
-window.currentJobId = null;
+// Only keep the editor initialization code
+document.addEventListener('DOMContentLoaded', function() {
+    const simplemde = new SimpleMDE({
+        element: document.getElementById("resume"),
+        spellChecker: false,
+        status: false
+    });
 
-// Handle form submission for job description
-document.getElementById('resumeForm').addEventListener('submit', async function(e) {
-    e.preventDefault();
-
-    const formData = new FormData(this);
-
-    try {
-        // First upload the resume
-        const resumeResponse = await fetch('/upload', {
-            method: 'POST',
-            body: formData
+    // Handle upload type toggle
+    document.querySelectorAll('input[name="uploadType"]').forEach(radio => {
+        radio.addEventListener('change', function() {
+            document.getElementById('textInputSection').style.display = 
+                this.value === 'text' ? 'block' : 'none';
+            document.getElementById('fileInputSection').style.display = 
+                this.value === 'file' ? 'block' : 'none';
         });
-        const resumeData = await resumeResponse.json();
+    });
 
-        if (resumeData.error) {
-            throw new Error(resumeData.error);
-        }
-
-        // Store the resume ID
-        window.currentResumeId = resumeData.resume_id;
-
-        // Now submit the job description
-        const jobDescriptionType = document.querySelector('input[name="jobDescriptionType"]:checked').value;
-        const endpoint = jobDescriptionType === 'url' ? '/api/job/url' : '/api/job/text';
-        let jobData;
-
-        if (jobDescriptionType === 'url') {
-            const jobResponse = await fetch(endpoint, {
-                method: 'POST',
-                body: formData
-            });
-            jobData = await jobResponse.json();
-        } else {
-            const jobResponse = await fetch(endpoint, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    title: 'Job Description',
-                    content: formData.get('job_description'),
-                    resume_id: window.currentResumeId
-                })
-            });
-            jobData = await jobResponse.json();
-        }
-
-        if (jobData.error) {
-            throw new Error(jobData.error);
-        }
-
-        // Store the job ID
-        window.currentJobId = jobData.job.id;
-
-        // Update UI with analysis results
-        updateAnalysisResults(resumeData);
-
-        // Show customize button if we have both IDs
-        const customizeBtn = document.getElementById('customize-btn');
-        if (window.currentResumeId && window.currentJobId) {
-            customizeBtn.style.display = 'block';
-            customizeBtn.onclick = function() {
-                customizeResume(window.currentResumeId, window.currentJobId);
-            };
-        }
-
-        // Log IDs for debugging
-        console.log('Resume ID:', window.currentResumeId);
-        console.log('Job ID:', window.currentJobId);
-
-    } catch (error) {
-        alert('Error: ' + error.message);
-    }
+    // Handle job description type toggle
+    document.querySelectorAll('input[name="jobDescriptionType"]').forEach(radio => {
+        radio.addEventListener('change', function() {
+            document.getElementById('jobTextSection').style.display = 
+                this.value === 'text' ? 'block' : 'none';
+            document.getElementById('jobUrlSection').style.display = 
+                this.value === 'url' ? 'block' : 'none';
+        });
+    });
 });
-
-function updateAnalysisResults(data) {
-    // Update ATS score
-    const atsScoreElement = document.getElementById('atsScore');
-    atsScoreElement.style.width = `${data.ats_score.score}%`;
-    atsScoreElement.textContent = `${Math.round(data.ats_score.score)}%`;
-
-    // Update matching keywords
-    const matchingKeywordsDiv = document.getElementById('matchingKeywords');
-    matchingKeywordsDiv.innerHTML = data.ats_score.matching_keywords
-        .map(keyword => `<span class="badge bg-success">${keyword}</span>`)
-        .join('');
-
-    // Update missing keywords
-    const missingKeywordsDiv = document.getElementById('missingKeywords');
-    missingKeywordsDiv.innerHTML = data.ats_score.missing_keywords
-        .map(keyword => `<span class="badge bg-warning">${keyword}</span>`)
-        .join('');
-
-    // Update AI suggestions
-    const aiSuggestionsDiv = document.getElementById('aiSuggestions');
-    aiSuggestionsDiv.innerHTML = data.suggestions
-        .map(suggestion => `<div class="list-group-item bg-dark text-light">${suggestion}</div>`)
-        .join('');
-}
 </script>
 {% endblock %}

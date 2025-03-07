@@ -1,0 +1,45 @@
+<div class="mb-4">
+    <h6>ATS Score</h6>
+    <div class="progress">
+        <div class="progress-bar" role="progressbar" style="width: {{ ats_score.score }}%">
+            {{ "%.1f"|format(ats_score.score) }}%
+        </div>
+    </div>
+</div>
+
+<div class="mb-4">
+    <h6>Matching Keywords</h6>
+    <div class="d-flex flex-wrap gap-2">
+        {% for keyword in ats_score.matching_keywords %}
+            <span class="badge bg-success">{{ keyword }}</span>
+        {% endfor %}
+    </div>
+</div>
+
+<div class="mb-4">
+    <h6>Missing Keywords</h6>
+    <div class="d-flex flex-wrap gap-2">
+        {% for keyword in ats_score.missing_keywords %}
+            <span class="badge bg-warning">{{ keyword }}</span>
+        {% endfor %}
+    </div>
+</div>
+
+<div class="mb-4">
+    <h6>AI Suggestions</h6>
+    <div class="list-group list-group-flush bg-dark">
+        {% for suggestion in suggestions %}
+            <div class="list-group-item bg-dark text-light">{{ suggestion }}</div>
+        {% endfor %}
+    </div>
+</div>
+
+<div class="mt-4">
+    <button class="btn btn-primary" 
+            hx-post="/api/customize-resume"
+            hx-vals='{"resume_id": "{{ resume_id }}", "job_id": "{{ job_id }}"}'
+            hx-target="body"
+            hx-push-url="true">
+        Customize Resume for Job
+    </button>
+</div>
