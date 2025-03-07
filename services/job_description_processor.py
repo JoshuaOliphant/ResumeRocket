@@ -42,6 +42,9 @@ class JobDescriptionProcessor:
                            not line.startswith('URL Source:')]
             cleaned_content = '\n'.join(content_lines).strip()
 
+            if not cleaned_content:
+                raise Exception("No content was extracted from the job posting URL")
+
             return {
                 'title': title,
                 'content': cleaned_content,
@@ -50,7 +53,7 @@ class JobDescriptionProcessor:
 
         except requests.exceptions.RequestException as e:
             logger.error(f"Request error extracting job description from URL {url}: {str(e)}")
-            raise Exception(f"Failed to extract job description due to request error: {str(e)}")
+            raise Exception(f"Failed to extract job description: {str(e)}")
         except Exception as e:
             logger.error(f"Error extracting job description from URL {url}: {str(e)}")
             raise Exception(f"Failed to extract job description: {str(e)}")

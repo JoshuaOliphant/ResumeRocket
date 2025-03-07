@@ -109,7 +109,14 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         fetch(endpoint, options)
-            .then(response => response.json())
+            .then(response => {
+                if (!response.ok) {
+                    return response.json().then(errorData => {
+                        throw new Error(errorData.error || 'Server error occurred');
+                    });
+                }
+                return response.json();
+            })
             .then(data => {
                 if (data.error) {
                     alert(data.error);
@@ -119,7 +126,7 @@ document.addEventListener('DOMContentLoaded', function() {
             })
             .catch(error => {
                 console.error('Error:', error);
-                alert('There was an error processing your request. Please try again.');
+                alert(error.message || 'There was an error processing your request. Please try again.');
             });
     }
 

@@ -774,6 +774,7 @@ dependencies = [
     { name = "python-docx" },
     { name = "python-magic" },
     { name = "requests" },
+    { name = "sqlalchemy" },
     { name = "werkzeug" },
 ]
 
@@ -794,6 +795,7 @@ requires-dist = [
     { name = "python-docx", specifier = ">=1.1.2" },
     { name = "python-magic", specifier = ">=0.4.27" },
     { name = "requests", specifier = ">=2.32.3" },
+    { name = "sqlalchemy", specifier = ">=2.0.38" },
     { name = "werkzeug", specifier = ">=3.1.3" },
 ]
 
