@@ -2,7 +2,6 @@ import requests
 import logging
 import re
 import os
-from urllib.parse import quote
 
 logger = logging.getLogger(__name__)
 
@@ -40,10 +39,19 @@ class JobDescriptionProcessor:
             content_lines = [line for line in content_lines 
                            if not line.startswith('Title:') and 
                            not line.startswith('URL Source:')]
-            cleaned_content = '\n'.join(content_lines).strip()
+
+            # Get the content after "Markdown Content:" line
+            try:
+                markdown_start = content_lines.index('Markdown Content:')
+                cleaned_content = '\n'.join(content_lines[markdown_start + 1:]).strip()
+            except ValueError:
+                cleaned_content = '\n'.join(content_lines).strip()
 
             if not cleaned_content:
                 raise Exception("No content was extracted from the job posting URL")
+
+            logger.debug(f"Extracted title: {title}")
+            logger.debug(f"Extracted content length: {len(cleaned_content)}")
 
             return {
                 'title': title,
