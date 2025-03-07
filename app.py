@@ -25,25 +25,29 @@ def index():
 @app.route('/upload', methods=['POST'])
 def upload_resume():
     try:
-        resume_content = request.form.get('resume')
-        job_description = request.form.get('job_description')
-        
+        resume_content = request.form.get('resume', '').strip()
+        job_description = request.form.get('job_description', '').strip()
+
         if not resume_content or not job_description:
             return jsonify({'error': 'Resume and job description are required'}), 400
-        
+
         # Store resume in memory
         resume_id = len(resumes)
         resumes[resume_id] = {
             'content': resume_content,
             'job_description': job_description
         }
-        
+
         # Perform ATS analysis
         ats_score = ats_analyzer.analyze(resume_content, job_description)
-        
+
         # Get AI suggestions
-        suggestions = ai_suggestions.get_suggestions(resume_content, job_description)
-        
+        try:
+            suggestions = ai_suggestions.get_suggestions(resume_content, job_description)
+        except Exception as e:
+            logger.error(f"Error getting AI suggestions: {str(e)}")
+            suggestions = ["Error getting AI suggestions. Please try again later."]
+
         return jsonify({
             'resume_id': resume_id,
             'ats_score': ats_score,
@@ -51,7 +55,7 @@ def upload_resume():
         })
     except Exception as e:
         logger.error(f"Error processing resume: {str(e)}")
-        return jsonify({'error': 'Failed to process resume'}), 500
+        return jsonify({'error': 'Failed to process resume. Please try again.'}), 500
 
 @app.route('/analyze', methods=['POST'])
 def analyze_resume():
