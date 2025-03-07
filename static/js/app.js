@@ -8,7 +8,9 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // Handle form submission
-    document.getElementById('resumeForm').addEventListener('htmx:beforeRequest', function(event) {
+    document.getElementById('resumeForm').addEventListener('submit', function(event) {
+        event.preventDefault();
+
         // Get the current value from SimpleMDE
         const resumeContent = resumeEditor.value();
         const jobDescription = document.getElementById('jobDescription').value;
@@ -16,12 +18,14 @@ document.addEventListener('DOMContentLoaded', function() {
         // Validate inputs
         if (!resumeContent.trim() || !jobDescription.trim()) {
             alert('Please provide both resume content and job description.');
-            event.preventDefault();
             return;
         }
 
         // Update the hidden textarea with SimpleMDE content
         document.getElementById('resume').value = resumeContent;
+
+        // Trigger htmx request
+        htmx.trigger('#resumeForm', 'submit');
     });
 
     document.getElementById('resumeForm').addEventListener('htmx:afterRequest', function(event) {

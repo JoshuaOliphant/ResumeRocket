@@ -8,10 +8,11 @@
                 <h5 class="card-title">Upload Resume</h5>
             </div>
             <div class="card-body">
-                <form id="resumeForm" hx-post="/upload" hx-target="#results">
+                <form id="resumeForm" hx-post="/upload" hx-target="#results" hx-trigger="submit">
                     <div class="mb-3">
                         <label for="resume" class="form-label">Resume (Markdown)</label>
-                        <textarea id="resume" name="resume" class="form-control"></textarea>
+                        <textarea id="resume" name="resume" class="form-control" style="display: none;"></textarea>
+                        <div id="editor"></div>
                     </div>
                     <div class="mb-3">
                         <label for="jobDescription" class="form-label">Job Description</label>
