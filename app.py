@@ -222,12 +222,16 @@ def view_customized_resume(resume_id):
         return render_template('error.html', message='Failed to load customized resume'), 500
 
 
+
 @app.route('/api/customize-resume', methods=['POST'])
 @login_required
 def customize_resume_endpoint():
     try:
-        resume_id = request.form.get('resume_id')
-        job_id = request.form.get('job_id')
+        data = request.get_json() if request.is_json else request.form
+        resume_id = data.get('resume_id')
+        job_id = data.get('job_id')
+
+        logger.debug(f"Received customize request - resume_id: {resume_id}, job_id: {job_id}")
 
         if not resume_id or not job_id:
             flash('Both resume and job information are required', 'error')
@@ -240,11 +244,12 @@ def customize_resume_endpoint():
             return redirect(url_for('index'))
 
         # Get the original resume content
-        if int(resume_id) not in resumes or resumes[int(resume_id)]['user_id'] != current_user.id:
+        resume_id = int(resume_id)
+        if resume_id not in resumes or resumes[resume_id]['user_id'] != current_user.id:
             flash('Invalid resume or unauthorized access', 'error')
             return redirect(url_for('index'))
 
-        original_content = resumes[int(resume_id)]['content']
+        original_content = resumes[resume_id]['content']
 
         # Generate customized resume
         customization_result = resume_customizer.customize_resume(

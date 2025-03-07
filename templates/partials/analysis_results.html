@@ -35,11 +35,13 @@
 </div>
 
 <div class="mt-4">
-    <button class="btn btn-primary" 
-            hx-post="/api/customize-resume"
-            hx-vals='{"resume_id": "{{ resume_id }}", "job_id": "{{ job_id }}"}'
-            hx-target="body"
-            hx-push-url="true">
-        Customize Resume for Job
-    </button>
+    <form hx-post="/api/customize-resume" 
+          hx-target="body"
+          hx-push-url="true">
+        <input type="hidden" name="resume_id" value="{{ resume_id }}">
+        <input type="hidden" name="job_id" value="{{ job_id }}">
+        <button type="submit" class="btn btn-primary">
+            Customize Resume for Job
+        </button>
+    </form>
 </div>
