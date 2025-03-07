@@ -2,7 +2,7 @@ import os
 import logging
 from flask import Flask, render_template, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
-from flask_login import LoginManager, login_required
+from flask_login import LoginManager, login_required, current_user
 from flask_jwt_extended import JWTManager, jwt_required, get_jwt_identity
 from services.ats_analyzer import ATSAnalyzer
 from services.ai_suggestions import AISuggestions
@@ -117,7 +117,7 @@ def upload_resume():
         resumes[resume_id] = {
             'content': resume_content,
             'job_description': job_description,
-            'user_id': get_jwt_identity()
+            'user_id': current_user.id
         }
 
         # Perform ATS analysis
@@ -153,7 +153,7 @@ def analyze_resume():
 
         resume = resumes[int(resume_id)]
         # Check if resume belongs to current user
-        if resume['user_id'] != get_jwt_identity():
+        if resume['user_id'] != current_user.id:
             return jsonify({'error': 'Unauthorized access'}), 403
 
         ats_score = ats_analyzer.analyze(resume['content'], resume['job_description'])
@@ -176,7 +176,7 @@ def export_resume():
             return jsonify({'error': 'Invalid resume ID'}), 400
 
         resume = resumes[int(resume_id)]
-        if resume['user_id'] != get_jwt_identity():
+        if resume['user_id'] != current_user.id:
             return jsonify({'error': 'Unauthorized access'}), 403
         return jsonify({
             'content': resume['content']
