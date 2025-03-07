@@ -13,4 +13,6 @@ dependencies = [
     "nltk>=3.9.1",
     "psycopg2-binary>=2.9.10",
     "flask-jwt-extended>=4.7.1",
+    "flask-wtf>=1.2.2",
+    "werkzeug>=3.1.3",
 ]

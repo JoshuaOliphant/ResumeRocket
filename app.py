@@ -38,6 +38,14 @@ def load_user(user_id):
 from routes.auth import auth_bp
 app.register_blueprint(auth_bp, url_prefix='/auth')
 
+@app.route('/login')
+def login():
+    return render_template('login.html')
+
+@app.route('/register')
+def register():
+    return render_template('register.html')
+
 @app.route('/')
 def index():
     return render_template('index.html')
