@@ -93,22 +93,34 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     function sendRequest(endpoint, data) {
-        fetch(endpoint, {
-            method: 'POST',
-            body: data
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.error) {
-                alert(data.error);
-                return;
-            }
-            updateUI(data);
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            alert('There was an error processing your request. Please try again.');
-        });
+        const options = {
+            method: 'POST'
+        };
+
+        if (data instanceof URLSearchParams) {
+            // For URL submissions, send as JSON
+            options.headers = {
+                'Content-Type': 'application/json'
+            };
+            options.body = JSON.stringify({ url: data.get('url') });
+        } else {
+            // For form data (resume uploads), send as is
+            options.body = data;
+        }
+
+        fetch(endpoint, options)
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    alert(data.error);
+                    return;
+                }
+                updateUI(data);
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('There was an error processing your request. Please try again.');
+            });
     }
 
     function updateUI(response) {
