@@ -10,10 +10,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Handle form submission
     document.getElementById('resumeForm').addEventListener('htmx:beforeRequest', function(event) {
         // Get the current value from SimpleMDE
-        const resumeTextarea = document.getElementById('resume');
-        resumeTextarea.value = resumeEditor.value(); // Update the textarea with SimpleMDE content
-
-        const resumeContent = resumeTextarea.value;
+        const resumeContent = resumeEditor.value();
         const jobDescription = document.getElementById('jobDescription').value;
 
         // Validate inputs
@@ -22,6 +19,9 @@ document.addEventListener('DOMContentLoaded', function() {
             event.preventDefault();
             return;
         }
+
+        // Update the hidden textarea with SimpleMDE content
+        document.getElementById('resume').value = resumeContent;
     });
 
     document.getElementById('resumeForm').addEventListener('htmx:afterRequest', function(event) {
@@ -38,27 +38,32 @@ document.addEventListener('DOMContentLoaded', function() {
             const score = response.ats_score.score || 0;
             scoreDiv.style.width = `${score}%`;
             scoreDiv.textContent = `${score}%`;
+            scoreDiv.className = `progress-bar ${score > 70 ? 'bg-success' : score > 40 ? 'bg-warning' : 'bg-danger'}`;
 
             // Update matching keywords
             const matchingKeywords = document.getElementById('matchingKeywords');
             matchingKeywords.innerHTML = (response.ats_score.matching_keywords || [])
-                .map(keyword => `<span class="badge bg-success">${keyword}</span>`)
-                .join(' ') || '<span class="text-muted">No matching keywords found</span>';
+                .map(keyword => `<span class="badge bg-success m-1">${keyword}</span>`)
+                .join('') || '<span class="text-muted">No matching keywords found</span>';
 
             // Update missing keywords
             const missingKeywords = document.getElementById('missingKeywords');
             missingKeywords.innerHTML = (response.ats_score.missing_keywords || [])
-                .map(keyword => `<span class="badge bg-danger">${keyword}</span>`)
-                .join(' ') || '<span class="text-muted">No missing keywords found</span>';
+                .map(keyword => `<span class="badge bg-danger m-1">${keyword}</span>`)
+                .join('') || '<span class="text-muted">No missing keywords found</span>';
 
             // Update AI suggestions
             const aiSuggestions = document.getElementById('aiSuggestions');
-            aiSuggestions.innerHTML = (response.suggestions || [])
-                .map(suggestion => `<li class="list-group-item bg-dark text-light">${suggestion}</li>`)
-                .join('');
-
-            // If no suggestions
-            if (!response.suggestions || response.suggestions.length === 0) {
+            if (response.suggestions && response.suggestions.length > 0) {
+                const suggestions = response.suggestions.map(suggestion => {
+                    // Check if it's a heading (starts with number and dot)
+                    if (/^\d+\./.test(suggestion)) {
+                        return `<li class="list-group-item bg-dark text-light fw-bold">${suggestion}</li>`;
+                    }
+                    return `<li class="list-group-item bg-dark text-light">${suggestion}</li>`;
+                });
+                aiSuggestions.innerHTML = suggestions.join('');
+            } else {
                 aiSuggestions.innerHTML = '<li class="list-group-item bg-dark text-light">No suggestions available at this time.</li>';
             }
         } catch (error) {

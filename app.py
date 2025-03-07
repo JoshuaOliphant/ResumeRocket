@@ -35,7 +35,11 @@ def upload_resume():
         logger.debug("Job description length: %d", len(job_description))
 
         if not resume_content or not job_description:
-            return jsonify({'error': 'Resume and job description are required'}), 400
+            return jsonify({
+                'error': 'Resume and job description are required',
+                'ats_score': {'score': 0, 'matching_keywords': [], 'missing_keywords': []},
+                'suggestions': []
+            }), 400
 
         # Store resume in memory
         resume_id = len(resumes)
@@ -61,7 +65,11 @@ def upload_resume():
         })
     except Exception as e:
         logger.error(f"Error processing resume: {str(e)}")
-        return jsonify({'error': 'Failed to process resume. Please try again.'}), 500
+        return jsonify({
+            'error': 'Failed to process resume. Please try again.',
+            'ats_score': {'score': 0, 'matching_keywords': [], 'missing_keywords': []},
+            'suggestions': []
+        }), 500
 
 @app.route('/analyze', methods=['POST'])
 def analyze_resume():
