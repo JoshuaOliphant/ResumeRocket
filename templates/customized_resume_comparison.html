@@ -303,48 +303,94 @@ marked.setOptions({
     breaks: true,        // Add line breaks on single newlines
     gfm: true,           // GitHub Flavored Markdown
     headerIds: true,     // Add IDs to headers
-    sanitize: false      // Allow HTML
+    sanitize: false      // Allow HTML tags (important for diff highlighting)
 });
 
-// Function to render Markdown to HTML with highlighting
-function renderMarkdownWithHighlighting(markdownContent, htmlContainer, markdownContainer) {
-    // First, get the raw markdown content
-    const content = markdownContainer.innerHTML;
-    
-    // Render to HTML
-    htmlContainer.innerHTML = marked.parse(content);
-    
-    // After rendering, check if we have diff highlighting to apply
-    if (htmlContainer.id === 'customized-resume-html') {
-        applyDiffHighlightingToHtml();
-    }
-}
+// Store original functions from resume_comparison.js that we need to override
+let originalInitFunction = null;
+let originalHighlightDifferences = null;
 
-// Function to apply diff highlighting to HTML elements
-function applyDiffHighlightingToHtml() {
-    // This is a placeholder - the actual implementation would depend on how the diffing is done
-    // We might need to modify the resume_comparison.js to support this
-    // For now, we'll rely on the existing diff highlighting on the markdown content
-    console.log('Applying diff highlighting to HTML content - to be implemented');
-}
-
-// Initialize the Markdown rendering
+// Initialize the page when DOM is loaded
 document.addEventListener('DOMContentLoaded', function() {
-    // Render both resumes as HTML
+    console.log('HTML rendering script loaded');
+    
+    // Save original functions before they're called
+    if (window.analyzeDiff) originalAnalyzeDiff = window.analyzeDiff;
+    if (window.highlightDifferences) originalHighlightDifferences = window.highlightDifferences;
+    
+    // Override the highlightDifferences function
+    window.highlightDifferences = function() {
+        // First call the original function to set up the diffs in the hidden markdown elements
+        if (originalHighlightDifferences) {
+            originalHighlightDifferences();
+        }
+        
+        // Then render the HTML versions
+        renderHtmlContent();
+    };
+});
+
+// Function to render both HTML content areas
+function renderHtmlContent() {
+    console.log('Rendering HTML content');
+    
+    // Get content elements
     const originalMarkdown = document.getElementById('original-resume');
     const customizedMarkdown = document.getElementById('customized-resume');
     const originalHtml = document.getElementById('original-resume-html');
     const customizedHtml = document.getElementById('customized-resume-html');
     
-    if (originalMarkdown && originalHtml) {
-        renderMarkdownWithHighlighting(originalMarkdown.innerHTML, originalHtml, originalMarkdown);
+    if (originalMarkdown && customizedMarkdown && originalHtml && customizedHtml) {
+        // Extract the HTML with diff spans already applied
+        const originalContent = originalMarkdown.innerHTML;
+        const customizedContent = customizedMarkdown.innerHTML;
+        
+        // Process the content to convert it to formatted HTML while preserving diff highlighting
+        processContentWithDiff(originalContent, originalHtml, 'original');
+        processContentWithDiff(customizedContent, customizedHtml, 'customized');
     }
+}
+
+// Process content with diff spans and convert to HTML
+function processContentWithDiff(content, targetElement, type) {
+    // First, create temp element to work with the content
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = content;
     
-    if (customizedMarkdown && customizedHtml) {
-        renderMarkdownWithHighlighting(customizedMarkdown.innerHTML, customizedHtml, customizedMarkdown);
-    }
+    // Get all diff spans
+    const diffSpans = tempDiv.querySelectorAll('.diff-added, .diff-removed');
     
-    // Add event listeners for toggle buttons
+    // Store the spans and their text content
+    const spanData = [];
+    diffSpans.forEach(span => {
+        spanData.push({
+            class: span.className,
+            content: span.textContent,
+            placeholder: `DIFF_PLACEHOLDER_${Math.random().toString(36).substring(2, 15)}`
+        });
+        
+        // Replace the span with a unique placeholder
+        span.outerHTML = spanData[spanData.length - 1].placeholder;
+    });
+    
+    // Get the content with placeholders
+    const contentWithPlaceholders = tempDiv.textContent || tempDiv.innerText;
+    
+    // Convert to HTML with marked
+    let htmlContent = marked.parse(contentWithPlaceholders);
+    
+    // Now replace the placeholders with highlighted spans
+    spanData.forEach(data => {
+        const spanHTML = `<span class="${data.class}">${data.content}</span>`;
+        htmlContent = htmlContent.replace(data.placeholder, spanHTML);
+    });
+    
+    // Set the HTML content
+    targetElement.innerHTML = htmlContent;
+}
+
+// Add event listeners for toggle buttons
+document.addEventListener('DOMContentLoaded', function() {
     const toggleButtons = document.querySelectorAll('.toggle-markdown-view');
     toggleButtons.forEach(button => {
         button.addEventListener('click', function() {
