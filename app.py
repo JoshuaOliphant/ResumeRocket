@@ -303,9 +303,11 @@ def customize_resume_endpoint():
         db.session.commit()
         logger.debug(f"Created customized resume with ID: {customized_resume.id}")
 
-        # Return appropriate response based on request type
+        # For HTMX requests, redirect to the customized resume view
         if request.headers.get('HX-Request'):
             return redirect(url_for('view_customized_resume', resume_id=customized_resume.id))
+
+        # For API requests, return JSON response
         return jsonify({
             'success': True,
             'redirect': url_for('view_customized_resume', resume_id=customized_resume.id)
