@@ -310,129 +310,38 @@ marked.setOptions({
 document.addEventListener('DOMContentLoaded', function() {
     console.log('HTML rendering script loaded');
     
-    // Show the HTML content containers by default
-    document.getElementById('original-resume-html').classList.remove('d-none');
-    document.getElementById('customized-resume-html').classList.remove('d-none');
-    
-    // Make sure Markdown content is hidden
-    document.getElementById('original-resume').classList.add('d-none');
-    document.getElementById('customized-resume').classList.add('d-none');
-    
-    // Wait for any other scripts to complete (especially resume_comparison.js)
+    // Let the resume_comparison.js work first
     setTimeout(function() {
-        console.log('Starting HTML rendering');
-        // Render HTML content
-        renderHtmlContent();
-        // Set up toggle buttons
+        // Add event listeners for toggle buttons
         setupToggleButtons();
-    }, 500);
+        
+        // Just set initial state
+        ensureContentVisibility();
+    }, 100);
 });
 
-// Function to render both HTML content areas
-function renderHtmlContent() {
-    try {
-        console.log('Rendering HTML content');
-        
-        // Get content elements
-        const originalMarkdown = document.getElementById('original-resume');
-        const customizedMarkdown = document.getElementById('customized-resume');
-        const originalHtml = document.getElementById('original-resume-html');
-        const customizedHtml = document.getElementById('customized-resume-html');
-        
-        if (!originalMarkdown || !customizedMarkdown || !originalHtml || !customizedHtml) {
-            console.error('One or more content elements not found');
-            return;
-        }
-        
-        // Check if content already has diff highlighting spans
-        const originalHasDiff = originalMarkdown.innerHTML.includes('diff-');
-        const customizedHasDiff = customizedMarkdown.innerHTML.includes('diff-');
-        
-        console.log('Original already has diff:', originalHasDiff);
-        console.log('Customized already has diff:', customizedHasDiff);
-        
-        // If diff highlighting is already applied, handle differently
-        if (originalHasDiff || customizedHasDiff) {
-            console.log('Using diff-aware rendering');
-            renderWithExistingDiff(originalMarkdown, customizedMarkdown, originalHtml, customizedHtml);
-        } else {
-            console.log('Using standard Markdown rendering');
-            // Standard approach - render markdown to HTML
-            originalHtml.innerHTML = marked.parse(originalMarkdown.textContent);
-            customizedHtml.innerHTML = marked.parse(customizedMarkdown.textContent);
-        }
-    } catch (error) {
-        console.error('Error in renderHtmlContent:', error);
-        // Display error to user
-        document.getElementById('original-resume-html').innerHTML = 
-            '<div class="alert alert-danger">Error rendering content: ' + error.message + '</div>';
-        document.getElementById('customized-resume-html').innerHTML = 
-            '<div class="alert alert-danger">Error rendering content: ' + error.message + '</div>';
-    }
-}
-
-// Render content that already has diff highlighting
-function renderWithExistingDiff(originalMarkdown, customizedMarkdown, originalHtml, customizedHtml) {
-    try {
-        // Process original content
-        let originalHtmlContent = processContentWithDiff(originalMarkdown.innerHTML);
-        originalHtml.innerHTML = originalHtmlContent;
-        
-        // Process customized content
-        let customizedHtmlContent = processContentWithDiff(customizedMarkdown.innerHTML);
-        customizedHtml.innerHTML = customizedHtmlContent;
-        
-        console.log('Rendered content with existing diff highlighting');
-    } catch (error) {
-        console.error('Error in renderWithExistingDiff:', error);
-        throw error; // Propagate error for central handling
-    }
-}
-
-// Process content with existing diff spans
-function processContentWithDiff(content) {
-    if (!content || content.trim() === '') {
-        return '<p>No content available</p>';
+// Ensure content visibility
+function ensureContentVisibility() {
+    // Get content containers
+    const originalHtml = document.getElementById('original-resume-html');
+    const customizedHtml = document.getElementById('customized-resume-html');
+    const originalMarkdown = document.getElementById('original-resume');
+    const customizedMarkdown = document.getElementById('customized-resume');
+    
+    // Copy content from markdown to HTML areas (it already has diff highlighting)
+    if (originalMarkdown && originalHtml) {
+        originalHtml.innerHTML = originalMarkdown.innerHTML;
     }
     
-    try {
-        // Create a temporary container to manipulate the HTML
-        const tempDiv = document.createElement('div');
-        tempDiv.innerHTML = content;
-        
-        // Find all diff spans
-        const diffSpans = tempDiv.querySelectorAll('.diff-added, .diff-removed, .diff-modified');
-        
-        // Replace diff spans with placeholder tokens
-        const placeholders = [];
-        
-        diffSpans.forEach((span, index) => {
-            const placeholder = `__DIFF_SPAN_${index}__`;
-            placeholders.push({
-                placeholder: placeholder,
-                html: span.outerHTML
-            });
-            
-            // Replace the span with a placeholder
-            span.outerHTML = placeholder;
-        });
-        
-        // Get the plain text content
-        let plainText = tempDiv.textContent || tempDiv.innerText;
-        
-        // Convert to HTML with marked
-        let htmlContent = marked.parse(plainText);
-        
-        // Restore the diff spans
-        placeholders.forEach(item => {
-            htmlContent = htmlContent.replace(item.placeholder, item.html);
-        });
-        
-        return htmlContent;
-    } catch (error) {
-        console.error('Error processing content with diff:', error);
-        return '<p>Error processing content: ' + error.message + '</p>';
+    if (customizedMarkdown && customizedHtml) {
+        customizedHtml.innerHTML = customizedMarkdown.innerHTML;
     }
+    
+    // Make sure HTML is visible and markdown is hidden
+    if (originalHtml) originalHtml.classList.remove('d-none');
+    if (customizedHtml) customizedHtml.classList.remove('d-none');
+    if (originalMarkdown) originalMarkdown.classList.add('d-none');
+    if (customizedMarkdown) customizedMarkdown.classList.add('d-none');
 }
 
 // Set up toggle buttons
@@ -443,6 +352,11 @@ function setupToggleButtons() {
             const targetId = this.getAttribute('data-target');
             const markdownElement = document.getElementById(targetId);
             const htmlElement = document.getElementById(targetId + '-html');
+            
+            if (!markdownElement || !htmlElement) {
+                console.error('Toggle target elements not found');
+                return;
+            }
             
             // Toggle visibility
             if (markdownElement.classList.contains('d-none')) {
