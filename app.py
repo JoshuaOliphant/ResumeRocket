@@ -62,9 +62,9 @@ def upload_resume():
         # Check if file is present
         if 'resume_file' not in request.files and 'resume' not in request.form:
             return render_template('partials/analysis_results.html',
-                                error='No resume file or content provided',
-                                ats_score={'score': 0, 'matching_keywords': [], 'missing_keywords': []},
-                                suggestions=[])
+                                   error='No resume file or content provided',
+                                   ats_score={'score': 0, 'matching_keywords': [], 'missing_keywords': []},
+                                   suggestions=[])
 
         # Get job description from form
         job_description = None
@@ -81,9 +81,9 @@ def upload_resume():
 
         if not job_description:
             return render_template('partials/analysis_results.html',
-                                error='Job description is required',
-                                ats_score={'score': 0, 'matching_keywords': [], 'missing_keywords': []},
-                                suggestions=[])
+                                   error='Job description is required',
+                                   ats_score={'score': 0, 'matching_keywords': [], 'missing_keywords': []},
+                                   suggestions=[])
 
         # Get resume content either from file or form
         resume_content = None
@@ -95,26 +95,26 @@ def upload_resume():
                 if not is_valid:
                     logger.error(f"File validation failed: {error_message}")
                     return render_template('partials/analysis_results.html',
-                                        error=error_message,
-                                        ats_score={'score': 0, 'matching_keywords': [], 'missing_keywords': []},
-                                        suggestions=[])
+                                           error=error_message,
+                                           ats_score={'score': 0, 'matching_keywords': [], 'missing_keywords': []},
+                                           suggestions=[])
 
                 try:
                     resume_content = FileParser.parse_to_markdown(file)
                 except Exception as e:
                     logger.error(f"Error parsing file: {str(e)}")
                     return render_template('partials/analysis_results.html',
-                                        error=f'Error parsing resume file: {str(e)}',
-                                        ats_score={'score': 0, 'matching_keywords': [], 'missing_keywords': []},
-                                        suggestions=[])
+                                           error=f'Error parsing resume file: {str(e)}',
+                                           ats_score={'score': 0, 'matching_keywords': [], 'missing_keywords': []},
+                                           suggestions=[])
         else:
             resume_content = request.form.get('resume', '').strip()
 
         if not resume_content:
             return render_template('partials/analysis_results.html',
-                                error='No resume content provided',
-                                ats_score={'score': 0, 'matching_keywords': [], 'missing_keywords': []},
-                                suggestions=[])
+                                   error='No resume content provided',
+                                   ats_score={'score': 0, 'matching_keywords': [], 'missing_keywords': []},
+                                   suggestions=[])
 
         # Store resume in memory with user ID
         resume_id = len(resumes)
@@ -146,17 +146,17 @@ def upload_resume():
 
         logger.debug(f"Rendering template with resume_id={resume_id}, job_id={job.id}")
         return render_template('partials/analysis_results.html',
-                            resume_id=resume_id,
-                            job_id=job.id,
-                            ats_score=ats_score,
-                            suggestions=suggestions)
+                               resume_id=resume_id,
+                               job_id=job.id,
+                               ats_score=ats_score,
+                               suggestions=suggestions)
 
     except Exception as e:
         logger.error(f"Error processing resume: {str(e)}")
         return render_template('partials/analysis_results.html',
-                            error=f'Error processing resume: {str(e)}',
-                            ats_score={'score': 0, 'matching_keywords': [], 'missing_keywords': []},
-                            suggestions=[])
+                               error=f'Error processing resume: {str(e)}',
+                               ats_score={'score': 0, 'matching_keywords': [], 'missing_keywords': []},
+                               suggestions=[])
 
 @app.route('/analyze', methods=['POST'])
 @login_required
@@ -215,48 +215,61 @@ def view_customized_resume(resume_id):
         job = JobDescription.query.get(customized_resume.job_description_id)
 
         return render_template('customized_resume.html',
-                             resume=customized_resume,
-                             job=job,
-                             title='Customized Resume')
+                                resume=customized_resume,
+                                job=job,
+                                title='Customized Resume')
     except Exception as e:
         logger.error(f"Error viewing customized resume: {str(e)}")
         return render_template('error.html', message='Failed to load customized resume'), 500
-
 
 
 @app.route('/api/customize-resume', methods=['POST'])
 @login_required
 def customize_resume_endpoint():
     try:
-        data = request.get_json() if request.is_json else request.form
-        resume_id = data.get('resume_id')
-        job_id = data.get('job_id')
+        logger.debug(f"Form data received: {request.form}")
+        resume_id = request.form.get('resume_id')
+        job_id = request.form.get('job_id')
 
-        logger.debug(f"Received customize request - resume_id: {resume_id}, job_id: {job_id}")
+        logger.debug(f"Raw values - resume_id: {resume_id}, job_id: {job_id}")
 
         if not resume_id or not job_id:
+            logger.error("Missing required IDs - resume_id or job_id not provided")
             flash('Both resume and job information are required', 'error')
             return redirect(url_for('index'))
+
+        try:
+            resume_id = int(resume_id)
+            job_id = int(job_id)
+        except (TypeError, ValueError) as e:
+            logger.error(f"Invalid ID format: {str(e)}")
+            flash('Invalid resume or job ID format', 'error')
+            return redirect(url_for('index'))
+
+        logger.debug(f"Converted values - resume_id: {resume_id}, job_id: {job_id}")
 
         # Get the job description
         job = JobDescription.query.get_or_404(job_id)
         if job.user_id != current_user.id:
+            logger.error(f"Unauthorized access - job.user_id: {job.user_id}, current_user.id: {current_user.id}")
             flash('Unauthorized access', 'error')
             return redirect(url_for('index'))
 
         # Get the original resume content
-        resume_id = int(resume_id)
         if resume_id not in resumes or resumes[resume_id]['user_id'] != current_user.id:
+            logger.error(f"Invalid resume access - resume_id: {resume_id}")
             flash('Invalid resume or unauthorized access', 'error')
             return redirect(url_for('index'))
 
         original_content = resumes[resume_id]['content']
+        logger.debug("Found original resume content")
 
         # Generate customized resume
         customization_result = resume_customizer.customize_resume(
             original_content,
             job.content
         )
+        logger.debug("Generated customized resume content")
 
         # Create new customized resume record
         customized_resume = CustomizedResume(
@@ -271,6 +284,7 @@ def customize_resume_endpoint():
 
         db.session.add(customized_resume)
         db.session.commit()
+        logger.debug(f"Created customized resume with ID: {customized_resume.id}")
 
         return redirect(url_for('view_customized_resume', resume_id=customized_resume.id))
 
