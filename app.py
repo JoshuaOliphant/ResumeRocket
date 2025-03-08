@@ -169,17 +169,18 @@ def customize_resume_endpoint():
         db.session.commit()
         logger.debug(f"Created customized resume with ID: {customized_resume.id}")
 
-        # For HTMX requests, redirect to the comparison view directly
+        # For HTMX requests, redirect to the stacked view first
+        # JavaScript will then redirect to comparison view if JS is enabled
         if request.headers.get('HX-Request'):
             response = make_response('')
-            response.headers['HX-Redirect'] = url_for('compare_resume', resume_id=customized_resume.id)
+            response.headers['HX-Redirect'] = url_for('view_customized_resume', resume_id=customized_resume.id)
             return response
 
         # For API requests, return JSON response
         return jsonify({
             'success': True,
             'customized_resume': customized_resume.to_dict(),
-            'redirect': url_for('compare_resume', resume_id=customized_resume.id)
+            'redirect': url_for('view_customized_resume', resume_id=customized_resume.id)
         }), 201
 
     except Exception as e:
@@ -378,10 +379,13 @@ def view_customized_resume(resume_id):
         # Get the associated job description
         job = JobDescription.query.get(customized_resume.job_description_id)
 
+        # This view now serves as a fallback for browsers with JavaScript disabled
+        # For browsers with JavaScript enabled, we'll redirect to the comparison view
         return render_template('customized_resume.html',
-                                resume=customized_resume,
-                                job=job,
-                                title='Customized Resume')
+                              resume=customized_resume,
+                              job=job,
+                              comparison_url=url_for('compare_resume', resume_id=resume_id),
+                              title='Customized Resume')
     except Exception as e:
         logger.error(f"Error viewing customized resume: {str(e)}")
         return render_template('error.html', message='Failed to load customized resume'), 500

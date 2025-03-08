@@ -1,6 +1,15 @@
 {% extends "base.html" %}
 
 {% block content %}
+<!-- Warning for users with JavaScript disabled -->
+<noscript>
+    <div class="alert alert-danger">
+        <strong>Warning:</strong> JavaScript is disabled in your browser. The diff highlighting and interactive features 
+        of this comparison view require JavaScript to function properly. Please enable JavaScript or 
+        <a href="{{ url_for('view_customized_resume', resume_id=resume.id) }}">view the basic version</a> instead.
+    </div>
+</noscript>
+
 <div class="container-fluid mt-4">
     <!-- Header with Summary Section -->
     <div class="row mb-4">

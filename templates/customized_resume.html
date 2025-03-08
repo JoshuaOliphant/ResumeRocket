@@ -1,6 +1,22 @@
 {% extends "base.html" %}
 
 {% block content %}
+<!-- JavaScript redirect to comparison view if JavaScript is enabled -->
+{% if comparison_url is defined %}
+<script>
+    // Redirect to comparison view for browsers with JavaScript enabled
+    window.location.href = "{{ comparison_url }}";
+</script>
+{% endif %}
+
+<!-- Message for users with JavaScript disabled -->
+<noscript>
+    <div class="alert alert-warning">
+        <strong>Note:</strong> JavaScript is disabled in your browser. The interactive comparison view requires JavaScript. 
+        You're currently viewing the basic version of the customized resume.
+    </div>
+</noscript>
+
 <div class="container mt-4">
     <div class="row">
         <div class="col-12">
