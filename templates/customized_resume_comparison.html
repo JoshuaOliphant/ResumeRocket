@@ -37,6 +37,19 @@
                             </div>
                         </div>
                     </div>
+                    
+                    {% if resume and resume.file_format != 'md' %}
+                    <div class="alert alert-info mt-3 mb-0">
+                        <div class="d-flex align-items-center">
+                            <i class="bi bi-info-circle-fill me-2 fs-4"></i>
+                            <div>
+                                <strong>Format Notice:</strong> Your {{ resume.file_format|upper }} resume is displayed as Markdown text in this comparison view.
+                                <span class="d-block mt-1">This allows our comparison tools to highlight changes more effectively. When you download using the buttons below, your resume will be in the original {{ resume.file_format|upper }} format.</span>
+                            </div>
+                            <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    </div>
+                    {% endif %}
                 </div>
             </div>
         </div>
