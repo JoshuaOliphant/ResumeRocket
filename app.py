@@ -3,6 +3,7 @@ import logging
 from flask import Flask, render_template, request, jsonify, flash, redirect, url_for
 from flask_login import LoginManager, login_required, current_user
 from flask_jwt_extended import JWTManager
+from flask_wtf.csrf import CSRFProtect
 from services.ats_analyzer import ATSAnalyzer
 from services.ai_suggestions import AISuggestions
 from services.file_parser import FileParser
@@ -18,6 +19,9 @@ app = Flask(__name__)
 app.secret_key = os.environ.get("SESSION_SECRET")
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get("DATABASE_URL", "sqlite:///app.db")
 app.config['JWT_SECRET_KEY'] = os.environ.get("JWT_SECRET_KEY", app.secret_key)
+
+# Initialize CSRF protection
+csrf = CSRFProtect(app)
 
 # Configure SQLAlchemy for better connection handling
 app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
