@@ -310,38 +310,54 @@ marked.setOptions({
 document.addEventListener('DOMContentLoaded', function() {
     console.log('HTML rendering script loaded');
     
-    // Let the resume_comparison.js work first
+    // Load the two versions
     setTimeout(function() {
-        // Add event listeners for toggle buttons
+        renderContent();
         setupToggleButtons();
-        
-        // Just set initial state
-        ensureContentVisibility();
-    }, 100);
+    }, 500); // Wait for resume_comparison.js to finish
 });
 
-// Ensure content visibility
-function ensureContentVisibility() {
-    // Get content containers
-    const originalHtml = document.getElementById('original-resume-html');
-    const customizedHtml = document.getElementById('customized-resume-html');
+// Render content properly
+function renderContent() {
+    // Get the markdown containers
     const originalMarkdown = document.getElementById('original-resume');
     const customizedMarkdown = document.getElementById('customized-resume');
     
-    // Copy content from markdown to HTML areas (it already has diff highlighting)
-    if (originalMarkdown && originalHtml) {
-        originalHtml.innerHTML = originalMarkdown.innerHTML;
+    // Get the HTML containers
+    const originalHtml = document.getElementById('original-resume-html');
+    const customizedHtml = document.getElementById('customized-resume-html');
+    
+    if (!originalMarkdown || !customizedMarkdown || !originalHtml || !customizedHtml) {
+        console.error('Could not find all required elements');
+        return;
     }
     
-    if (customizedMarkdown && customizedHtml) {
-        customizedHtml.innerHTML = customizedMarkdown.innerHTML;
+    // Get the text content (ignoring HTML tags)
+    const originalText = originalMarkdown.textContent;
+    const customizedText = customizedMarkdown.textContent;
+    
+    // Render to HTML using marked
+    originalHtml.innerHTML = marked.parse(originalText);
+    customizedHtml.innerHTML = marked.parse(customizedText);
+    
+    // Apply highlighting from resume_comparison.js once rendered
+    if (typeof highlightDifferences === 'function') {
+        try {
+            console.log('Applying diff highlighting to rendered HTML');
+            highlightDifferences(
+                originalHtml.querySelector('p') || originalHtml, 
+                customizedHtml.querySelector('p') || customizedHtml
+            );
+        } catch (error) {
+            console.error('Error applying diff highlighting:', error);
+        }
     }
     
-    // Make sure HTML is visible and markdown is hidden
-    if (originalHtml) originalHtml.classList.remove('d-none');
-    if (customizedHtml) customizedHtml.classList.remove('d-none');
-    if (originalMarkdown) originalMarkdown.classList.add('d-none');
-    if (customizedMarkdown) customizedMarkdown.classList.add('d-none');
+    // Show the HTML containers and hide the Markdown ones
+    originalHtml.classList.remove('d-none');
+    customizedHtml.classList.remove('d-none');
+    originalMarkdown.classList.add('d-none');
+    customizedMarkdown.classList.add('d-none');
 }
 
 // Set up toggle buttons
