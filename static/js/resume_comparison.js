@@ -408,23 +408,27 @@ function escapeRegExp(string) {
 function updateChangeSummary(changes) {
     const changesCountElement = document.getElementById('changes-count');
     const summaryDetailsElement = document.getElementById('summary-details');
+    const changeSummaryElement = document.getElementById('change-summary');
     
     if (changesCountElement) {
-        changesCountElement.textContent = `${changes.total} changes`;
+        // Animate the count from 0 to the total number of changes
+        animateCount(changesCountElement, 0, changes.total);
     }
     
     if (summaryDetailsElement && modifiedSections && modifiedSections.modifiedSectionTitles) {
         let summaryHTML = `
-            <span class="text-success">${changes.added} additions</span>, 
-            <span class="text-danger">${changes.removed} removals</span>
+            <span class="text-success fade-in-up delay-1">${changes.added} additions</span>, 
+            <span class="text-danger fade-in-up delay-2">${changes.removed} removals</span>
         `;
         
         // Add section summary if we have modified sections
         if (modifiedSections.modifiedSectionTitles.length > 0) {
-            summaryHTML += `<div class="mt-2">Modified sections: `;
+            summaryHTML += `<div class="mt-2 fade-in-up delay-3">Modified sections: `;
             
             modifiedSections.modifiedSectionTitles.forEach((title, index) => {
-                summaryHTML += `<span class="badge bg-info me-1">${title}</span>`;
+                // Add staggered delay for each badge
+                const delay = Math.min(index + 4, 10); // Cap at delay-10
+                summaryHTML += `<span class="badge bg-info me-1 fade-in-up delay-${delay}">${title}</span>`;
             });
             
             summaryHTML += `</div>`;
@@ -432,6 +436,61 @@ function updateChangeSummary(changes) {
         
         summaryDetailsElement.innerHTML = summaryHTML;
     }
+    
+    // Add highlight pulse animation to the summary card
+    if (changeSummaryElement) {
+        // Remove any existing animation class first
+        changeSummaryElement.classList.remove('highlight-pulse');
+        
+        // Force a reflow to restart the animation
+        void changeSummaryElement.offsetWidth;
+        
+        // Add the animation class
+        changeSummaryElement.classList.add('highlight-pulse');
+    }
+}
+
+/**
+ * Animate counting from start to end
+ */
+function animateCount(element, start, end) {
+    // If the difference is small, don't animate
+    if (end - start < 5) {
+        element.textContent = `${end} changes`;
+        return;
+    }
+    
+    // Duration in milliseconds
+    const duration = 1000;
+    // Number of steps
+    const steps = 20;
+    // Time per step
+    const stepTime = duration / steps;
+    
+    let current = start;
+    const increment = (end - start) / steps;
+    
+    // Clear any existing interval
+    if (element.countInterval) {
+        clearInterval(element.countInterval);
+    }
+    
+    // Start the animation
+    element.countInterval = setInterval(() => {
+        current += increment;
+        
+        // Round to nearest integer
+        const rounded = Math.round(current);
+        
+        // Update the element
+        element.textContent = `${rounded} changes`;
+        
+        // Check if we've reached the end
+        if (rounded >= end) {
+            clearInterval(element.countInterval);
+            element.textContent = `${end} changes`;
+        }
+    }, stepTime);
 }
 
 /**

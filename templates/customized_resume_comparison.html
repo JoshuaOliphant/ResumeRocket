@@ -118,6 +118,46 @@
     background-color: rgba(255, 255, 0, 0.2);
 }
 
+/* Animation for summary section */
+@keyframes highlightPulse {
+    0% { box-shadow: 0 0 0 0 rgba(0, 123, 255, 0); }
+    50% { box-shadow: 0 0 0 10px rgba(0, 123, 255, 0.1); }
+    100% { box-shadow: 0 0 0 0 rgba(0, 123, 255, 0); }
+}
+
+.highlight-pulse {
+    animation: highlightPulse 2s ease-out;
+}
+
+/* Animation for badges */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translate3d(0, 20px, 0);
+    }
+    to {
+        opacity: 1;
+        transform: translate3d(0, 0, 0);
+    }
+}
+
+.fade-in-up {
+    opacity: 0;
+    animation: fadeInUp 0.5s ease forwards;
+}
+
+/* Delay for staggered animations */
+.delay-1 { animation-delay: 0.1s; }
+.delay-2 { animation-delay: 0.2s; }
+.delay-3 { animation-delay: 0.3s; }
+.delay-4 { animation-delay: 0.4s; }
+.delay-5 { animation-delay: 0.5s; }
+.delay-6 { animation-delay: 0.6s; }
+.delay-7 { animation-delay: 0.7s; }
+.delay-8 { animation-delay: 0.8s; }
+.delay-9 { animation-delay: 0.9s; }
+.delay-10 { animation-delay: 1s; }
+
 /* Media query for mobile responsiveness */
 @media (max-width: 768px) {
     .markdown-content {

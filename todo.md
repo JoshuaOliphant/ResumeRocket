@@ -39,7 +39,7 @@
 - [x] Add section indicators/badges to show which parts changed
 - [x] Test with various levels of changes (minor to extensive)
 - [x] Ensure change counting is accurate
-- [ ] Add lightweight animation to draw attention to the summary
+- [x] Add lightweight animation to draw attention to the summary
 
 ## Phase 2: DOCX Support
 
