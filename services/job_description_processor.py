@@ -2,7 +2,6 @@ import requests
 import logging
 import re
 import os
-import trafilatura
 
 logger = logging.getLogger(__name__)
 
@@ -18,40 +17,17 @@ class JobDescriptionProcessor:
 
     def extract_from_url(self, url):
         """
-        Extract job description from a given URL using Trafilatura first, then falling back to Jina Reader API
+        Extract job description from a given URL using Jina Reader API
         """
         try:
             logger.debug(f"Attempting to extract content from URL: {url}")
 
-            # Try trafilatura first
-            logger.debug("Attempting extraction with trafilatura...")
-            downloaded = trafilatura.fetch_url(url)
-
-            if downloaded:
-                extracted_text = trafilatura.extract(downloaded)
-                if extracted_text and len(extracted_text.strip()) > 0:
-                    logger.debug("Successfully extracted content with trafilatura")
-                    # Try to find a title in the first few lines
-                    lines = extracted_text.split('\n')
-                    title = next((line for line in lines[:10] if len(line.strip()) > 0 and len(line.strip()) < 100), "Job Posting")
-
-                    logger.debug(f"Extracted title from trafilatura: {title}")
-                    return {
-                        'title': title.strip(),
-                        'content': extracted_text,
-                        'url': url
-                    }
-                else:
-                    logger.debug("Trafilatura extracted empty content, falling back to Jina API")
-            else:
-                logger.debug("Trafilatura failed to fetch URL, falling back to Jina API")
-
-            # Fall back to Jina API
-            logger.debug("Using Jina API as fallback...")
+            # Use Jina API to extract content
+            logger.debug(f"Using Jina API to extract content from: {url}")
             jina_url = f"https://r.jina.ai/{url}"
             logger.debug(f"Sending request to Jina API with URL: {jina_url}")
 
-            response = requests.get(jina_url, headers=self.headers, timeout=10)
+            response = requests.get(jina_url, headers=self.headers, timeout=30)
             response.raise_for_status()
 
             content = response.text

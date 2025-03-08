@@ -1,6 +1,6 @@
 import os
 import io
-import magic
+import filetype  # Replace magic with filetype
 import docx
 import PyPDF2
 import logging
@@ -44,16 +44,26 @@ class FileParser:
             if extension not in FileParser.ALLOWED_EXTENSIONS:
                 return False, f"File extension .{extension} not allowed"
 
-            # Check file type using python-magic
+            # Check file type using filetype instead of python-magic
             file_content = file.read()
             file.seek(0)
-            mime_type = magic.from_buffer(file_content, mime=True)
+            
+            # Special handling for Markdown files (text files)
+            if extension == 'md':
+                # Simple check for text files - try to decode as UTF-8
+                try:
+                    file_content.decode('utf-8')
+                    mime_type = 'text/plain'
+                except UnicodeDecodeError:
+                    return False, "Invalid markdown file format"
+            else:
+                # Use filetype for binary files (PDF, DOCX)
+                kind = filetype.guess(file_content)
+                if kind is None:
+                    return False, "Unknown file type"
+                mime_type = kind.mime
 
             logger.debug(f"File MIME type: {mime_type}")
-
-            # Special handling for Markdown files
-            if extension == 'md' and mime_type == 'text/plain':
-                return True, None
 
             if mime_type not in FileParser.ALLOWED_MIMETYPES:
                 return False, f"File type {mime_type} not allowed"
@@ -81,7 +91,13 @@ class FileParser:
             # Read file content
             file_content = file.read()
             file.seek(0)
-            mime_type = magic.from_buffer(file_content, mime=True)
+            
+            # Determine mime type
+            if extension == 'md':
+                mime_type = 'text/plain'
+            else:
+                kind = filetype.guess(file_content)
+                mime_type = kind.mime if kind else None
 
             logger.debug(f"File MIME type for parsing: {mime_type}")
 

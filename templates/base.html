@@ -47,7 +47,9 @@
                 {% endfor %}
             {% endif %}
         {% endwith %}
-        {% block content %}{% endblock %}
+        <div id="main-content">
+            {% block content %}{% endblock %}
+        </div>
     </div>
 
     <script>
@@ -68,10 +70,21 @@
             alertDiv.textContent = errorMessage;
             document.querySelector('.container').insertBefore(alertDiv, document.querySelector('.container').firstChild);
         });
+        
+        // Initialize SimpleMDE when a textarea with id 'resume' is added to the DOM
+        document.body.addEventListener('htmx:afterSwap', function(evt) {
+            const resumeTextarea = document.getElementById('resume');
+            if (resumeTextarea) {
+                new SimpleMDE({
+                    element: resumeTextarea,
+                    spellChecker: true,
+                    status: true,
+                    placeholder: "Paste your resume in Markdown format..."
+                });
+            }
+        });
     </script>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/resume_customizer.js') }}"></script>
 </body>
 </html>

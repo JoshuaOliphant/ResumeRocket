@@ -4,7 +4,7 @@ from models import User, db
 from flask_jwt_extended import create_access_token
 from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField
-from wtforms.validators import DataRequired, Email
+from wtforms.validators import DataRequired, Email, EqualTo, Length, ValidationError
 
 auth_bp = Blueprint('auth', __name__)
 
@@ -12,28 +12,31 @@ class LoginForm(FlaskForm):
     email = StringField('Email', validators=[DataRequired(), Email()])
     password = PasswordField('Password', validators=[DataRequired()])
 
+class RegisterForm(FlaskForm):
+    username = StringField('Username', validators=[DataRequired(), Length(min=3, max=64)])
+    email = StringField('Email', validators=[DataRequired(), Email()])
+    password = PasswordField('Password', validators=[DataRequired(), Length(min=6)])
+
 @auth_bp.route('/register', methods=['GET', 'POST'])
 def register():
-    if request.method == 'POST':
-        data = request.form
-
-        if not data or not data.get('email') or not data.get('password') or not data.get('username'):
-            flash('Missing required fields', 'danger')
-            return redirect(url_for('auth.register'))
-
-        if User.query.filter_by(email=data['email']).first():
+    form = RegisterForm()
+    if form.validate_on_submit():
+        # Check if email is already registered
+        if User.query.filter_by(email=form.email.data).first():
             flash('Email already registered', 'danger')
-            return redirect(url_for('auth.register'))
+            return render_template('register.html', form=form)
 
-        if User.query.filter_by(username=data['username']).first():
+        # Check if username is already taken
+        if User.query.filter_by(username=form.username.data).first():
             flash('Username already taken', 'danger')
-            return redirect(url_for('auth.register'))
+            return render_template('register.html', form=form)
 
+        # Create new user
         user = User(
-            username=data['username'],
-            email=data['email']
+            username=form.username.data,
+            email=form.email.data
         )
-        user.set_password(data['password'])
+        user.set_password(form.password.data)
 
         db.session.add(user)
         db.session.commit()
@@ -41,7 +44,7 @@ def register():
         flash('Registration successful! Please login.', 'success')
         return redirect(url_for('auth.login'))
 
-    return render_template('register.html')
+    return render_template('register.html', form=form)
 
 @auth_bp.route('/login', methods=['GET', 'POST'])
 def login():

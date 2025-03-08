@@ -73,7 +73,7 @@ def submit_job_url():
         logger.debug(f"Form data received: {request.form}")
 
         # Get URL from form data
-        url = request.form.get('url')
+        url = request.form.get('job_url')
         if not url:
             return jsonify({'error': 'Job posting URL is required'}), 400
 
@@ -145,7 +145,7 @@ def get_jobs():
         logger.error(f"Error fetching jobs: {str(e)}")
         return jsonify({'error': 'Failed to fetch jobs'}), 500
 
-@jobs_bp.route('/customize-resume', methods=['POST'])
+@jobs_bp.route('/customize-resume-v2', methods=['POST'])
 @login_required
 def customize_resume():
     try:

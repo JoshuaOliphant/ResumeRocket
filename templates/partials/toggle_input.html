@@ -1,0 +1,12 @@
+{% if type == 'text' %}
+<div id="textInputSection" class="mb-3">
+    <label for="resume" class="form-label">Resume (Markdown)</label>
+    <textarea id="resume" name="resume" class="form-control" rows="10"></textarea>
+</div>
+{% else %}
+<div id="fileInputSection" class="mb-3">
+    <label for="resume_file" class="form-label">Resume File</label>
+    <input type="file" class="form-control" id="resume_file" name="resume_file" accept=".pdf,.docx,.md">
+    <small class="text-muted">Maximum file size: 5MB</small>
+</div>
+{% endif %} 

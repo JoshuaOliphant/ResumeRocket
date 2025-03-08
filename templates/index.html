@@ -16,58 +16,71 @@
                     <div class="mb-3">
                         <label class="form-label">Resume Upload Method</label>
                         <div class="form-check">
-                            <input class="form-check-input" type="radio" name="uploadType" id="textInput" value="text" checked>
+                            <input class="form-check-input" type="radio" name="uploadType" id="textInput" value="text"
+                                   hx-get="/partials/toggle-input?type=text"
+                                   hx-target="#input-sections"
+                                   hx-swap="innerHTML"
+                                   hx-trigger="click">
                             <label class="form-check-label" for="textInput">
                                 Enter Text (Markdown)
                             </label>
                         </div>
                         <div class="form-check">
-                            <input class="form-check-input" type="radio" name="uploadType" id="fileInput" value="file">
+                            <input class="form-check-input" type="radio" name="uploadType" id="fileInput" value="file" checked
+                                   hx-get="/partials/toggle-input?type=file"
+                                   hx-target="#input-sections"
+                                   hx-swap="innerHTML"
+                                   hx-trigger="click">
                             <label class="form-check-label" for="fileInput">
                                 Upload File (PDF, DOCX, MD)
                             </label>
                         </div>
                     </div>
 
-                    <div id="textInputSection" class="mb-3">
-                        <label for="resume" class="form-label">Resume (Markdown)</label>
-                        <textarea id="resume" name="resume" class="form-control" rows="10"></textarea>
-                    </div>
-
-                    <div id="fileInputSection" class="mb-3" style="display: none;">
-                        <label for="resume_file" class="form-label">Resume File</label>
-                        <input type="file" class="form-control" id="resume_file" name="resume_file" accept=".pdf,.docx,.md">
-                        <small class="text-muted">Maximum file size: 5MB</small>
+                    <div id="input-sections">
+                        <!-- Default to file input section -->
+                        <div id="fileInputSection" class="mb-3">
+                            <label for="resume_file" class="form-label">Resume File</label>
+                            <input type="file" class="form-control" id="resume_file" name="resume_file" accept=".pdf,.docx,.md">
+                            <small class="text-muted">Maximum file size: 5MB</small>
+                        </div>
                     </div>
 
                     <div class="mb-3">
                         <label class="form-label">Job Description Input Method</label>
                         <div class="form-check">
-                            <input class="form-check-input" type="radio" name="jobDescriptionType" id="jobTextInput" value="text" checked>
+                            <input class="form-check-input" type="radio" name="jobDescriptionType" id="jobTextInput" value="text"
+                                   hx-get="/partials/toggle-job-input?type=text"
+                                   hx-target="#job-input-sections"
+                                   hx-swap="innerHTML"
+                                   hx-trigger="click">
                             <label class="form-check-label" for="jobTextInput">
                                 Enter Text
                             </label>
                         </div>
                         <div class="form-check">
-                            <input class="form-check-input" type="radio" name="jobDescriptionType" id="jobUrlInput" value="url">
+                            <input class="form-check-input" type="radio" name="jobDescriptionType" id="jobUrlInput" value="url" checked
+                                   hx-get="/partials/toggle-job-input?type=url"
+                                   hx-target="#job-input-sections"
+                                   hx-swap="innerHTML"
+                                   hx-trigger="click">
                             <label class="form-check-label" for="jobUrlInput">
                                 Enter Job URL
                             </label>
                         </div>
                     </div>
 
-                    <div id="jobTextSection" class="mb-3">
-                        <label for="jobDescription" class="form-label">Job Description</label>
-                        <textarea id="jobDescription" name="job_description" class="form-control" rows="5"></textarea>
-                    </div>
-
-                    <div id="jobUrlSection" class="mb-3" style="display: none;">
-                        <label for="jobUrl" class="form-label">Job Posting URL</label>
-                        <input type="url" class="form-control" id="jobUrl" name="job_url" placeholder="https://...">
+                    <div id="job-input-sections">
+                        <!-- Default to URL input section -->
+                        <div id="jobUrlSection" class="mb-3">
+                            <label for="jobUrl" class="form-label">Job Posting URL</label>
+                            <input class="form-control" id="jobUrl" name="job_url" placeholder="https://...">
+                            <small class="text-muted">Enter the full URL of the job posting (including https://)</small>
+                        </div>
                     </div>
 
                     <button type="submit" class="btn btn-primary">
-                        Analyze Resume
+                        Analyze Job Description
                     </button>
                 </form>
             </div>
@@ -85,28 +98,4 @@
         </div>
     </div>
 </div>
-
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Handle upload type toggle
-    document.querySelectorAll('input[name="uploadType"]').forEach(radio => {
-        radio.addEventListener('change', function() {
-            document.getElementById('textInputSection').style.display = 
-                this.value === 'text' ? 'block' : 'none';
-            document.getElementById('fileInputSection').style.display = 
-                this.value === 'file' ? 'block' : 'none';
-        });
-    });
-
-    // Handle job description type toggle
-    document.querySelectorAll('input[name="jobDescriptionType"]').forEach(radio => {
-        radio.addEventListener('change', function() {
-            document.getElementById('jobTextSection').style.display = 
-                this.value === 'text' ? 'block' : 'none';
-            document.getElementById('jobUrlSection').style.display = 
-                this.value === 'url' ? 'block' : 'none';
-        });
-    });
-});
-</script>
 {% endblock %}

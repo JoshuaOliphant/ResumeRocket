@@ -1,0 +1,12 @@
+{% if type == 'text' %}
+<div id="jobTextSection" class="mb-3">
+    <label for="jobDescription" class="form-label">Job Description</label>
+    <textarea id="jobDescription" name="job_description" class="form-control" rows="5"></textarea>
+</div>
+{% else %}
+<div id="jobUrlSection" class="mb-3">
+    <label for="jobUrl" class="form-label">Job Posting URL</label>
+    <input class="form-control" id="jobUrl" name="job_url" placeholder="https://...">
+    <small class="text-muted">Enter the full URL of the job posting (including https://)</small>
+</div>
+{% endif %} 
