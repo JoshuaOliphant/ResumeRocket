@@ -310,15 +310,16 @@ marked.setOptions({
 document.addEventListener('DOMContentLoaded', function() {
     console.log('HTML rendering script loaded');
     
-    // Load the two versions
+    // Let resume_comparison.js run first
     setTimeout(function() {
-        renderContent();
+        console.log('Rendering content with diff highlighting');
+        renderContentWithDiff();
         setupToggleButtons();
-    }, 500); // Wait for resume_comparison.js to finish
+    }, 500);
 });
 
-// Render content properly
-function renderContent() {
+// Render content with diff highlighting
+function renderContentWithDiff() {
     // Get the markdown containers
     const originalMarkdown = document.getElementById('original-resume');
     const customizedMarkdown = document.getElementById('customized-resume');
@@ -336,21 +337,57 @@ function renderContent() {
     const originalText = originalMarkdown.textContent;
     const customizedText = customizedMarkdown.textContent;
     
-    // Render to HTML using marked
-    originalHtml.innerHTML = marked.parse(originalText);
-    customizedHtml.innerHTML = marked.parse(customizedText);
-    
-    // Apply highlighting from resume_comparison.js once rendered
-    if (typeof highlightDifferences === 'function') {
-        try {
-            console.log('Applying diff highlighting to rendered HTML');
-            highlightDifferences(
-                originalHtml.querySelector('p') || originalHtml, 
-                customizedHtml.querySelector('p') || customizedHtml
-            );
-        } catch (error) {
-            console.error('Error applying diff highlighting:', error);
+    // Compute the diff
+    try {
+        // Use the diff library to find differences
+        const diffResult = Diff.diffWords(originalText, customizedText);
+        
+        // Create HTML with diff highlighting
+        let originalHtmlWithDiff = '';
+        let customizedHtmlWithDiff = '';
+        
+        diffResult.forEach(part => {
+            if (part.added) {
+                // Added parts only show in customized
+                customizedHtmlWithDiff += `<span class="diff-added">${part.value}</span>`;
+            } else if (part.removed) {
+                // Removed parts only show in original
+                originalHtmlWithDiff += `<span class="diff-removed">${part.value}</span>`;
+            } else {
+                // Unchanged parts show in both
+                originalHtmlWithDiff += part.value;
+                customizedHtmlWithDiff += part.value;
+            }
+        });
+        
+        // Convert the highlighted text to HTML
+        originalHtml.innerHTML = marked.parse(originalHtmlWithDiff);
+        customizedHtml.innerHTML = marked.parse(customizedHtmlWithDiff);
+        
+        // Update change count
+        const addedCount = diffResult.filter(part => part.added).reduce((acc, part) => acc + countWords(part.value), 0);
+        const removedCount = diffResult.filter(part => part.removed).reduce((acc, part) => acc + countWords(part.value), 0);
+        const changesCount = document.getElementById('changes-count');
+        if (changesCount) {
+            changesCount.textContent = `${addedCount + removedCount} changes`;
+            changesCount.classList.add('badge', 'bg-info');
         }
+        
+        // Update summary details
+        const summaryDetails = document.getElementById('summary-details');
+        if (summaryDetails) {
+            summaryDetails.innerHTML = `
+                <span class="me-3">${addedCount} additions</span>
+                <span>${removedCount} removals</span>
+            `;
+        }
+        
+        console.log('Diff highlighting applied successfully');
+    } catch (error) {
+        console.error('Error applying diff highlighting:', error);
+        // Fallback to basic rendering without diff
+        originalHtml.innerHTML = marked.parse(originalText);
+        customizedHtml.innerHTML = marked.parse(customizedText);
     }
     
     // Show the HTML containers and hide the Markdown ones
@@ -358,6 +395,11 @@ function renderContent() {
     customizedHtml.classList.remove('d-none');
     originalMarkdown.classList.add('d-none');
     customizedMarkdown.classList.add('d-none');
+}
+
+// Helper function to count words in a string
+function countWords(str) {
+    return str.split(/\s+/).filter(word => word.length > 0).length;
 }
 
 // Set up toggle buttons

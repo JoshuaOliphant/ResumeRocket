@@ -53,6 +53,8 @@ class CustomizedResume(db.Model):
     ats_score = db.Column(db.Float)
     matching_keywords = db.Column(db.JSON)
     missing_keywords = db.Column(db.JSON)
+    file_format = db.Column(db.String(10), default='md')  # 'md', 'docx', 'pdf'
+    original_bytes = db.Column(db.LargeBinary, nullable=True)  # Store original file bytes for non-markdown files
 
     def to_dict(self):
         return {
@@ -64,5 +66,6 @@ class CustomizedResume(db.Model):
             'created_at': self.created_at.isoformat(),
             'ats_score': self.ats_score,
             'matching_keywords': self.matching_keywords,
-            'missing_keywords': self.missing_keywords
+            'missing_keywords': self.missing_keywords,
+            'file_format': self.file_format
         }

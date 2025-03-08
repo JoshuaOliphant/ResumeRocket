@@ -44,23 +44,23 @@
 ## Phase 2: DOCX Support
 
 ### 2.1 DOCX Parsing and Structure Extraction
-- [ ] Add python-docx library to project dependencies
-- [ ] Create a function to parse DOCX files and extract content
-- [ ] Ensure formatting and structure are preserved
-- [ ] Implement conversion to markdown format
-- [ ] Test with various DOCX file formats and structures
-- [ ] Handle edge cases (complex formatting, tables, etc.)
-- [ ] Add error handling for corrupted or incompatible files
-- [ ] Document the DOCX parsing process
+- [x] Add python-docx library to project dependencies
+- [x] Create a function to parse DOCX files and extract content
+- [x] Ensure formatting and structure are preserved
+- [x] Implement conversion to markdown format
+- [x] Test with various DOCX file formats and structures
+- [x] Handle edge cases (complex formatting, tables, etc.)
+- [x] Add error handling for corrupted or incompatible files
+- [x] Document the DOCX parsing process
 
 ### 2.2 DOCX Integration with Comparison View
-- [ ] Update file parser to detect and handle DOCX files
-- [ ] Connect DOCX processing pipeline to the comparison view
-- [ ] Ensure DOCX-sourced content renders correctly in the UI
-- [ ] Test the entire flow from upload to comparison
-- [ ] Handle potential formatting inconsistencies
-- [ ] Optimize for performance with larger DOCX files
-- [ ] Add logging for DOCX processing errors
+- [x] Update file parser to detect and handle DOCX files
+- [x] Connect DOCX processing pipeline to the comparison view
+- [x] Ensure DOCX-sourced content renders correctly in the UI
+- [x] Test the entire flow from upload to comparison
+- [x] Handle potential formatting inconsistencies
+- [x] Optimize for performance with larger DOCX files
+- [x] Add logging for DOCX processing errors
 
 ## Phase 3: PDF Support
 
