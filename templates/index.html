@@ -12,6 +12,7 @@
                       hx-post="/upload"
                       hx-target="#results-content"
                       hx-swap="innerHTML"
+                      hx-indicator="#loading-indicator"
                       enctype="multipart/form-data">
                     <div class="mb-3">
                         <label class="form-label">Resume Upload Method</label>
@@ -80,6 +81,7 @@
                     </div>
 
                     <button type="submit" class="btn btn-primary">
+                        <span class="spinner-border spinner-border-sm htmx-indicator" id="loading-indicator" role="status" aria-hidden="true"></span>
                         Analyze Job Description
                     </button>
                 </form>
@@ -94,8 +96,27 @@
             </div>
             <div id="results-content" class="card-body">
                 <!-- Results will be loaded here by HTMX -->
+                <div id="results-loading-placeholder" class="text-center d-none">
+                    <div class="spinner-border my-5" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p>Analyzing your resume against the job description...</p>
+                    <p class="text-muted">This may take 15-30 seconds</p>
+                </div>
             </div>
         </div>
     </div>
 </div>
+
+<script>
+    // Show loading placeholder when form is submitted
+    document.getElementById('resumeForm').addEventListener('htmx:beforeRequest', function() {
+        document.getElementById('results-loading-placeholder').classList.remove('d-none');
+    });
+    
+    // Hide loading placeholder when response is received
+    document.getElementById('resumeForm').addEventListener('htmx:afterSwap', function() {
+        document.getElementById('results-loading-placeholder').classList.add('d-none');
+    });
+</script>
 {% endblock %}
