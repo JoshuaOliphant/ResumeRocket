@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <!-- Header with Summary Section -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h2 class="mb-0">Resume Comparison</h2>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h5>Job Title: <span id="job-title">{{ job.title if job else 'N/A' }}</span></h5>
+                            <p class="text-muted">Created: <span id="creation-date">{{ resume.created_at if resume else 'N/A' }}</span></p>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <h5>ATS Score: <span id="ats-score" class="badge bg-primary">{{ resume.ats_score if resume else 'N/A' }}%</span></h5>
+                            </div>
+                            <div id="change-summary">
+                                <p>Summary of changes: <span id="changes-count" class="badge bg-info">0 changes</span></p>
+                                <div id="summary-details" class="small text-muted">
+                                    <!-- This will be populated with JavaScript -->
+                                    Changes will be highlighted in the comparison below.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Resume Comparison Section -->
+    <div class="row">
+        <!-- Original Resume Column -->
+        <div class="col-md-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header bg-secondary text-white">
+                    <h3 class="mb-0">Original Resume</h3>
+                </div>
+                <div class="card-body">
+                    <div id="original-resume" class="markdown-content">
+                        {{ resume.original_content | safe if resume else 'No content available' }}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Customized Resume Column -->
+        <div class="col-md-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header bg-success text-white">
+                    <h3 class="mb-0">Customized Resume</h3>
+                </div>
+                <div class="card-body">
+                    <div id="customized-resume" class="markdown-content">
+                        {{ resume.customized_content | safe if resume else 'No content available' }}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer with Action Buttons -->
+    <div class="row mb-5">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body d-flex justify-content-between flex-wrap">
+                    <div class="mb-2">
+                        <button id="toggle-view-btn" class="btn btn-primary">Toggle View Mode</button>
+                        <button id="show-diff-btn" class="btn btn-info">Show Diff Only</button>
+                    </div>
+                    <div class="mb-2">
+                        <button id="print-btn" class="btn btn-secondary" onclick="window.print()">Print Comparison</button>
+                        <a id="download-original-btn" href="{{ url_for('export_resume', resume_id=resume.id, version='original') if resume else '#' }}" class="btn btn-outline-secondary">Download Original</a>
+                        <a id="download-customized-btn" href="{{ url_for('export_resume', resume_id=resume.id, version='customized') if resume else '#' }}" class="btn btn-success">Download Customized</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.markdown-content {
+    white-space: pre-wrap;
+    font-family: 'Source Sans Pro', sans-serif;
+    line-height: 1.6;
+    min-height: 500px;
+    max-height: 800px;
+    overflow-y: auto;
+}
+
+/* Diff styling */
+.diff-added {
+    background-color: rgba(0, 255, 0, 0.2);
+    text-decoration: none;
+}
+
+.diff-removed {
+    background-color: rgba(255, 0, 0, 0.2);
+    text-decoration: line-through;
+}
+
+.diff-modified {
+    background-color: rgba(255, 255, 0, 0.2);
+}
+
+/* Media query for mobile responsiveness */
+@media (max-width: 768px) {
+    .markdown-content {
+        min-height: 300px;
+    }
+}
+</style>
+
+<!-- Include the jsdiff library -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jsdiff/5.1.0/diff.min.js"></script>
+
+<!-- Include our custom JavaScript -->
+<script src="{{ url_for('static', filename='js/resume_comparison.js') }}"></script>
+{% endblock %} 

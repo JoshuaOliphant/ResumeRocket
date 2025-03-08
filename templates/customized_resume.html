@@ -72,6 +72,7 @@
             <div class="mt-4">
                 <a href="#" class="btn btn-primary" onclick="window.print()">Print Resume</a>
                 <a href="{{ url_for('export_resume', resume_id=resume.id) }}" class="btn btn-secondary">Export</a>
+                <a href="{{ url_for('compare_resume', resume_id=resume.id) }}" class="btn btn-info">Compare Changes</a>
             </div>
         </div>
     </div>
