@@ -3,8 +3,14 @@
 
 # Python bytecode
 __pycache__/
+*/__pycache__/
+*/*/__pycache__/
+*/*/*/__pycache__/
 *.py[cod]
 *$py.class
+.pytest_cache/
+.coverage
+htmlcov/
 
 # Virtual environment
 .venv/
@@ -14,8 +20,11 @@ env/
 
 # Database files
 *.db
+*.db-*
 *.sqlite
 *.sqlite3
+*.backup_*
+*.old
 
 # Distribution / packaging
 dist/
@@ -27,13 +36,30 @@ build/
 .vscode/
 *.swp
 *.swo
+.DS_Store
+Thumbs.db
+*.sublime*
+*~
 
 # Logs
 *.log
+logs/
 
 # OS specific files
 .DS_Store
 Thumbs.db
+desktop.ini
 
 # Flask instance folder
 instance/
+
+# Temporary files
+*.tmp
+*.bak
+.temp/
+tmp/
+
+# Documentation
+/site
+
+CLAUDE.md
