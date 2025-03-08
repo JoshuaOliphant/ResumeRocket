@@ -29,14 +29,14 @@
 - [x] Implement color coding (green for additions, red for deletions, etc.)
 - [x] Test with various resume content to ensure accuracy
 - [x] Optimize performance for longer resumes
-- [ ] Add fallback for browsers with JavaScript disabled
+- [x] Add fallback for browsers with JavaScript disabled
 
 ### 1.4 Change Summary Generation
 - [x] Create a function to analyze and count changes
 - [x] Identify which resume sections were modified
 - [x] Generate human-readable summary text
 - [x] Design and implement summary display at top of page
-- [ ] Add section indicators/badges to show which parts changed
+- [x] Add section indicators/badges to show which parts changed
 - [x] Test with various levels of changes (minor to extensive)
 - [x] Ensure change counting is accurate
 - [ ] Add lightweight animation to draw attention to the summary

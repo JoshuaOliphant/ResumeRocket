@@ -8,6 +8,7 @@
 let originalContent = '';
 let customizedContent = '';
 let diffResults = null;
+let modifiedSections = [];
 
 /**
  * Initialize the comparison view when the DOM is loaded
@@ -113,6 +114,9 @@ function resetContent() {
     
     // Re-highlight differences
     highlightDifferences();
+    
+    // Re-add section badges
+    addSectionBadges();
 }
 
 /**
@@ -162,11 +166,17 @@ function analyzeDiff() {
     // Count changes
     const changes = countChangesFromDiff(diffResults);
     
+    // Identify modified sections
+    modifiedSections = identifyModifiedSections(originalText, customizedText, diffResults);
+    
     // Update the summary
     updateChangeSummary(changes);
     
     // Highlight differences
     highlightDifferences();
+    
+    // Add section badges
+    addSectionBadges();
 }
 
 /**
@@ -211,6 +221,188 @@ function countChangesFromDiff(diffResult) {
 }
 
 /**
+ * Identify which sections of the resume were modified
+ */
+function identifyModifiedSections(originalText, customizedText, diffResult) {
+    // Split texts into lines
+    const originalLines = originalText.split('\n');
+    const customizedLines = customizedText.split('\n');
+    
+    // Identify section headers (lines starting with # or ##)
+    const sectionRegex = /^(#{1,3})\s+(.+)$/;
+    
+    // Extract sections from original text
+    const originalSections = [];
+    let currentSection = null;
+    
+    originalLines.forEach((line, index) => {
+        const match = line.match(sectionRegex);
+        if (match) {
+            currentSection = {
+                level: match[1].length,
+                title: match[2].trim(),
+                startLine: index,
+                endLine: originalLines.length - 1, // Default to end of document
+                modified: false
+            };
+            
+            // Update end line of previous section if exists
+            if (originalSections.length > 0) {
+                originalSections[originalSections.length - 1].endLine = index - 1;
+            }
+            
+            originalSections.push(currentSection);
+        }
+    });
+    
+    // Extract sections from customized text
+    const customizedSections = [];
+    currentSection = null;
+    
+    customizedLines.forEach((line, index) => {
+        const match = line.match(sectionRegex);
+        if (match) {
+            currentSection = {
+                level: match[1].length,
+                title: match[2].trim(),
+                startLine: index,
+                endLine: customizedLines.length - 1, // Default to end of document
+                modified: false
+            };
+            
+            // Update end line of previous section if exists
+            if (customizedSections.length > 0) {
+                customizedSections[customizedSections.length - 1].endLine = index - 1;
+            }
+            
+            customizedSections.push(currentSection);
+        }
+    });
+    
+    // Determine which sections were modified by checking if any diff parts
+    // fall within the section boundaries
+    let originalLineCounter = 0;
+    let customizedLineCounter = 0;
+    
+    diffResult.forEach(part => {
+        const partLines = part.value.split('\n');
+        const lineCount = partLines.length;
+        
+        if (part.added) {
+            // Check which customized sections this addition falls into
+            const startLine = customizedLineCounter;
+            const endLine = customizedLineCounter + lineCount - 1;
+            
+            customizedSections.forEach(section => {
+                // If any part of the diff overlaps with the section, mark it as modified
+                if ((startLine <= section.endLine && endLine >= section.startLine)) {
+                    section.modified = true;
+                }
+            });
+            
+            customizedLineCounter += lineCount;
+        } else if (part.removed) {
+            // Check which original sections this removal falls into
+            const startLine = originalLineCounter;
+            const endLine = originalLineCounter + lineCount - 1;
+            
+            originalSections.forEach(section => {
+                // If any part of the diff overlaps with the section, mark it as modified
+                if ((startLine <= section.endLine && endLine >= section.startLine)) {
+                    section.modified = true;
+                }
+            });
+            
+            originalLineCounter += lineCount;
+        } else {
+            // Unchanged part, just update line counters
+            originalLineCounter += lineCount;
+            customizedLineCounter += lineCount;
+        }
+    });
+    
+    // Get list of modified section titles
+    const modifiedSectionTitles = [];
+    
+    // Add from original sections
+    originalSections.forEach(section => {
+        if (section.modified && !modifiedSectionTitles.includes(section.title)) {
+            modifiedSectionTitles.push(section.title);
+        }
+    });
+    
+    // Add from customized sections
+    customizedSections.forEach(section => {
+        if (section.modified && !modifiedSectionTitles.includes(section.title)) {
+            modifiedSectionTitles.push(section.title);
+        }
+    });
+    
+    return {
+        originalSections,
+        customizedSections,
+        modifiedSectionTitles
+    };
+}
+
+/**
+ * Add badges to section headers to indicate which were modified
+ */
+function addSectionBadges() {
+    if (!modifiedSections || !modifiedSections.modifiedSectionTitles) return;
+    
+    const originalElement = document.getElementById('original-resume');
+    const customizedElement = document.getElementById('customized-resume');
+    
+    if (!originalElement || !customizedElement) return;
+    
+    // Add badges to section headers in original content
+    const originalContent = originalElement.innerHTML;
+    let modifiedOriginalContent = originalContent;
+    
+    modifiedSections.originalSections.forEach(section => {
+        if (section.modified) {
+            // Create regex to find the section header
+            const headerRegex = new RegExp(`(^|>)(#{1,3}\\s+${escapeRegExp(section.title)})(\\s|$|<)`, 'gm');
+            
+            // Replace with header + badge
+            modifiedOriginalContent = modifiedOriginalContent.replace(
+                headerRegex, 
+                `$1$2 <span class="badge bg-warning ms-2" title="This section was modified">Modified</span>$3`
+            );
+        }
+    });
+    
+    originalElement.innerHTML = modifiedOriginalContent;
+    
+    // Add badges to section headers in customized content
+    const customizedContent = customizedElement.innerHTML;
+    let modifiedCustomizedContent = customizedContent;
+    
+    modifiedSections.customizedSections.forEach(section => {
+        if (section.modified) {
+            // Create regex to find the section header
+            const headerRegex = new RegExp(`(^|>)(#{1,3}\\s+${escapeRegExp(section.title)})(\\s|$|<)`, 'gm');
+            
+            // Replace with header + badge
+            modifiedCustomizedContent = modifiedCustomizedContent.replace(
+                headerRegex, 
+                `$1$2 <span class="badge bg-success ms-2" title="This section was improved">Improved</span>$3`
+            );
+        }
+    });
+    
+    customizedElement.innerHTML = modifiedCustomizedContent;
+}
+
+/**
+ * Escape special characters for use in regex
+ */
+function escapeRegExp(string) {
+    return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/**
  * Update the change summary in the UI
  */
 function updateChangeSummary(changes) {
@@ -221,11 +413,24 @@ function updateChangeSummary(changes) {
         changesCountElement.textContent = `${changes.total} changes`;
     }
     
-    if (summaryDetailsElement) {
-        summaryDetailsElement.innerHTML = `
+    if (summaryDetailsElement && modifiedSections && modifiedSections.modifiedSectionTitles) {
+        let summaryHTML = `
             <span class="text-success">${changes.added} additions</span>, 
             <span class="text-danger">${changes.removed} removals</span>
         `;
+        
+        // Add section summary if we have modified sections
+        if (modifiedSections.modifiedSectionTitles.length > 0) {
+            summaryHTML += `<div class="mt-2">Modified sections: `;
+            
+            modifiedSections.modifiedSectionTitles.forEach((title, index) => {
+                summaryHTML += `<span class="badge bg-info me-1">${title}</span>`;
+            });
+            
+            summaryHTML += `</div>`;
+        }
+        
+        summaryDetailsElement.innerHTML = summaryHTML;
     }
 }
 
