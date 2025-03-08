@@ -110,6 +110,66 @@ To update dependencies or add new ones:
 uv pip install [package-name]
 ```
 
+## Database Migrations
+
+This project uses Flask-Migrate to manage database migrations. Here are the basic commands:
+
+### Installing Flask-Migrate
+
+First, make sure you have Flask-Migrate installed:
+
+```bash
+# Using UV (recommended for speed)
+uv pip install flask-migrate
+
+# Or using pip
+pip install flask-migrate
+```
+
+### Initialize the database (first time)
+
+```bash
+flask --app app db upgrade
+```
+
+This will create all necessary tables based on the migrations.
+
+### Creating new migrations
+
+After making changes to your models, generate a new migration:
+
+```bash
+flask --app app db migrate -m "Description of changes"
+```
+
+Review the generated migration script in `migrations/versions/` before applying it.
+
+### Applying migrations
+
+To apply pending migrations:
+
+```bash
+flask --app app db upgrade
+```
+
+### Rolling back migrations
+
+To roll back the most recent migration:
+
+```bash
+flask --app app db downgrade
+```
+
+### Getting migration status
+
+To check the current migration status:
+
+```bash
+flask --app app db current
+```
+
+For more details on using Flask-Migrate, refer to the [official documentation](https://flask-migrate.readthedocs.io/).
+
 ## License
 
 This project is licensed under the MIT License - see the LICENSE file for details.

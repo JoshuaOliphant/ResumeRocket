@@ -17,6 +17,8 @@ from services.file_parser import FileParser
 from services.resume_customizer import ResumeCustomizer
 from extensions import db
 from models import JobDescription, CustomizedResume, User
+from sqlalchemy import text
+from flask_migrate import Migrate
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
@@ -74,6 +76,10 @@ resume_customizer = ResumeCustomizer()
 
 # In-memory storage for resumes
 resumes = {}
+
+# Initialize Flask-Migrate
+migrate = Migrate(app, db)
+logger.info("Flask-Migrate initialized")
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -145,7 +151,9 @@ def customize_resume_endpoint():
             return jsonify({'error': error_msg}), 403
 
         original_content = resumes[resume_id]['content']
-        logger.debug("Found original resume content")
+        file_format = resumes[resume_id].get('file_format', 'md')
+        original_bytes = resumes[resume_id].get('original_bytes')
+        logger.debug(f"Found original resume content with format: {file_format}")
 
         # Generate customized resume
         customization_result = resume_customizer.customize_resume(
@@ -162,7 +170,9 @@ def customize_resume_endpoint():
             user_id=current_user.id,
             ats_score=customization_result['ats_score'],
             matching_keywords=customization_result['matching_keywords'],
-            missing_keywords=customization_result['missing_keywords']
+            missing_keywords=customization_result['missing_keywords'],
+            file_format=file_format,
+            original_bytes=original_bytes
         )
 
         db.session.add(customized_resume)
@@ -237,6 +247,8 @@ def upload_resume():
 
         # Get resume content either from file or form
         resume_content = None
+        file_format = 'md'  # Default format is markdown
+        original_file_bytes = None
         if 'resume_file' in request.files:
             file = request.files['resume_file']
             if file.filename:
@@ -250,7 +262,9 @@ def upload_resume():
                                        suggestions=[])
 
                 try:
-                    resume_content = FileParser.parse_to_markdown(file)
+                    # Use the new method that preserves format
+                    resume_content, original_file_bytes, file_format = FileParser.parse_file_with_format(file)
+                    logger.debug(f"File parsed successfully. Format: {file_format}")
                 except Exception as e:
                     logger.error(f"Error parsing file: {str(e)}")
                     return render_template('partials/analysis_results.html',
@@ -259,6 +273,8 @@ def upload_resume():
                                        suggestions=[])
         else:
             resume_content = request.form.get('resume', '').strip()
+            # For plain text input, we use the content as the original bytes
+            original_file_bytes = resume_content.encode('utf-8')
 
         if not resume_content:
             return render_template('partials/analysis_results.html',
@@ -271,7 +287,9 @@ def upload_resume():
         resumes[resume_id] = {
             'content': resume_content,
             'job_description': job_description,
-            'user_id': current_user.id
+            'user_id': current_user.id,
+            'file_format': file_format,
+            'original_bytes': original_file_bytes
         }
 
         # Create job description
@@ -344,18 +362,61 @@ def export_resume(resume_id, version='customized'):
         if customized_resume.user_id != current_user.id:
             return render_template('error.html', message='Unauthorized access'), 403
 
-        # Determine which content to export based on version parameter
+        # Get the file format
+        file_format = customized_resume.file_format or 'md'
+        
+        # Determine which content to export based on version and format
         if version == 'original':
-            content = customized_resume.original_content
-            filename = f"original_resume_{resume_id}.md"
+            # If format is markdown or the original bytes are not available, return markdown
+            if file_format == 'md' or not customized_resume.original_bytes:
+                content = customized_resume.original_content
+                filename = f"original_resume_{resume_id}.md"
+                mimetype = 'text/markdown'
+            else:
+                # For DOCX or PDF, return the original binary file
+                content = customized_resume.original_bytes
+                extension = file_format
+                filename = f"original_resume_{resume_id}.{extension}"
+                if file_format == 'docx':
+                    mimetype = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+                elif file_format == 'pdf':
+                    mimetype = 'application/pdf'
+                else:
+                    mimetype = 'application/octet-stream'
         else:
-            content = customized_resume.customized_content
-            filename = f"customized_resume_{resume_id}.md"
+            # For customized version
+            if file_format == 'md':
+                # If original was markdown, export as markdown
+                content = customized_resume.customized_content
+                filename = f"customized_resume_{resume_id}.md"
+                mimetype = 'text/markdown'
+            elif file_format == 'docx':
+                # If original was DOCX, convert the customized markdown back to DOCX
+                try:
+                    content = FileParser.markdown_to_docx(customized_resume.customized_content)
+                    filename = f"customized_resume_{resume_id}.docx"
+                    mimetype = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+                except Exception as e:
+                    logger.error(f"Error converting to DOCX: {str(e)}")
+                    # Fallback to markdown if conversion fails
+                    content = customized_resume.customized_content
+                    filename = f"customized_resume_{resume_id}.md"
+                    mimetype = 'text/markdown'
+            elif file_format == 'pdf':
+                # For PDF, we can only return markdown for now since PDF generation is complex
+                content = customized_resume.customized_content
+                filename = f"customized_resume_{resume_id}.md"
+                mimetype = 'text/markdown'
+                flash('PDF export is not supported. Exporting as Markdown instead.', 'warning')
+            else:
+                content = customized_resume.customized_content
+                filename = f"customized_resume_{resume_id}.md"
+                mimetype = 'text/markdown'
 
         # Create response with proper headers for download
         response = app.response_class(
             response=content,
-            mimetype='text/markdown',
+            mimetype=mimetype,
             status=200
         )
         response.headers.set('Content-Disposition', f'attachment; filename={filename}')
@@ -440,61 +501,38 @@ def toggle_job_input():
 # Simple database initialization
 with app.app_context():
     try:
-        # Ensure the database directory exists
-        db_dir = os.path.dirname(db_path)
-        os.makedirs(db_dir, exist_ok=True)
-        
-        # Before creating tables, explicitly set the database file permissions
-        # First, touch the file to create it if it doesn't exist
-        if not os.path.exists(db_path):
-            with open(db_path, 'w') as f:
-                pass
-            logger.info(f"Created empty database file at {db_path}")
-            
-            # Set permissions on the file
-            try:
-                os.chmod(db_path, 0o666)  # rw-rw-rw-
-                logger.info(f"Set permissions on database file to 0o666")
-            except Exception as perm_ex:
-                logger.error(f"Failed to set permissions on database file: {str(perm_ex)}")
-        
-        # Special handling for SQLite on network/shared drives like Dropbox
-        # Set a longer timeout and enable WAL mode for better concurrency
-        from sqlalchemy import event
-        from sqlalchemy.engine import Engine
+        # Check if we can connect to the database
         import sqlite3
+        from sqlalchemy import inspect
         
-        @event.listens_for(Engine, "connect")
-        def set_sqlite_pragma(dbapi_connection, connection_record):
-            if isinstance(dbapi_connection, sqlite3.Connection):
-                cursor = dbapi_connection.cursor()
-                # Set a longer timeout for busy connections
-                cursor.execute("PRAGMA busy_timeout = 30000")  # 30 seconds
-                # Use WAL mode for better concurrency
-                cursor.execute("PRAGMA journal_mode = WAL")
-                cursor.close()
+        # Check if tables exist instead of creating them automatically
+        inspector = inspect(db.engine)
+        tables_exist = inspector.get_table_names()
         
-        # Create database tables
-        db.create_all()
-        logger.info("Database tables created successfully")
+        if not tables_exist:
+            logger.warning("Database tables not found. Please run migrations with 'flask db upgrade'")
+            
+        logger.info(f"Database tables found: {tables_exist}")
     except Exception as e:
-        logger.error(f"Error creating database tables: {str(e)}")
+        logger.error(f"Error checking database tables: {str(e)}")
         logger.error(f"Current directory: {os.getcwd()}")
         # Try to provide helpful information about potential issues
         try:
             # Check database status
-            if os.path.exists(db_path):
-                logger.info(f"Database file exists at {db_path}")
-                logger.info(f"File permissions: {oct(os.stat(db_path).st_mode)}")
-                # Try to open the file directly to diagnose issues
-                try:
-                    with open(db_path, 'rb+') as f:
-                        logger.info("Successfully opened database file for read/write")
-                except Exception as open_ex:
-                    logger.error(f"Failed to open database file: {str(open_ex)}")
+            if 'sqlite' in app.config['SQLALCHEMY_DATABASE_URI'].lower():
+                logger.info("Using SQLite database")
+                db_path = app.config['SQLALCHEMY_DATABASE_URI'].replace('sqlite:///', '')
+                logger.info(f"Database path: {db_path}")
+                
+                if not os.path.isabs(db_path):
+                    abs_path = os.path.abspath(db_path)
+                    logger.info(f"Absolute database path: {abs_path}")
+                    
+                if os.path.exists(db_path):
+                    logger.info(f"Database file exists. Size: {os.path.getsize(db_path)}")
+                else:
+                    logger.warning("Database file does not exist")
             else:
-                logger.info(f"Database file does not exist yet at {db_path} (will be created)")
-                logger.info(f"Instance folder permissions: {oct(os.stat(app.instance_path).st_mode)}")
-                logger.info(f"Instance folder is writable: {os.access(app.instance_path, os.W_OK)}")
+                logger.info(f"Using database: {app.config['SQLALCHEMY_DATABASE_URI']}")
         except Exception as ex:
-            logger.error(f"Error checking database info: {str(ex)}")
+            logger.error(f"Error checking database status: {str(ex)}")
