@@ -6,10 +6,9 @@ from flask_jwt_extended import JWTManager
 from services.ats_analyzer import ATSAnalyzer
 from services.ai_suggestions import AISuggestions
 from services.file_parser import FileParser
-from services.resume_customizer import ResumeCustomizer # Added import for resume customization service
+from services.resume_customizer import ResumeCustomizer
 from extensions import db
-from models import JobDescription, CustomizedResume # Added imports for models
-
+from models import JobDescription, CustomizedResume
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
@@ -22,10 +21,10 @@ app.config['JWT_SECRET_KEY'] = os.environ.get("JWT_SECRET_KEY", app.secret_key)
 
 # Configure SQLAlchemy for better connection handling
 app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
-    "pool_pre_ping": True,  # Enable pre-ping
-    "pool_recycle": 300,    # Recycle connections every 5 minutes
-    "pool_timeout": 30,     # Timeout after 30 seconds
-    "max_overflow": 15      # Allow up to 15 extra connections
+    "pool_pre_ping": True,
+    "pool_recycle": 300,
+    "pool_timeout": 30,
+    "max_overflow": 15
 }
 
 # Initialize extensions
@@ -37,7 +36,7 @@ login_manager.login_view = 'auth.login'
 # Initialize services
 ats_analyzer = ATSAnalyzer()
 ai_suggestions = AISuggestions()
-resume_customizer = ResumeCustomizer() # Initialize resume customizer service
+resume_customizer = ResumeCustomizer()
 
 # In-memory storage for resumes
 resumes = {}
@@ -52,18 +51,6 @@ from routes.auth import auth_bp
 from routes.jobs import jobs_bp
 app.register_blueprint(auth_bp, url_prefix='/auth')
 app.register_blueprint(jobs_bp, url_prefix='/api')
-
-@app.route('/login')
-def login():
-    return render_template('login.html')
-
-@app.route('/register')
-def register():
-    return render_template('register.html')
-
-@app.route('/')
-def index():
-    return render_template('index.html')
 
 @app.route('/upload', methods=['POST'])
 @login_required
@@ -86,7 +73,9 @@ def upload_resume():
             # If URL is provided, fetch job description
             from services.job_description_processor import JobDescriptionProcessor
             processor = JobDescriptionProcessor()
-            job_description = processor.extract_from_url(job_url)
+            job_data = processor.extract_from_url(job_url)
+            # Extract content from the returned dictionary
+            job_description = job_data['content'] if isinstance(job_data, dict) else job_data
         else:
             job_description = request.form.get('job_description', '').strip()
 
@@ -137,7 +126,7 @@ def upload_resume():
 
         # Create job description
         job = JobDescription(
-            title='Job Description',
+            title="Job Description",
             content=job_description,
             user_id=current_user.id
         )
@@ -165,7 +154,7 @@ def upload_resume():
     except Exception as e:
         logger.error(f"Error processing resume: {str(e)}")
         return render_template('partials/analysis_results.html',
-                            error='Failed to process resume. Please try again.',
+                            error=f'Error processing resume: {str(e)}',
                             ats_score={'score': 0, 'matching_keywords': [], 'missing_keywords': []},
                             suggestions=[])
 
@@ -289,6 +278,18 @@ def customize_resume_endpoint():
         logger.error(f"Error customizing resume: {str(e)}")
         flash(f'Error customizing resume: {str(e)}', 'error')
         return redirect(url_for('index'))
+
+@app.route('/login')
+def login():
+    return render_template('login.html')
+
+@app.route('/register')
+def register():
+    return render_template('register.html')
+
+@app.route('/')
+def index():
+    return render_template('index.html')
 
 with app.app_context():
     db.create_all()
