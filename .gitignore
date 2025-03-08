@@ -1,5 +1,10 @@
-# Environment variables
+# Environment variables and secrets
 .env
+.env.*
+*.env
+.env.local
+.env.development
+.env.production
 
 # Python bytecode
 __pycache__/

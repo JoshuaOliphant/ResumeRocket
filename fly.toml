@@ -1,0 +1,39 @@
+# fly.toml app configuration file generated for resumerocket on 2025-03-08T13:35:03-08:00
+#
+# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
+#
+
+app = 'resumerocket'
+primary_region = 'sjc'
+
+[build]
+  dockerfile = 'Dockerfile'
+
+[env]
+  PORT = '8080'
+  # Non-sensitive environment variables
+  MAX_CONTENT_LENGTH = '5242880'
+  
+# Sensitive environment variables should be set using the fly secrets command:
+# fly secrets set JINA_API_KEY=your_key_here ANTHROPIC_API_KEY=your_key_here FLASK_SECRET_KEY=your_secret_here
+
+# Ensure DATABASE_URL is correctly set to the persistent storage location
+[env.DATABASE_URL]
+  value = "sqlite:///instance/resumerocket.db"
+
+[[mounts]]
+  source = 'resumerocket_data'
+  destination = '/app/instance'
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = 'stop'
+  auto_start_machines = true
+  min_machines_running = 0
+  processes = ['app']
+
+[[vm]]
+  cpu_kind = 'shared'
+  cpus = 1
+  memory_mb = 1024
