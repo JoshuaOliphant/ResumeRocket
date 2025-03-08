@@ -232,8 +232,12 @@ def view_customized_resume(resume_id):
 def customize_resume_endpoint():
     try:
         logger.debug(f"Form data received: {request.form}")
-        resume_id = request.form.get('resume_id')
-        job_id = request.form.get('job_id')
+        logger.debug(f"JSON data received: {request.get_json(silent=True)}")
+
+        # Get data from either JSON or form data
+        data = request.get_json(silent=True) if request.is_json else request.form
+        resume_id = data.get('resume_id')
+        job_id = data.get('job_id')
 
         logger.debug(f"Raw values - resume_id: {resume_id}, job_id: {job_id}")
 
@@ -290,12 +294,23 @@ def customize_resume_endpoint():
         db.session.commit()
         logger.debug(f"Created customized resume with ID: {customized_resume.id}")
 
-        return redirect(url_for('view_customized_resume', resume_id=customized_resume.id))
+        # Return JSON response for HTMX requests
+        if request.headers.get('HX-Request'):
+            return redirect(url_for('view_customized_resume', resume_id=customized_resume.id))
+        else:
+            return jsonify({
+                'success': True,
+                'redirect': url_for('view_customized_resume', resume_id=customized_resume.id)
+            })
 
     except Exception as e:
         logger.error(f"Error customizing resume: {str(e)}")
-        flash(f'Error customizing resume: {str(e)}', 'error')
-        return redirect(url_for('index'))
+        # Return appropriate error response based on request type
+        if request.headers.get('HX-Request'):
+            flash(f'Error customizing resume: {str(e)}', 'error')
+            return redirect(url_for('index'))
+        else:
+            return jsonify({'error': str(e)}), 400
 
 @app.route('/login')
 def login():

@@ -39,13 +39,14 @@
 
 {% if resume_id is defined and job_id is defined %}
 <div class="mt-4">
-    <form method="POST" action="{{ url_for('customize_resume_endpoint') }}">
-        <input type="hidden" name="resume_id" value="{{ resume_id }}">
-        <input type="hidden" name="job_id" value="{{ job_id }}">
-        <button type="submit" class="btn btn-primary">
-            Customize Resume for Job
-        </button>
-    </form>
+    <button class="btn btn-primary"
+            hx-post="{{ url_for('customize_resume_endpoint') }}"
+            hx-headers='{"X-CSRFToken": "{{ csrf_token() }}"}'
+            hx-vals='{"resume_id": "{{ resume_id }}", "job_id": "{{ job_id }}"}'
+            hx-target="body"
+            hx-push-url="true">
+        Customize Resume for Job
+    </button>
 </div>
 {% endif %}
 {% endif %}
