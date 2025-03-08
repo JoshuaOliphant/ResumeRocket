@@ -334,66 +334,60 @@ function renderHtmlContent() {
         return;
     }
     
-    console.log('Original markdown content length:', originalMarkdown.innerHTML.length);
-    console.log('Customized markdown content length:', customizedMarkdown.innerHTML.length);
+    // Get the raw content
+    const originalContent = originalMarkdown.textContent || originalMarkdown.innerText;
+    const customizedContent = customizedMarkdown.textContent || customizedMarkdown.innerText;
     
-    // Process the content to convert it to formatted HTML while preserving diff highlighting
-    processContentWithDiff(originalMarkdown.innerHTML, originalHtml, 'original');
-    processContentWithDiff(customizedMarkdown.innerHTML, customizedHtml, 'customized');
+    console.log('Original content length:', originalContent.length);
+    console.log('Customized content length:', customizedContent.length);
+    
+    // Direct approach - render the content with marked and then apply diff highlighting
+    try {
+        // First, render the content as HTML
+        originalHtml.innerHTML = marked.parse(originalContent);
+        customizedHtml.innerHTML = marked.parse(customizedContent);
+        
+        // Then apply diff highlighting
+        applyDiffHighlighting(originalContent, customizedContent, originalHtml, customizedHtml);
+        
+        console.log('Successfully rendered HTML content');
+    } catch (error) {
+        console.error('Error rendering HTML content:', error);
+        originalHtml.innerHTML = '<p>Error rendering content</p>';
+        customizedHtml.innerHTML = '<p>Error rendering content</p>';
+    }
 }
 
-// Process content with diff spans and convert to HTML
-function processContentWithDiff(content, targetElement, type) {
-    if (!content || content.trim() === '') {
-        console.error(`Empty content for ${type}`);
-        targetElement.innerHTML = '<p>No content available</p>';
-        return;
-    }
+// Apply diff highlighting to the HTML content
+function applyDiffHighlighting(originalText, customizedText, originalHtml, customizedHtml) {
+    // Use the diff library to find differences
+    const diffResult = Diff.diffWords(originalText, customizedText);
     
-    console.log(`Processing ${type} content, length:`, content.length);
+    // Create HTML with diff highlighting
+    let originalHighlighted = '';
+    let customizedHighlighted = '';
     
-    try {
-        // First, create temp element to work with the content
-        const tempDiv = document.createElement('div');
-        tempDiv.innerHTML = content;
-        
-        // Get all diff spans
-        const diffSpans = tempDiv.querySelectorAll('.diff-added, .diff-removed');
-        console.log(`Found ${diffSpans.length} diff spans in ${type} content`);
-        
-        // Store the spans and their text content
-        const spanData = [];
-        diffSpans.forEach((span, index) => {
-            const placeholder = `DIFF_PLACEHOLDER_${type}_${index}_${Math.random().toString(36).substring(2, 8)}`;
-            spanData.push({
-                class: span.className,
-                content: span.textContent,
-                placeholder: placeholder
-            });
-            
-            // Replace the span with a unique placeholder
-            span.outerHTML = placeholder;
-        });
-        
-        // Get the content with placeholders
-        const contentWithPlaceholders = tempDiv.textContent || tempDiv.innerText;
-        
-        // Convert to HTML with marked
-        let htmlContent = marked.parse(contentWithPlaceholders);
-        
-        // Now replace the placeholders with highlighted spans
-        spanData.forEach(data => {
-            const spanHTML = `<span class="${data.class}">${data.content}</span>`;
-            htmlContent = htmlContent.replace(data.placeholder, spanHTML);
-        });
-        
-        // Set the HTML content
-        targetElement.innerHTML = htmlContent;
-        console.log(`Successfully rendered ${type} HTML content`);
-    } catch (error) {
-        console.error(`Error processing ${type} content:`, error);
-        targetElement.innerHTML = `<p>Error rendering content: ${error.message}</p>`;
-    }
+    diffResult.forEach(part => {
+        if (part.added) {
+            // Added parts only show in customized
+            customizedHighlighted += `<span class="diff-added">${part.value}</span>`;
+        } else if (part.removed) {
+            // Removed parts only show in original
+            originalHighlighted += `<span class="diff-removed">${part.value}</span>`;
+        } else {
+            // Unchanged parts show in both
+            originalHighlighted += part.value;
+            customizedHighlighted += part.value;
+        }
+    });
+    
+    // Convert the highlighted text to HTML
+    const originalHtmlWithDiff = marked.parse(originalHighlighted);
+    const customizedHtmlWithDiff = marked.parse(customizedHighlighted);
+    
+    // Update the HTML content
+    originalHtml.innerHTML = originalHtmlWithDiff;
+    customizedHtml.innerHTML = customizedHtmlWithDiff;
 }
 
 // Set up toggle buttons
