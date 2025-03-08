@@ -306,28 +306,17 @@ marked.setOptions({
     sanitize: false      // Allow HTML tags (important for diff highlighting)
 });
 
-// Store original functions from resume_comparison.js that we need to override
-let originalInitFunction = null;
-let originalHighlightDifferences = null;
-
 // Initialize the page when DOM is loaded
 document.addEventListener('DOMContentLoaded', function() {
     console.log('HTML rendering script loaded');
     
-    // Save original functions before they're called
-    if (window.analyzeDiff) originalAnalyzeDiff = window.analyzeDiff;
-    if (window.highlightDifferences) originalHighlightDifferences = window.highlightDifferences;
-    
-    // Override the highlightDifferences function
-    window.highlightDifferences = function() {
-        // First call the original function to set up the diffs in the hidden markdown elements
-        if (originalHighlightDifferences) {
-            originalHighlightDifferences();
-        }
-        
-        // Then render the HTML versions
+    // Render the HTML content after a short delay to ensure diff highlighting is applied first
+    setTimeout(function() {
         renderHtmlContent();
-    };
+        
+        // Add event listeners for toggle buttons
+        setupToggleButtons();
+    }, 500);
 });
 
 // Function to render both HTML content areas
@@ -340,57 +329,75 @@ function renderHtmlContent() {
     const originalHtml = document.getElementById('original-resume-html');
     const customizedHtml = document.getElementById('customized-resume-html');
     
-    if (originalMarkdown && customizedMarkdown && originalHtml && customizedHtml) {
-        // Extract the HTML with diff spans already applied
-        const originalContent = originalMarkdown.innerHTML;
-        const customizedContent = customizedMarkdown.innerHTML;
-        
-        // Process the content to convert it to formatted HTML while preserving diff highlighting
-        processContentWithDiff(originalContent, originalHtml, 'original');
-        processContentWithDiff(customizedContent, customizedHtml, 'customized');
+    if (!originalMarkdown || !customizedMarkdown || !originalHtml || !customizedHtml) {
+        console.error('One or more content elements not found');
+        return;
     }
+    
+    console.log('Original markdown content length:', originalMarkdown.innerHTML.length);
+    console.log('Customized markdown content length:', customizedMarkdown.innerHTML.length);
+    
+    // Process the content to convert it to formatted HTML while preserving diff highlighting
+    processContentWithDiff(originalMarkdown.innerHTML, originalHtml, 'original');
+    processContentWithDiff(customizedMarkdown.innerHTML, customizedHtml, 'customized');
 }
 
 // Process content with diff spans and convert to HTML
 function processContentWithDiff(content, targetElement, type) {
-    // First, create temp element to work with the content
-    const tempDiv = document.createElement('div');
-    tempDiv.innerHTML = content;
+    if (!content || content.trim() === '') {
+        console.error(`Empty content for ${type}`);
+        targetElement.innerHTML = '<p>No content available</p>';
+        return;
+    }
     
-    // Get all diff spans
-    const diffSpans = tempDiv.querySelectorAll('.diff-added, .diff-removed');
+    console.log(`Processing ${type} content, length:`, content.length);
     
-    // Store the spans and their text content
-    const spanData = [];
-    diffSpans.forEach(span => {
-        spanData.push({
-            class: span.className,
-            content: span.textContent,
-            placeholder: `DIFF_PLACEHOLDER_${Math.random().toString(36).substring(2, 15)}`
+    try {
+        // First, create temp element to work with the content
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = content;
+        
+        // Get all diff spans
+        const diffSpans = tempDiv.querySelectorAll('.diff-added, .diff-removed');
+        console.log(`Found ${diffSpans.length} diff spans in ${type} content`);
+        
+        // Store the spans and their text content
+        const spanData = [];
+        diffSpans.forEach((span, index) => {
+            const placeholder = `DIFF_PLACEHOLDER_${type}_${index}_${Math.random().toString(36).substring(2, 8)}`;
+            spanData.push({
+                class: span.className,
+                content: span.textContent,
+                placeholder: placeholder
+            });
+            
+            // Replace the span with a unique placeholder
+            span.outerHTML = placeholder;
         });
         
-        // Replace the span with a unique placeholder
-        span.outerHTML = spanData[spanData.length - 1].placeholder;
-    });
-    
-    // Get the content with placeholders
-    const contentWithPlaceholders = tempDiv.textContent || tempDiv.innerText;
-    
-    // Convert to HTML with marked
-    let htmlContent = marked.parse(contentWithPlaceholders);
-    
-    // Now replace the placeholders with highlighted spans
-    spanData.forEach(data => {
-        const spanHTML = `<span class="${data.class}">${data.content}</span>`;
-        htmlContent = htmlContent.replace(data.placeholder, spanHTML);
-    });
-    
-    // Set the HTML content
-    targetElement.innerHTML = htmlContent;
+        // Get the content with placeholders
+        const contentWithPlaceholders = tempDiv.textContent || tempDiv.innerText;
+        
+        // Convert to HTML with marked
+        let htmlContent = marked.parse(contentWithPlaceholders);
+        
+        // Now replace the placeholders with highlighted spans
+        spanData.forEach(data => {
+            const spanHTML = `<span class="${data.class}">${data.content}</span>`;
+            htmlContent = htmlContent.replace(data.placeholder, spanHTML);
+        });
+        
+        // Set the HTML content
+        targetElement.innerHTML = htmlContent;
+        console.log(`Successfully rendered ${type} HTML content`);
+    } catch (error) {
+        console.error(`Error processing ${type} content:`, error);
+        targetElement.innerHTML = `<p>Error rendering content: ${error.message}</p>`;
+    }
 }
 
-// Add event listeners for toggle buttons
-document.addEventListener('DOMContentLoaded', function() {
+// Set up toggle buttons
+function setupToggleButtons() {
     const toggleButtons = document.querySelectorAll('.toggle-markdown-view');
     toggleButtons.forEach(button => {
         button.addEventListener('click', function() {
@@ -412,7 +419,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     });
-});
+}
 
 // Custom print function to ensure side-by-side view is maintained
 function printComparison() {
