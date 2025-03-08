@@ -232,9 +232,8 @@ def view_customized_resume(resume_id):
 def customize_resume_endpoint():
     try:
         logger.debug(f"Form data received: {request.form}")
-        logger.debug(f"JSON data received: {request.get_json(silent=True)}")
 
-        # Get data from either JSON or form data
+        # Handle both form data and JSON requests
         data = request.get_json(silent=True) if request.is_json else request.form
         resume_id = data.get('resume_id')
         job_id = data.get('job_id')
@@ -242,32 +241,42 @@ def customize_resume_endpoint():
         logger.debug(f"Raw values - resume_id: {resume_id}, job_id: {job_id}")
 
         if not resume_id or not job_id:
-            logger.error("Missing required IDs - resume_id or job_id not provided")
-            flash('Both resume and job information are required', 'error')
-            return redirect(url_for('index'))
+            error_msg = 'Both resume and job information are required'
+            logger.error(f"Missing required IDs - {error_msg}")
+            if request.headers.get('HX-Request'):
+                flash(error_msg, 'error')
+                return redirect(url_for('index'))
+            return jsonify({'error': error_msg}), 400
 
         try:
             resume_id = int(resume_id)
             job_id = int(job_id)
         except (TypeError, ValueError) as e:
+            error_msg = 'Invalid resume or job ID format'
             logger.error(f"Invalid ID format: {str(e)}")
-            flash('Invalid resume or job ID format', 'error')
-            return redirect(url_for('index'))
-
-        logger.debug(f"Converted values - resume_id: {resume_id}, job_id: {job_id}")
+            if request.headers.get('HX-Request'):
+                flash(error_msg, 'error')
+                return redirect(url_for('index'))
+            return jsonify({'error': error_msg}), 400
 
         # Get the job description
         job = JobDescription.query.get_or_404(job_id)
         if job.user_id != current_user.id:
+            error_msg = 'Unauthorized access'
             logger.error(f"Unauthorized access - job.user_id: {job.user_id}, current_user.id: {current_user.id}")
-            flash('Unauthorized access', 'error')
-            return redirect(url_for('index'))
+            if request.headers.get('HX-Request'):
+                flash(error_msg, 'error')
+                return redirect(url_for('index'))
+            return jsonify({'error': error_msg}), 403
 
         # Get the original resume content
         if resume_id not in resumes or resumes[resume_id]['user_id'] != current_user.id:
+            error_msg = 'Invalid resume or unauthorized access'
             logger.error(f"Invalid resume access - resume_id: {resume_id}")
-            flash('Invalid resume or unauthorized access', 'error')
-            return redirect(url_for('index'))
+            if request.headers.get('HX-Request'):
+                flash(error_msg, 'error')
+                return redirect(url_for('index'))
+            return jsonify({'error': error_msg}), 403
 
         original_content = resumes[resume_id]['content']
         logger.debug("Found original resume content")
@@ -294,23 +303,21 @@ def customize_resume_endpoint():
         db.session.commit()
         logger.debug(f"Created customized resume with ID: {customized_resume.id}")
 
-        # Return JSON response for HTMX requests
+        # Return appropriate response based on request type
         if request.headers.get('HX-Request'):
             return redirect(url_for('view_customized_resume', resume_id=customized_resume.id))
-        else:
-            return jsonify({
-                'success': True,
-                'redirect': url_for('view_customized_resume', resume_id=customized_resume.id)
-            })
+        return jsonify({
+            'success': True,
+            'redirect': url_for('view_customized_resume', resume_id=customized_resume.id)
+        })
 
     except Exception as e:
         logger.error(f"Error customizing resume: {str(e)}")
-        # Return appropriate error response based on request type
+        error_msg = f'Error customizing resume: {str(e)}'
         if request.headers.get('HX-Request'):
-            flash(f'Error customizing resume: {str(e)}', 'error')
+            flash(error_msg, 'error')
             return redirect(url_for('index'))
-        else:
-            return jsonify({'error': str(e)}), 400
+        return jsonify({'error': error_msg}), 500
 
 @app.route('/login')
 def login():

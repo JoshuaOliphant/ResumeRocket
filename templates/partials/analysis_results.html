@@ -41,7 +41,7 @@
 <div class="mt-4">
     <button class="btn btn-primary"
             hx-post="{{ url_for('customize_resume_endpoint') }}"
-            hx-headers='{"X-CSRFToken": "{{ csrf_token() }}"}'
+            hx-headers='{"X-CSRFToken": "{{ csrf_token() }}", "Content-Type": "application/x-www-form-urlencoded"}'
             hx-vals='{"resume_id": "{{ resume_id }}", "job_id": "{{ job_id }}"}'
             hx-target="body"
             hx-push-url="true">
