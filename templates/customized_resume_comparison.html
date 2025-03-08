@@ -74,7 +74,7 @@
                         <button id="show-diff-btn" class="btn btn-info">Show Diff Only</button>
                     </div>
                     <div class="mb-2">
-                        <button id="print-btn" class="btn btn-secondary" onclick="window.print()">Print Comparison</button>
+                        <button id="print-btn" class="btn btn-secondary" onclick="printComparison()">Print Comparison</button>
                         <a id="download-original-btn" href="{{ url_for('export_resume', resume_id=resume.id, version='original') if resume else '#' }}" class="btn btn-outline-secondary">Download Original</a>
                         <a id="download-customized-btn" href="{{ url_for('export_resume', resume_id=resume.id, version='customized') if resume else '#' }}" class="btn btn-success">Download Customized</a>
                     </div>
@@ -115,6 +115,46 @@
         min-height: 300px;
     }
 }
+
+/* Print-specific styles */
+@media print {
+    /* Ensure the side-by-side layout is maintained when printing */
+    .col-md-6 {
+        width: 50% !important;
+        float: left !important;
+        display: block !important;
+    }
+    
+    /* Hide elements not needed for printing */
+    .card-header, .footer, #toggle-view-btn, #show-diff-btn, #print-btn, 
+    #download-original-btn, #download-customized-btn {
+        display: none !important;
+    }
+    
+    /* Remove max-height to show all content */
+    .markdown-content {
+        max-height: none !important;
+        overflow: visible !important;
+    }
+    
+    /* Ensure diff highlighting is visible in print */
+    .diff-added {
+        background-color: rgba(0, 255, 0, 0.2) !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
+    
+    .diff-removed {
+        background-color: rgba(255, 0, 0, 0.2) !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
+    
+    /* Add page break control */
+    .page-break-after {
+        page-break-after: always;
+    }
+}
 </style>
 
 <!-- Include the jsdiff library -->
@@ -122,4 +162,49 @@
 
 <!-- Include our custom JavaScript -->
 <script src="{{ url_for('static', filename='js/resume_comparison.js') }}"></script>
+
+<script>
+// Custom print function to ensure side-by-side view is maintained
+function printComparison() {
+    // Make sure we're in side-by-side view before printing
+    const originalCol = document.querySelector('.col-md-6:first-child');
+    const customizedCol = document.querySelector('.col-md-6:last-child');
+    
+    // Store current view state
+    const originalHidden = originalCol.classList.contains('d-none');
+    const customizedHidden = customizedCol.classList.contains('d-none');
+    const originalWidth = originalCol.className.includes('col-md-12');
+    const customizedWidth = customizedCol.className.includes('col-md-12');
+    
+    // Temporarily switch to side-by-side view if not already
+    if (originalHidden || customizedHidden || originalWidth || customizedWidth) {
+        // Reset to side-by-side view
+        originalCol.classList.remove('d-none', 'col-md-12');
+        customizedCol.classList.remove('d-none', 'col-md-12');
+        originalCol.classList.add('col-md-6');
+        customizedCol.classList.add('col-md-6');
+    }
+    
+    // Print the page
+    window.print();
+    
+    // Restore previous view state
+    setTimeout(() => {
+        if (originalHidden) {
+            originalCol.classList.add('d-none');
+        }
+        if (customizedHidden) {
+            customizedCol.classList.add('d-none');
+        }
+        if (originalWidth) {
+            originalCol.classList.remove('col-md-6');
+            originalCol.classList.add('col-md-12');
+        }
+        if (customizedWidth) {
+            customizedCol.classList.remove('col-md-6');
+            customizedCol.classList.add('col-md-12');
+        }
+    }, 500); // Small delay to ensure print dialog has opened
+}
+</script>
 {% endblock %} 
