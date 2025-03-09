@@ -65,23 +65,23 @@
 ## Phase 3: PDF Support
 
 ### 3.1 PDF Extraction with unstructured.io
-- [ ] Add unstructured.io to project dependencies
-- [ ] Set up proper authentication for the unstructured.io API
-- [ ] Create a function to extract text content from PDFs
-- [ ] Ensure document structure is preserved during extraction
-- [ ] Implement conversion to markdown or HTML
-- [ ] Test with various PDF layouts (especially resume templates)
-- [ ] Optimize extraction parameters for resume documents
-- [ ] Handle errors and fallbacks for problematic PDFs
+- [x] Add unstructured.io to project dependencies
+- [x] Set up proper authentication for the unstructured.io API
+- [x] Create a function to extract text content from PDFs
+- [x] Ensure document structure is preserved during extraction
+- [x] Implement conversion to markdown or HTML
+- [x] Test with various PDF layouts (especially resume templates)
+- [x] Optimize extraction parameters for resume documents
+- [x] Handle errors and fallbacks for problematic PDFs
 
 ### 3.2 PDF Integration with Comparison View
-- [ ] Update file parser to detect and handle PDF files
-- [ ] Connect PDF processing pipeline to the comparison view
-- [ ] Ensure PDF-sourced content renders correctly in the UI
-- [ ] Test the entire flow from upload to comparison
+- [x] Update file parser to detect and handle PDF files
+- [x] Connect PDF processing pipeline to the comparison view
+- [x] Ensure PDF-sourced content renders correctly in the UI
+- [x] Test the entire flow from upload to comparison
 - [ ] Add caching mechanism to improve performance for large PDFs
 - [ ] Implement fallback extraction method for problematic PDFs
-- [ ] Add detailed logging for PDF processing
+- [x] Add detailed logging for PDF processing
 
 ## Phase 4: UI/UX Enhancements
 

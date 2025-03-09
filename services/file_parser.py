@@ -6,6 +6,7 @@ import PyPDF2
 import logging
 from werkzeug.utils import secure_filename
 from docx.opc.exceptions import PackageNotFoundError
+from services.pdf_extractor import PDFExtractor  # Import the new PDFExtractor class
 
 logger = logging.getLogger(__name__)
 
@@ -18,6 +19,11 @@ class FileParser:
         'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'docx',
         'application/pdf': 'pdf'
     }
+
+    def __init__(self):
+        """Initialize FileParser with a PDFExtractor instance"""
+        self.pdf_extractor = PDFExtractor()
+        logger.info("Initialized FileParser with PDFExtractor")
 
     @staticmethod
     def allowed_file(file):
@@ -79,8 +85,7 @@ class FileParser:
             logger.error(f"Error validating file: {str(e)}")
             return False, f"Error validating file: {str(e)}"
 
-    @staticmethod
-    def parse_to_markdown(file):
+    def parse_to_markdown(self, file):
         """Parse different file types to markdown format"""
         try:
             # Get file info
@@ -122,15 +127,24 @@ class FileParser:
                 return content
 
             elif mime_type == 'application/pdf':
-                reader = PyPDF2.PdfReader(io.BytesIO(file_content))
-                markdown = []
-                for page in reader.pages:
-                    text = page.extract_text()
-                    if text:
-                        markdown.append(text)
-                content = '\n\n'.join(markdown)
-                logger.debug(f"Parsed PDF content length: {len(content)}")
-                return content
+                # Use the new PDFExtractor for PDF files
+                try:
+                    # Try using unstructured.io for better extraction
+                    content = self.pdf_extractor.extract_text(file_content)
+                    logger.debug(f"Parsed PDF content with unstructured.io: {len(content)} chars")
+                    return content
+                except Exception as e:
+                    logger.warning(f"Error with unstructured.io PDF extraction, falling back to PyPDF2: {str(e)}")
+                    # Fall back to PyPDF2 if unstructured.io fails
+                    reader = PyPDF2.PdfReader(io.BytesIO(file_content))
+                    markdown = []
+                    for page in reader.pages:
+                        text = page.extract_text()
+                        if text:
+                            markdown.append(text)
+                    content = '\n\n'.join(markdown)
+                    logger.debug(f"Parsed PDF content with PyPDF2: {len(content)} chars")
+                    return content
 
             else:
                 raise ValueError(f"Unsupported file type: {mime_type}")
@@ -139,8 +153,7 @@ class FileParser:
             logger.error(f"Error parsing file: {str(e)}")
             raise Exception(f"Error parsing file: {str(e)}")
 
-    @staticmethod
-    def parse_file_with_format(file):
+    def parse_file_with_format(self, file):
         """
         Parse file to markdown for display but preserve original format for download
         Returns a tuple of (markdown_content, original_file_bytes, file_format)
@@ -190,13 +203,22 @@ class FileParser:
                 
             # For PDF files, convert to markdown for display but keep original bytes
             elif mime_type == 'application/pdf':
-                reader = PyPDF2.PdfReader(io.BytesIO(file_content))
-                markdown = []
-                for page in reader.pages:
-                    text = page.extract_text()
-                    if text:
-                        markdown.append(text)
-                content = '\n\n'.join(markdown)
+                # Use the new PDFExtractor for PDF files
+                try:
+                    # Try using unstructured.io for better extraction
+                    content = self.pdf_extractor.extract_text(file_content)
+                    logger.debug(f"Parsed PDF content with unstructured.io: {len(content)} chars")
+                except Exception as e:
+                    logger.warning(f"Error with unstructured.io PDF extraction, falling back to PyPDF2: {str(e)}")
+                    # Fall back to PyPDF2 if unstructured.io fails
+                    reader = PyPDF2.PdfReader(io.BytesIO(file_content))
+                    markdown = []
+                    for page in reader.pages:
+                        text = page.extract_text()
+                        if text:
+                            markdown.append(text)
+                    content = '\n\n'.join(markdown)
+                    logger.debug(f"Parsed PDF content with PyPDF2: {len(content)} chars")
                 
                 # Return markdown content, original bytes, and format
                 return content, file_content, 'pdf'
@@ -248,12 +270,12 @@ class FileParser:
                     document.add_paragraph(line)
                     
             # Save the document to a BytesIO object
-            docx_bytes = io.BytesIO()
-            document.save(docx_bytes)
-            docx_bytes.seek(0)
+            document_io = io.BytesIO()
+            document.save(document_io)
+            document_io.seek(0)
             
-            return docx_bytes.getvalue()
+            return document_io.read()
             
         except Exception as e:
             logger.error(f"Error converting markdown to DOCX: {str(e)}")
-            raise Exception(f"Error creating DOCX file: {str(e)}")
+            raise Exception(f"Error converting markdown to DOCX: {str(e)}")

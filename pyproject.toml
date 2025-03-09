@@ -24,4 +24,7 @@ dependencies = [
     "beautifulsoup4>=4.13.3",
     "sqlalchemy>=2.0.38",
     "python-dotenv>=1.0.0",
+    "unstructured-client>=0.31.1",
+    "unstructured[pdf]>=0.16.25",
+    "fpdf>=1.7.2",
 ]

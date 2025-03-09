@@ -6,6 +6,7 @@ from services.job_description_processor import JobDescriptionProcessor
 from services.ats_analyzer import ATSAnalyzer
 from services.ai_suggestions import AISuggestions
 from services.resume_customizer import ResumeCustomizer
+from services.file_parser import FileParser
 import logging
 
 logger = logging.getLogger(__name__)
@@ -14,6 +15,7 @@ job_processor = JobDescriptionProcessor()
 ats_analyzer = ATSAnalyzer()
 ai_suggestions = AISuggestions()
 resume_customizer = ResumeCustomizer()
+file_parser = FileParser()
 
 @jobs_bp.route('/job/text', methods=['POST'])
 @login_required
@@ -73,20 +75,20 @@ def submit_job_url():
         logger.debug(f"Form data received: {request.form}")
 
         # Get URL from form data
-        url = request.form.get('job_url')
+        url = request.form.get('job_url', '')
         if not url:
-            return jsonify({'error': 'Job posting URL is required'}), 400
+            logger.error("No URL provided")
+            return jsonify({'error': 'No URL provided'}), 400
 
         # Get resume content from form data
         resume_content = request.form.get('resume', '')
         resume_file = request.files.get('resume_file')
 
         if resume_file:
-            from services.file_parser import FileParser
-            is_valid, error_message = FileParser.allowed_file(resume_file)
+            is_valid, error_message = file_parser.allowed_file(resume_file)
             if not is_valid:
                 return jsonify({'error': error_message}), 400
-            resume_content = FileParser.parse_to_markdown(resume_file)
+            resume_content = file_parser.parse_to_markdown(resume_file)
 
         logger.debug(f"Received URL: {url}")
         logger.debug(f"Resume content received: {bool(resume_content)} (length: {len(resume_content) if resume_content else 0})")

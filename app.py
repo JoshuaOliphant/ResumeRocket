@@ -73,6 +73,7 @@ app.register_blueprint(jobs_bp, url_prefix='/api')
 ats_analyzer = ATSAnalyzer()
 ai_suggestions = AISuggestions()
 resume_customizer = ResumeCustomizer()
+file_parser = FileParser()  # Create an instance of FileParser
 
 # In-memory storage for resumes
 resumes = {}
@@ -253,7 +254,7 @@ def upload_resume():
             file = request.files['resume_file']
             if file.filename:
                 # Validate file
-                is_valid, error_message = FileParser.allowed_file(file)
+                is_valid, error_message = file_parser.allowed_file(file)
                 if not is_valid:
                     logger.error(f"File validation failed: {error_message}")
                     return render_template('partials/analysis_results.html',
@@ -263,7 +264,7 @@ def upload_resume():
 
                 try:
                     # Use the new method that preserves format
-                    resume_content, original_file_bytes, file_format = FileParser.parse_file_with_format(file)
+                    resume_content, original_file_bytes, file_format = file_parser.parse_file_with_format(file)
                     logger.debug(f"File parsed successfully. Format: {file_format}")
                 except Exception as e:
                     logger.error(f"Error parsing file: {str(e)}")
@@ -326,29 +327,71 @@ def upload_resume():
                            ats_score={'score': 0, 'matching_keywords': [], 'missing_keywords': []},
                            suggestions=[])
 
-@app.route('/analyze', methods=['POST'])
-@login_required
-def analyze_resume():
+@app.route('/api/analyze_resume', methods=['POST'])
+def analyze_resume_endpoint():
     try:
-        resume_id = request.form.get('resume_id')
-        if resume_id is None or int(resume_id) not in resumes:
-            return jsonify({'error': 'Invalid resume ID'}), 400
+        # Check if resume is uploaded as a file or provided as text
+        if 'file' in request.files and request.files['file'].filename:
+            file = request.files['file']
+            
+            # Validate file
+            is_valid, error_message = file_parser.allowed_file(file)
+            if not is_valid:
+                return jsonify({'error': error_message}), 400
+                
+            # Parse file content to markdown
+            resume_content, original_file_bytes, file_format = file_parser.parse_file_with_format(file)
+            
+        elif 'resume' in request.form and request.form['resume'].strip():
+            resume_content = request.form['resume']
+            file_format = 'md'  # Default to markdown for text input
+            original_file_bytes = resume_content.encode('utf-8')
+        else:
+            return jsonify({'error': 'No resume provided. Please upload a file or enter text.'}), 400
 
-        resume = resumes[int(resume_id)]
-        # Check if resume belongs to current user
-        if resume['user_id'] != current_user.id:
-            return jsonify({'error': 'Unauthorized access'}), 403
+        # Store resume in memory with user ID
+        resume_id = len(resumes)
+        resumes[resume_id] = {
+            'content': resume_content,
+            'job_description': None,
+            'user_id': current_user.id,
+            'file_format': file_format,
+            'original_bytes': original_file_bytes
+        }
 
-        ats_score = ats_analyzer.analyze(resume['content'], resume['job_description'])
-        suggestions = ai_suggestions.get_suggestions(resume['content'], resume['job_description'])
+        # Create job description
+        job = JobDescription(
+            title="Job Description",
+            content=None,
+            user_id=current_user.id
+        )
+        db.session.add(job)
+        db.session.commit()
 
-        return jsonify({
-            'ats_score': ats_score,
-            'suggestions': suggestions
-        })
+        # Perform ATS analysis
+        ats_score = ats_analyzer.analyze(resume_content, None)
+
+        # Get AI suggestions
+        try:
+            suggestions = ai_suggestions.get_suggestions(resume_content, None)
+            logger.debug(f"Generated {len(suggestions)} AI suggestions")
+        except Exception as e:
+            logger.error(f"Error getting AI suggestions: {str(e)}")
+            suggestions = ["Error getting AI suggestions. Please try again later."]
+
+        logger.debug(f"Rendering template with resume_id={resume_id}, job_id={job.id}")
+        return render_template('partials/analysis_results.html',
+                           resume_id=resume_id,
+                           job_id=job.id,
+                           ats_score=ats_score,
+                           suggestions=suggestions)
+
     except Exception as e:
-        logger.error(f"Error analyzing resume: {str(e)}")
-        return jsonify({'error': 'Failed to analyze resume'}), 500
+        logger.error(f"Error processing resume: {str(e)}")
+        return render_template('partials/analysis_results.html',
+                           error=f'Error processing resume: {str(e)}',
+                           ats_score={'score': 0, 'matching_keywords': [], 'missing_keywords': []},
+                           suggestions=[])
 
 @app.route('/export/<int:resume_id>')
 @app.route('/export/<int:resume_id>/<version>')
@@ -393,7 +436,7 @@ def export_resume(resume_id, version='customized'):
             elif file_format == 'docx':
                 # If original was DOCX, convert the customized markdown back to DOCX
                 try:
-                    content = FileParser.markdown_to_docx(customized_resume.customized_content)
+                    content = file_parser.markdown_to_docx(customized_resume.customized_content)
                     filename = f"customized_resume_{resume_id}.docx"
                     mimetype = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
                 except Exception as e:
@@ -497,6 +540,39 @@ def toggle_input():
 def toggle_job_input():
     input_type = request.args.get('type', 'url')
     return render_template('partials/toggle_job_input.html', type=input_type)
+
+@app.route('/download_resume/<int:resume_id>/<format>', methods=['GET'])
+def download_resume(resume_id, format):
+    try:
+        # Fetch customized resume from database
+        customized_resume = CustomizedResume.query.get_or_404(resume_id)
+        
+        # Get the original format of the resume
+        file_format = customized_resume.file_format
+        
+        # Check if user is authorized to access this resume
+        if current_user.id != customized_resume.user_id:
+            abort(403)
+            
+        if format == 'md':
+            # Return markdown as a downloadable file
+            response = make_response(customized_resume.customized_content)
+            response.headers['Content-Type'] = 'text/markdown'
+            response.headers['Content-Disposition'] = f'attachment; filename=customized_resume.md'
+            return response
+            
+        elif format == 'docx':
+            # Convert markdown to DOCX and return
+            content = file_parser.markdown_to_docx(customized_resume.customized_content)
+            
+            response = make_response(content)
+            response.headers['Content-Type'] = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+            response.headers['Content-Disposition'] = f'attachment; filename=customized_resume.docx'
+            return response
+
+    except Exception as e:
+        logger.error(f"Error downloading resume: {str(e)}")
+        return render_template('error.html', message='Failed to download resume'), 500
 
 # Simple database initialization
 with app.app_context():

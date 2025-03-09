@@ -1,0 +1,32 @@
+Sample Resume
+
+John Doe
+123 Main St, Anytown, USA
+john.doe@email.com
+555-123-4567
+
+SUMMARY
+Experienced software engineer with expertise in Python, JavaScript, and cloud technologies.
+Passionate about building scalable web applications and using machine learning to solve real-world problems.
+
+EDUCATION
+Bachelor of Science in Computer Science
+University of Technology, 2015-2019
+
+EXPERIENCE
+Senior Software Engineer
+Tech Company Inc., 2021-Present
+- Developed and maintained RESTful APIs using Flask and Django
+- Implemented CI/CD pipelines using GitHub Actions
+- Optimized database queries resulting in 40% performance improvement
+
+Software Engineer
+Startup XYZ, 2019-2021
+- Built responsive web applications using React and Redux
+- Integrated third-party APIs for payment processing and social media
+- Collaborated with cross-functional teams to deliver features on time
+
+SKILLS
+Programming Languages: Python, JavaScript, TypeScript, SQL
+Frameworks & Libraries: React, Django, Flask, Express.js
+Tools & Technologies: Git, Docker, AWS, GCP
