@@ -9,6 +9,7 @@ let originalContent = '';
 let customizedContent = '';
 let diffResults = null;
 let modifiedSections = [];
+let sectionStates = {}; // Store collapse state of sections
 
 /**
  * Initialize the comparison view when the DOM is loaded
@@ -117,6 +118,12 @@ function resetContent() {
     
     // Re-add section badges
     addSectionBadges();
+    
+    // Process sections for collapsing/expanding
+    processSectionsForCollapsing();
+    
+    // Restore previous collapse states
+    restoreCollapseStates();
 }
 
 /**
@@ -142,6 +149,9 @@ function showOnlyDifferences() {
                 originalElement.innerHTML += `<div class="diff-removed p-2 mb-2">${part.value}</div>`;
             }
         });
+        
+        // Process sections for collapsing/expanding
+        processSectionsForCollapsing();
     }
 }
 
@@ -177,6 +187,9 @@ function analyzeDiff() {
     
     // Add section badges
     addSectionBadges();
+    
+    // Process sections for collapsing/expanding
+    processSectionsForCollapsing();
 }
 
 /**
@@ -228,19 +241,25 @@ function identifyModifiedSections(originalText, customizedText, diffResult) {
     const originalLines = originalText.split('\n');
     const customizedLines = customizedText.split('\n');
     
-    // Identify section headers (lines starting with # or ##)
-    const sectionRegex = /^(#{1,3})\s+(.+)$/;
+    // Identify section headers (lines starting with # or ##, or all-uppercase lines)
+    const markdownHeaderRegex = /^(#{1,3})\s+(.+)$/;
+    const uppercaseSectionRegex = /^([A-Z][A-Z\s]+[A-Z])$/;
     
     // Extract sections from original text
     const originalSections = [];
     let currentSection = null;
     
     originalLines.forEach((line, index) => {
-        const match = line.match(sectionRegex);
-        if (match) {
+        const markdownMatch = line.match(markdownHeaderRegex);
+        const uppercaseMatch = line.match(uppercaseSectionRegex);
+        
+        if (markdownMatch || uppercaseMatch) {
+            const title = markdownMatch ? markdownMatch[2].trim() : uppercaseMatch[1].trim();
+            const level = markdownMatch ? markdownMatch[1].length : 1;
+            
             currentSection = {
-                level: match[1].length,
-                title: match[2].trim(),
+                level: level,
+                title: title,
                 startLine: index,
                 endLine: originalLines.length - 1, // Default to end of document
                 modified: false
@@ -260,11 +279,16 @@ function identifyModifiedSections(originalText, customizedText, diffResult) {
     currentSection = null;
     
     customizedLines.forEach((line, index) => {
-        const match = line.match(sectionRegex);
-        if (match) {
+        const markdownMatch = line.match(markdownHeaderRegex);
+        const uppercaseMatch = line.match(uppercaseSectionRegex);
+        
+        if (markdownMatch || uppercaseMatch) {
+            const title = markdownMatch ? markdownMatch[2].trim() : uppercaseMatch[1].trim();
+            const level = markdownMatch ? markdownMatch[1].length : 1;
+            
             currentSection = {
-                level: match[1].length,
-                title: match[2].trim(),
+                level: level,
+                title: title,
                 startLine: index,
                 endLine: customizedLines.length - 1, // Default to end of document
                 modified: false
@@ -351,48 +375,320 @@ function identifyModifiedSections(originalText, customizedText, diffResult) {
 function addSectionBadges() {
     if (!modifiedSections || !modifiedSections.modifiedSectionTitles) return;
     
-    const originalElement = document.getElementById('original-resume');
-    const customizedElement = document.getElementById('customized-resume');
+    const originalHtmlElement = document.getElementById('original-resume-html');
+    const customizedHtmlElement = document.getElementById('customized-resume-html');
     
-    if (!originalElement || !customizedElement) return;
+    if (!originalHtmlElement || !customizedHtmlElement) return;
     
     // Add badges to section headers in original content
-    const originalContent = originalElement.innerHTML;
-    let modifiedOriginalContent = originalContent;
-    
     modifiedSections.originalSections.forEach(section => {
         if (section.modified) {
-            // Create regex to find the section header
-            const headerRegex = new RegExp(`(^|>)(#{1,3}\\s+${escapeRegExp(section.title)})(\\s|$|<)`, 'gm');
+            // Find all h tags that could be this section
+            const headers = originalHtmlElement.querySelectorAll('h1, h2, h3, h4, h5, h6');
             
-            // Replace with header + badge
-            modifiedOriginalContent = modifiedOriginalContent.replace(
-                headerRegex, 
-                `$1$2 <span class="badge bg-warning ms-2" title="This section was modified">Modified</span>$3`
-            );
+            headers.forEach(header => {
+                if (header.textContent.trim() === section.title) {
+                    // Check if badge already exists
+                    if (!header.querySelector('.section-badge')) {
+                        const badge = document.createElement('span');
+                        badge.className = 'badge bg-warning ms-2 section-badge';
+                        badge.title = 'This section was modified';
+                        badge.textContent = 'Modified';
+                        header.appendChild(badge);
+                    }
+                }
+            });
         }
     });
-    
-    originalElement.innerHTML = modifiedOriginalContent;
     
     // Add badges to section headers in customized content
-    const customizedContent = customizedElement.innerHTML;
-    let modifiedCustomizedContent = customizedContent;
-    
     modifiedSections.customizedSections.forEach(section => {
         if (section.modified) {
-            // Create regex to find the section header
-            const headerRegex = new RegExp(`(^|>)(#{1,3}\\s+${escapeRegExp(section.title)})(\\s|$|<)`, 'gm');
+            // Find all h tags that could be this section
+            const headers = customizedHtmlElement.querySelectorAll('h1, h2, h3, h4, h5, h6');
             
-            // Replace with header + badge
-            modifiedCustomizedContent = modifiedCustomizedContent.replace(
-                headerRegex, 
-                `$1$2 <span class="badge bg-success ms-2" title="This section was improved">Improved</span>$3`
-            );
+            headers.forEach(header => {
+                if (header.textContent.trim() === section.title) {
+                    // Check if badge already exists
+                    if (!header.querySelector('.section-badge')) {
+                        const badge = document.createElement('span');
+                        badge.className = 'badge bg-success ms-2 section-badge';
+                        badge.title = 'This section was improved';
+                        badge.textContent = 'Improved';
+                        header.appendChild(badge);
+                    }
+                }
+            });
+        }
+    });
+}
+
+/**
+ * Process sections for collapsing/expanding
+ * Adds toggle buttons to section headers and makes sections collapsible
+ */
+function processSectionsForCollapsing() {
+    const originalHtmlElement = document.getElementById('original-resume-html');
+    const customizedHtmlElement = document.getElementById('customized-resume-html');
+    
+    if (!originalHtmlElement || !customizedHtmlElement) return;
+    
+    // Process headers in both views
+    processHeadersForCollapsing(originalHtmlElement, 'original');
+    processHeadersForCollapsing(customizedHtmlElement, 'customized');
+    
+    // Handle all-uppercase sections for both views
+    processUppercaseSectionsForCollapsing(originalHtmlElement, 'original');
+    processUppercaseSectionsForCollapsing(customizedHtmlElement, 'customized');
+}
+
+/**
+ * Process markdown headers for collapsing
+ */
+function processHeadersForCollapsing(container, prefix) {
+    // Find all h1-h3 tags that could be section headers
+    const headers = container.querySelectorAll('h1, h2, h3');
+    
+    headers.forEach((header, index) => {
+        // Skip if already processed
+        if (header.querySelector('.section-toggle')) return;
+        
+        const sectionId = `${prefix}-section-${index}`;
+        const sectionContent = collectSectionContent(header);
+        
+        if (sectionContent.length > 0) {
+            // Create the section wrapper
+            const sectionWrapper = document.createElement('div');
+            sectionWrapper.classList.add('resume-section');
+            sectionWrapper.id = sectionId;
+            
+            // Create toggle button
+            const toggleButton = document.createElement('button');
+            toggleButton.classList.add('section-toggle', 'btn', 'btn-sm');
+            toggleButton.setAttribute('type', 'button');
+            toggleButton.setAttribute('data-section', sectionId);
+            toggleButton.setAttribute('data-section-title', header.textContent.trim());
+            toggleButton.innerHTML = '<i class="bi bi-chevron-down"></i>';
+            toggleButton.title = 'Toggle section';
+            
+            // Add the toggle button to the header
+            header.classList.add('d-flex', 'align-items-center', 'justify-content-between');
+            header.prepend(toggleButton);
+            
+            // Create content container
+            const contentContainer = document.createElement('div');
+            contentContainer.classList.add('section-content');
+            contentContainer.id = `${sectionId}-content`;
+            
+            // Move content into container
+            sectionContent.forEach(element => {
+                contentContainer.appendChild(element);
+            });
+            
+            // Insert header and content container after the original header
+            header.parentNode.insertBefore(sectionWrapper, header.nextSibling);
+            sectionWrapper.appendChild(header);
+            sectionWrapper.appendChild(contentContainer);
+            
+            // Set up event listener for toggle
+            toggleButton.addEventListener('click', function() {
+                toggleSection(sectionId);
+            });
+        }
+    });
+}
+
+/**
+ * Process all-uppercase text sections for collapsing
+ */
+function processUppercaseSectionsForCollapsing(container, prefix) {
+    // Find all p tags that could be uppercase section headers
+    const paragraphs = container.querySelectorAll('p');
+    
+    paragraphs.forEach((paragraph, index) => {
+        const text = paragraph.textContent.trim();
+        // Check if the paragraph text is all uppercase and at least 3 characters
+        if (text === text.toUpperCase() && text.length >= 3 && text === text.replace(/[^A-Z\s]/g, '')) {
+            // Skip if already processed
+            if (paragraph.querySelector('.section-toggle')) return;
+            
+            const sectionId = `${prefix}-uppercase-section-${index}`;
+            const sectionContent = collectSectionContent(paragraph);
+            
+            if (sectionContent.length > 0) {
+                // Create the section wrapper
+                const sectionWrapper = document.createElement('div');
+                sectionWrapper.classList.add('resume-section');
+                sectionWrapper.id = sectionId;
+                
+                // Make the paragraph look like a header
+                paragraph.classList.add('fw-bold', 'fs-5', 'd-flex', 'align-items-center', 'justify-content-between');
+                
+                // Create toggle button
+                const toggleButton = document.createElement('button');
+                toggleButton.classList.add('section-toggle', 'btn', 'btn-sm');
+                toggleButton.setAttribute('type', 'button');
+                toggleButton.setAttribute('data-section', sectionId);
+                toggleButton.setAttribute('data-section-title', text);
+                toggleButton.innerHTML = '<i class="bi bi-chevron-down"></i>';
+                toggleButton.title = 'Toggle section';
+                
+                // Add the toggle button to the paragraph
+                paragraph.prepend(toggleButton);
+                
+                // Create content container
+                const contentContainer = document.createElement('div');
+                contentContainer.classList.add('section-content');
+                contentContainer.id = `${sectionId}-content`;
+                
+                // Move content into container
+                sectionContent.forEach(element => {
+                    contentContainer.appendChild(element);
+                });
+                
+                // Insert paragraph and content container after the original paragraph
+                paragraph.parentNode.insertBefore(sectionWrapper, paragraph.nextSibling);
+                sectionWrapper.appendChild(paragraph);
+                sectionWrapper.appendChild(contentContainer);
+                
+                // Set up event listener for toggle
+                toggleButton.addEventListener('click', function() {
+                    toggleSection(sectionId);
+                });
+            }
+        }
+    });
+}
+
+/**
+ * Collect all content elements that belong to a section
+ */
+function collectSectionContent(header) {
+    const content = [];
+    let nextElement = header.nextElementSibling;
+    
+    // Get the header level to determine when to stop collecting
+    const headerTagName = header.tagName;
+    
+    while (nextElement) {
+        // Stop when we hit another header of the same or higher level
+        if (nextElement.tagName && 
+            (nextElement.tagName === headerTagName || isHigherLevelHeader(nextElement.tagName, headerTagName))) {
+            break;
+        }
+        
+        // Store the element for moving later
+        const elementToMove = nextElement;
+        nextElement = nextElement.nextElementSibling;
+        content.push(elementToMove);
+    }
+    
+    return content;
+}
+
+/**
+ * Check if one header is of higher level than another
+ */
+function isHigherLevelHeader(headerTag1, headerTag2) {
+    const headerLevels = {
+        'H1': 1,
+        'H2': 2,
+        'H3': 3,
+        'H4': 4,
+        'H5': 5,
+        'H6': 6
+    };
+    
+    return headerLevels[headerTag1] <= headerLevels[headerTag2];
+}
+
+/**
+ * Toggle the visibility of a section
+ */
+function toggleSection(sectionId) {
+    const section = document.getElementById(sectionId);
+    const content = document.getElementById(`${sectionId}-content`);
+    const toggle = section.querySelector('.section-toggle');
+    const title = toggle.getAttribute('data-section-title');
+    
+    if (!content) return;
+    
+    // Get the other section if it exists (to keep both sides in sync)
+    const otherPrefix = sectionId.startsWith('original') ? 'customized' : 'original';
+    let otherSectionToggle = null;
+    
+    // Find the matching section in the other view by section title
+    const otherToggles = document.querySelectorAll(`.section-toggle[data-section-title="${title.replace(/"/g, '\\"')}"]`);
+    otherToggles.forEach(btn => {
+        if (btn.getAttribute('data-section').startsWith(otherPrefix)) {
+            otherSectionToggle = btn;
         }
     });
     
-    customizedElement.innerHTML = modifiedCustomizedContent;
+    // Toggle this section
+    if (content.style.display === 'none') {
+        // Expand
+        content.style.display = 'block';
+        content.style.maxHeight = content.scrollHeight + 'px';
+        toggle.innerHTML = '<i class="bi bi-chevron-down"></i>';
+        // Store state
+        sectionStates[title] = 'expanded';
+    } else {
+        // Collapse
+        content.style.maxHeight = '0px';
+        setTimeout(() => {
+            content.style.display = 'none';
+        }, 300); // Match the transition time
+        toggle.innerHTML = '<i class="bi bi-chevron-right"></i>';
+        // Store state
+        sectionStates[title] = 'collapsed';
+    }
+    
+    // Toggle the matching section in the other view if it exists
+    if (otherSectionToggle) {
+        const otherSectionId = otherSectionToggle.getAttribute('data-section');
+        const otherSection = document.getElementById(otherSectionId);
+        const otherContent = document.getElementById(`${otherSectionId}-content`);
+        
+        if (otherContent) {
+            if (content.style.display === 'none') {
+                // Other should collapse too
+                otherContent.style.maxHeight = '0px';
+                setTimeout(() => {
+                    otherContent.style.display = 'none';
+                }, 300);
+                otherSectionToggle.innerHTML = '<i class="bi bi-chevron-right"></i>';
+            } else {
+                // Other should expand too
+                otherContent.style.display = 'block';
+                otherContent.style.maxHeight = otherContent.scrollHeight + 'px';
+                otherSectionToggle.innerHTML = '<i class="bi bi-chevron-down"></i>';
+            }
+        }
+    }
+}
+
+/**
+ * Restore the collapse states after content reloading
+ */
+function restoreCollapseStates() {
+    // For each stored section state
+    Object.keys(sectionStates).forEach(title => {
+        // Find all toggles for this section title
+        const toggles = document.querySelectorAll(`.section-toggle[data-section-title="${title.replace(/"/g, '\\"')}"]`);
+        
+        toggles.forEach(toggle => {
+            const sectionId = toggle.getAttribute('data-section');
+            const content = document.getElementById(`${sectionId}-content`);
+            
+            if (content && sectionStates[title] === 'collapsed') {
+                // Apply collapsed state
+                content.style.display = 'none';
+                content.style.maxHeight = '0px';
+                toggle.innerHTML = '<i class="bi bi-chevron-right"></i>';
+            }
+        });
+    });
 }
 
 /**
@@ -532,4 +828,4 @@ function highlightDifferences() {
     // Update the content with highlighting
     originalElement.innerHTML = originalHtml;
     customizedElement.innerHTML = customizedHtml;
-} 
+}

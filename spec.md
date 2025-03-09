@@ -17,7 +17,7 @@ This specification outlines the **remaining implementation tasks** for the enhan
 - ✅ Implement improved PDF extraction with PyMuPDF (Completed 2025-03-09)
 
 ### 2. Missing Interactive Controls
-- Add section collapsing/expanding functionality
+- ✅ Add section collapsing/expanding functionality (Completed 2025-03-09)
 - Implement search function for content in either version
 - Add copy-to-clipboard functionality
 
@@ -63,19 +63,19 @@ Implemented an improved PDF extraction system using PyMuPDF (fitz) that:
 The advanced extraction capabilities of PyMuPDF provide more reliable results for a wide range of PDF layouts commonly used in resumes, eliminating the need for fallback methods.
 ```
 
-### Prompt 3: Section Collapsing/Expanding Functionality
+### ✅ Prompt 3: Section Collapsing/Expanding Functionality (COMPLETED)
 ```
-Implement section collapsing and expanding functionality for the resume comparison view. Your implementation should:
+Implemented section collapsing and expanding functionality for the resume comparison view that:
 
-1. Identify resume sections based on headings or other structural elements
-2. Add UI controls (arrows or icons) to collapse/expand each identified section
-3. Create JavaScript functions to handle the collapse/expand interactions
-4. Ensure both the original and customized views stay synchronized when collapsing/expanding
-5. Add smooth animations for the collapse/expand actions
-6. Preserve the collapsed/expanded state when switching between different view modes
-7. Ensure the feature works on both desktop and mobile views
+1. Identifies resume sections based on both markdown headings and all-uppercase section headers
+2. Adds toggle buttons with intuitive chevron icons to collapse/expand each section
+3. Features JavaScript functions that handle section toggling with state preservation
+4. Keeps both original and customized views perfectly synchronized when expanding/collapsing
+5. Includes smooth CSS transitions for expanding and collapsing animations
+6. Preserves collapsed/expanded states when switching between view modes
+7. Functions properly on both desktop and mobile with appropriate sizing adjustments
 
-This will help users focus on specific sections of interest in longer resumes.
+The implementation detects both markdown-style headings (# or ##) and traditional all-uppercase resume section headers (like "EXPERIENCE" or "EDUCATION"), making it compatible with various resume formats. This allows users to focus on specific sections of interest in longer resumes.
 ```
 
 ### Prompt 4: Search Function for Resume Content

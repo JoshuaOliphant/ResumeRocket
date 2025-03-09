@@ -91,7 +91,7 @@
 - [x] Implement original-only view toggle
 - [x] Implement customized-only view toggle
 - [x] Implement unified diff view toggle
-- [ ] Create section collapsing/expanding functionality
+- [x] Create section collapsing/expanding functionality
 - [ ] Add search function for content in either version
 - [x] Implement smooth transition animations
 - [ ] Add copy-to-clipboard functionality
@@ -155,7 +155,7 @@
 ## Final Deliverables
 - [x] Working comparison feature for Markdown documents
 - [x] Support for DOCX file parsing and comparison
-- [ ] Support for PDF file parsing and comparison
+- [x] Support for PDF file parsing and comparison
 - [x] Interactive controls for enhanced user experience
 - [x] Comprehensive documentation and help content
 - [x] Optimized performance for all file types
