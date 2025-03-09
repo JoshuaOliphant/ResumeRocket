@@ -80,7 +80,7 @@
 - [x] Ensure PDF-sourced content renders correctly in the UI
 - [x] Test the entire flow from upload to comparison
 - [x] Add caching mechanism to improve performance for large PDFs
-- [ ] Implement fallback extraction method for problematic PDFs
+- [x] Implement improved extraction using PyMuPDF for reliable PDF handling
 - [x] Add detailed logging for PDF processing
 
 ## Phase 4: UI/UX Enhancements

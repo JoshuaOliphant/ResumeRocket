@@ -1,5 +1,5 @@
 """
-Test script for lightweight PDF extraction using PyPDF2 with caching
+Test script for enhanced PDF extraction using PyMuPDF (fitz) with caching
 
 This script allows you to test PDF extraction and the caching mechanism.
 
@@ -35,13 +35,17 @@ from models import PDFCache
 # Initialize the database
 db.init_app(app)
 
+# Create tables if they don't exist
+with app.app_context():
+    db.create_all()
+
 # Set up logging
 logging.basicConfig(level=logging.INFO, 
                     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
 def test_extraction(pdf_path, use_cache=True, test_cache=False):
-    """Test lightweight PDF extraction on a sample PDF file with optional caching"""
+    """Test enhanced PDF extraction with PyMuPDF on a sample PDF file with optional caching"""
     logger.info(f"Testing PDF extraction on: {pdf_path}")
     logger.info(f"Cache enabled: {use_cache}")
     

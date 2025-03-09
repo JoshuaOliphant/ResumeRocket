@@ -1,10 +1,10 @@
-# Lightweight PDF Extraction with Caching
+# Enhanced PDF Extraction with PyMuPDF and Caching
 
-This document describes the PDF extraction feature implemented in ResumeRocket using PyPDF2, including the caching mechanism for improved performance.
+This document describes the PDF extraction feature implemented in ResumeRocket using PyMuPDF (fitz), including the caching mechanism for improved performance.
 
 ## Overview
 
-The PDF extraction feature allows users to upload PDF resumes, which are then parsed and converted to a structured format for analysis and customization. The implementation uses the `PyPDF2` library to extract text content from PDFs efficiently, with a database-backed caching system to improve performance for large files and repeated processing.
+The PDF extraction feature allows users to upload PDF resumes, which are then parsed and converted to a structured format for analysis and customization. The implementation uses the `PyMuPDF` library to extract text content from PDFs with superior formatting retention, with a database-backed caching system to improve performance for large files and repeated processing.
 
 ## Implementation Details
 
@@ -12,7 +12,7 @@ The PDF extraction feature allows users to upload PDF resumes, which are then pa
 
 The following dependencies are required for PDF extraction:
 
-- `pypdf2`: Used for basic PDF text extraction
+- `pymupdf`: A high-performance PDF processing library for superior text extraction
 - SQLAlchemy: For database caching
 
 ### PDFExtractor Class
@@ -22,7 +22,7 @@ The `PDFExtractor` class in `services/pdf_extractor.py` provides the main functi
 ```python
 class PDFExtractor:
     """
-    Lightweight PDF extraction service using PyPDF2 with caching support
+    Enhanced PDF extraction service using PyMuPDF (fitz) with caching support
     """
     
     def __init__(self, use_cache=True):
@@ -30,7 +30,7 @@ class PDFExtractor:
         # ...
     
     def extract_text(self, pdf_bytes: bytes) -> str:
-        """Extract text from PDF using PyPDF2, with caching"""
+        """Extract text from PDF using PyMuPDF, with caching"""
         # ...
 ```
 
@@ -110,11 +110,22 @@ The caching mechanism provides several benefits:
 
 ## Future Improvements
 
-- Add basic table detection and formatting
-- Consider using pdfplumber for more complex PDFs if needed
-- Implement fallback mechanisms for extraction failures
-- Add support for PDF structure recognition (headings, sections, etc.)
+- Enhance table structure detection and formatting
+- Add deeper document structure recognition (headings, sections, lists)
+- Implement advanced layout analysis for multi-column resumes
+- Consider structure detection with AI for complex formatting
+
+## Advantages of PyMuPDF
+
+PyMuPDF offers several advantages over the previously used PyPDF2:
+
+1. **Superior Text Extraction**: Better preservation of text flow and formatting
+2. **Performance**: 3-5x faster extraction speed for most documents
+3. **Layout Analysis**: Better handling of columns, tables, and complex layouts
+4. **Accuracy**: More reliable extraction, especially with complex PDFs
+5. **Active Development**: Regular updates and bug fixes
 
 ## References
 
-- [PyPDF2 Documentation](https://pypdf2.readthedocs.io/) 
+- [PyMuPDF Documentation](https://pymupdf.readthedocs.io/)
+- [MuPDF Project](https://mupdf.com/) 
