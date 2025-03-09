@@ -3,22 +3,46 @@ Script to create a sample PDF file for testing
 """
 
 import os
-from fpdf import FPDF
+from reportlab.lib.pagesizes import letter
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
+from reportlab.lib.styles import getSampleStyleSheet
 
 def create_sample_pdf(input_text_path, output_pdf_path):
     """Create a PDF file from a text file"""
-    pdf = FPDF()
-    pdf.add_page()
-    pdf.set_font("Arial", size=12)
-    
     # Read the text file
     with open(input_text_path, "r") as f:
-        for line in f:
-            # Add each line to the PDF
-            pdf.cell(200, 10, txt=line.strip(), ln=True)
+        content = f.read()
     
-    # Save the PDF
-    pdf.output(output_pdf_path)
+    # Create a PDF document
+    doc = SimpleDocTemplate(
+        output_pdf_path,
+        pagesize=letter,
+        rightMargin=72,
+        leftMargin=72,
+        topMargin=72,
+        bottomMargin=72
+    )
+    
+    # Get default styles
+    styles = getSampleStyleSheet()
+    
+    # Process text and build flowables
+    flowables = []
+    lines = content.split('\n')
+    
+    for line in lines:
+        if not line.strip():
+            # Add space for empty lines
+            flowables.append(Spacer(1, 12))
+        elif line.strip().upper() == line.strip() and len(line.strip()) > 3:
+            # Assume section headings are uppercase
+            flowables.append(Paragraph(f"<b>{line}</b>", styles['Heading2']))
+        else:
+            # Regular text
+            flowables.append(Paragraph(line, styles['Normal']))
+    
+    # Build the PDF
+    doc.build(flowables)
     print(f"Created PDF file: {output_pdf_path}")
 
 if __name__ == "__main__":

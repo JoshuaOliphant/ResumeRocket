@@ -1,7 +1,7 @@
 """
-Test script for PDF extraction using unstructured.io
+Test script for lightweight PDF extraction using PyPDF2
 
-This script allows you to test local extraction using the unstructured library.
+This script allows you to test PDF extraction using the PyPDF2 library.
 
 Usage:
     python scripts/test_pdf_extraction.py path/to/sample.pdf
@@ -23,7 +23,7 @@ logging.basicConfig(level=logging.INFO,
 logger = logging.getLogger(__name__)
 
 def test_extraction(pdf_path):
-    """Test PDF extraction on a sample PDF file"""
+    """Test lightweight PDF extraction on a sample PDF file"""
     logger.info(f"Testing PDF extraction on: {pdf_path}")
     
     # Initialize PDF extractor

@@ -1,10 +1,10 @@
-# PDF Extraction with unstructured.io
+# Lightweight PDF Extraction
 
-This document describes the PDF extraction feature implemented in ResumeRocket using the unstructured.io library.
+This document describes the PDF extraction feature implemented in ResumeRocket using PyPDF2.
 
 ## Overview
 
-The PDF extraction feature allows users to upload PDF resumes, which are then parsed and converted to a structured format for analysis and customization. The implementation uses the `unstructured` library to extract text content from PDFs while preserving the document structure.
+The PDF extraction feature allows users to upload PDF resumes, which are then parsed and converted to a structured format for analysis and customization. The implementation uses the `PyPDF2` library to extract text content from PDFs efficiently.
 
 ## Implementation Details
 
@@ -12,11 +12,7 @@ The PDF extraction feature allows users to upload PDF resumes, which are then pa
 
 The following dependencies are required for PDF extraction:
 
-- `unstructured[pdf]`: The core library for PDF extraction
-- `pypdf2`: Used as a fallback for basic PDF text extraction
-- System dependencies:
-  - `tesseract`: For OCR (Optical Character Recognition)
-  - `poppler`: For PDF rendering
+- `pypdf2`: Used for basic PDF text extraction
 
 ### PDFExtractor Class
 
@@ -25,23 +21,19 @@ The `PDFExtractor` class in `services/pdf_extractor.py` provides the main functi
 ```python
 class PDFExtractor:
     """
-    PDF extraction service using unstructured.io
-    Provides local extraction using the unstructured library
+    Lightweight PDF extraction service using PyPDF2
     """
     
-    def __init__(self, api_key: Optional[str] = None, api_url: Optional[str] = None):
+    def __init__(self):
         """Initialize the PDF extractor"""
         # ...
     
     def extract_text(self, pdf_bytes: bytes) -> str:
-        """Extract text from PDF using local unstructured library"""
+        """Extract text from PDF using PyPDF2"""
         # ...
 ```
 
-The `extract_text` method takes PDF content as bytes and returns the extracted text as a markdown string. It uses the `partition_pdf` function from the `unstructured` library with the following parameters:
-
-- `strategy="hi_res"`: Uses high-resolution strategy for better results
-- `infer_table_structure=True`: Extracts tables with structure preserved
+The `extract_text` method takes PDF content as bytes and returns the extracted text as a formatted string with page markers. It uses PyPDF2's `PdfReader` and `extract_text()` method to extract text from each page.
 
 ### Integration with FileParser
 
@@ -75,12 +67,10 @@ python scripts/test_pdf_extraction.py path/to/sample.pdf
 
 ## Future Improvements
 
-- Add support for unstructured.io API for enhanced extraction capabilities
 - Implement caching mechanism to improve performance for large PDFs
-- Add more advanced table extraction and formatting
-- Improve handling of complex layouts and formatting
+- Add basic table detection and formatting
+- Consider using pdfplumber for more complex PDFs if needed
 
 ## References
 
-- [unstructured.io Documentation](https://unstructured.io/docs)
 - [PyPDF2 Documentation](https://pypdf2.readthedocs.io/) 

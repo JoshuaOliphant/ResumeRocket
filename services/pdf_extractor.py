@@ -1,84 +1,52 @@
 import os
 import io
 import logging
-from typing import Optional, Tuple
-import tempfile
-
-# Import unstructured libraries
-from unstructured.partition.pdf import partition_pdf
+from typing import Optional
+import PyPDF2
 
 logger = logging.getLogger(__name__)
 
 class PDFExtractor:
     """
-    PDF extraction service using unstructured.io
-    Provides local extraction using the unstructured library
+    Lightweight PDF extraction service using PyPDF2
     """
     
-    def __init__(self, api_key: Optional[str] = None, api_url: Optional[str] = None):
+    def __init__(self):
         """
         Initialize the PDF extractor
-        
-        Args:
-            api_key: Optional API key for unstructured.io API (not used in local extraction)
-            api_url: Optional API URL for unstructured.io API (not used in local extraction)
         """
-        self.api_key = api_key or os.environ.get("UNSTRUCTURED_API_KEY")
-        self.api_url = api_url or os.environ.get("UNSTRUCTURED_API_URL")
-        
-        # Log initialization
-        logger.info("Initialized PDF extractor with local extraction capabilities")
+        logger.info("Initialized lightweight PDF extractor with PyPDF2")
     
     def extract_text(self, pdf_bytes: bytes) -> str:
         """
-        Extract text from PDF using local unstructured library
+        Extract text from PDF using PyPDF2
         
         Args:
             pdf_bytes: PDF file content as bytes
             
         Returns:
-            Extracted text as markdown string
+            Extracted text as string
         """
         try:
-            logger.info("Extracting PDF text using local unstructured library")
+            logger.info("Extracting PDF text using PyPDF2")
             
-            # Create a temporary file to write the PDF content
-            with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as temp_file:
-                temp_file.write(pdf_bytes)
-                temp_file_path = temp_file.name
+            # Create a PyPDF2 reader from the byte stream
+            reader = PyPDF2.PdfReader(io.BytesIO(pdf_bytes))
             
-            try:
-                # Use unstructured's partition_pdf to extract content
-                elements = partition_pdf(
-                    filename=temp_file_path,
-                    strategy="hi_res",  # Use high-resolution strategy for better results
-                    infer_table_structure=True,  # Extract tables with structure
-                )
+            # Extract text from each page
+            text_parts = []
+            for i, page in enumerate(reader.pages):
+                text = page.extract_text()
+                if text:
+                    # Add a page header and the extracted text
+                    text_parts.append(f"## Page {i+1}\n\n{text}")
+            
+            # Join all text parts with double newlines
+            content = "\n\n".join(text_parts)
+            
+            logger.info(f"Successfully extracted text from {len(reader.pages)} PDF pages")
+            return content
                 
-                # Convert elements to text (not all elements have to_markdown method)
-                markdown_lines = []
-                for element in elements:
-                    # Check if the element has text attribute
-                    if hasattr(element, 'text'):
-                        # Try to use to_markdown if available, otherwise use text
-                        if hasattr(element, 'to_markdown') and callable(getattr(element, 'to_markdown')):
-                            try:
-                                markdown_lines.append(element.to_markdown())
-                            except Exception:
-                                markdown_lines.append(element.text)
-                        else:
-                            markdown_lines.append(element.text)
-                
-                markdown_content = "\n\n".join(markdown_lines)
-                
-                logger.info(f"Successfully extracted {len(elements)} elements from PDF")
-                return markdown_content
-                
-            finally:
-                # Clean up the temporary file
-                if os.path.exists(temp_file_path):
-                    os.unlink(temp_file_path)
-                    
         except Exception as e:
             logger.error(f"Error extracting PDF text: {str(e)}")
             raise Exception(f"Error extracting PDF text: {str(e)}") 

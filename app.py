@@ -446,11 +446,18 @@ def export_resume(resume_id, version='customized'):
                     filename = f"customized_resume_{resume_id}.md"
                     mimetype = 'text/markdown'
             elif file_format == 'pdf':
-                # For PDF, we can only return markdown for now since PDF generation is complex
-                content = customized_resume.customized_content
-                filename = f"customized_resume_{resume_id}.md"
-                mimetype = 'text/markdown'
-                flash('PDF export is not supported. Exporting as Markdown instead.', 'warning')
+                # Convert the customized markdown to PDF
+                try:
+                    content = file_parser.markdown_to_pdf(customized_resume.customized_content)
+                    filename = f"customized_resume_{resume_id}.pdf"
+                    mimetype = 'application/pdf'
+                except Exception as e:
+                    logger.error(f"Error converting to PDF: {str(e)}")
+                    # Fallback to markdown if conversion fails
+                    content = customized_resume.customized_content
+                    filename = f"customized_resume_{resume_id}.md"
+                    mimetype = 'text/markdown'
+                    flash('Error creating PDF. Exporting as Markdown instead.', 'warning')
             else:
                 content = customized_resume.customized_content
                 filename = f"customized_resume_{resume_id}.md"
