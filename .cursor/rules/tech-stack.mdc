@@ -1,0 +1,21 @@
+---
+description: Helpful for when deciding what tech stack tools to use
+globs: 
+alwaysApply: false
+---
+# Technical stack
+
+## Backend
+
+- Python
+- FastAPI
+- sqlite
+- Pydantic
+- Astral's uv
+
+## Frontend
+
+- HTMX
+- Tailwind CSS
+- AlpineJS
+- Alpine AJAX
