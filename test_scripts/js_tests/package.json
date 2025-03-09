@@ -1,0 +1,12 @@
+{
+  "name": "resumerocket-js-tests",
+  "version": "1.0.0",
+  "description": "JavaScript tests for ResumeRocket",
+  "main": "index.js",
+  "scripts": {
+    "test": "node test_section_collapsing.js"
+  },
+  "dependencies": {
+    "playwright": "^1.42.1"
+  }
+}
