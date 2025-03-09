@@ -1,257 +1,202 @@
-# Resume Comparison Feature Implementation Plan
+# Resume Comparison Feature - Remaining Implementation Plan
 
 ## Overview
-This specification outlines the implementation of an enhanced resume comparison feature that displays the original and customized resumes side-by-side with visual diff highlighting. The plan includes support for markdown, DOCX, and PDF file formats, with a focus on creating an intuitive and helpful user experience.
+This specification outlines the **remaining implementation tasks** for the enhanced resume comparison feature. Most of the foundational work has been completed, including markdown and DOCX support, basic comparison view, diff highlighting, and change summary generation. This document focuses on the outstanding tasks that need to be completed to finalize the feature.
 
-## High-Level Architecture
-1. Extract and process resume content from various formats (MD, DOCX, PDF)
-2. Store both original and customized versions
-3. Implement side-by-side comparison with diff highlighting
-4. Provide summary of changes and interactive controls
-5. Support section-by-section comparison
+## Current Status Summary
+- ✅ Phase 1 (Foundation and Markdown Support): **COMPLETED**
+- ✅ Phase 2 (DOCX Support): **COMPLETED**
+- ⚠️ Phase 3 (PDF Support): **PARTIALLY COMPLETED** (✅ caching added, missing fallback extraction)
+- ⚠️ Phase 4 (UI/UX Enhancements): **PARTIALLY COMPLETED** (missing several interactive controls and visualization features)
+- ⚠️ Accessibility: **PARTIALLY COMPLETED** (missing screen reader testing)
 
-## Phased Implementation Plan
+## High-Priority Remaining Tasks
 
-### Phase 1: Foundation and Markdown Support
-- Set up basic comparison view layout
-- Implement markdown side-by-side display
-- Add basic diff highlighting
-- Create summary of changes
+### 1. PDF Support Improvements
+- ✅ Add caching mechanism for large PDFs (Completed 2025-03-09)
+- Implement fallback extraction method for problematic PDFs
 
-### Phase 2: DOCX Support
-- Implement DOCX parsing and conversion to structured text
-- Integrate with existing comparison view
-
-### Phase 3: PDF Support
-- Implement PDF extraction using unstructured.io
-- Integrate with existing comparison view
-
-### Phase 4: UI/UX Enhancements
-- Add interactive controls (toggle views, expand/collapse sections)
-- Improve diff visualization
-- Add analytics to track feature usage
-
-## Detailed Implementation Steps
-
-### Phase 1: Foundation and Markdown Support
-
-#### Step 1.1: Set up basic comparison view template
-- Create HTML/CSS template for side-by-side comparison
-- Implement responsive layout
-- Add placeholder for summary section
-
-#### Step 1.2: Basic side-by-side display for Markdown
-- Update the customized resume storage to keep both versions
-- Modify the resume customization endpoint to return both versions
-- Update the template to display both versions
-
-#### Step 1.3: Add diff highlighting for Markdown
-- Research and select a JavaScript diff library
-- Implement highlighting of changes between versions
-- Style the diff display for readability
-
-#### Step 1.4: Add summary of changes
-- Generate a summary of changes made to the resume
-- Display count of additions, modifications, and improvements
-- Add section indicators to show which parts were changed
-
-### Phase 2: DOCX Support
-
-#### Step 2.1: DOCX parsing and structure extraction
-- Implement DOCX parsing using python-docx
-- Extract structured content while preserving formatting
-- Convert to markdown or HTML for comparison
-
-#### Step 2.2: Integrate DOCX comparison with existing view
-- Update the file parser to handle DOCX specifically
-- Connect DOCX processing to the comparison view
-- Test with various DOCX formats
-
-### Phase 3: PDF Support
-
-#### Step 3.1: Implement PDF extraction with unstructured.io
-- Set up unstructured.io library integration
-- Implement PDF content extraction with structure preservation
-- Convert extracted content to markdown or HTML
-
-#### Step 3.2: Integrate PDF comparison with existing view
-- Update the file parser to handle PDF specifically
-- Connect PDF processing to the comparison view
-- Test with various PDF layouts
-
-### Phase 4: UI/UX Enhancements
-
-#### Step 4.1: Add interactive controls
-- Implement view toggle options (side-by-side, original only, etc.)
+### 2. Missing Interactive Controls
 - Add section collapsing/expanding functionality
-- Create animation for smooth transitions
+- Implement search function for content in either version
+- Add copy-to-clipboard functionality
 
-#### Step 4.2: Improve diff visualization
-- Enhance color scheme and styling for better readability
-- Add inline comments explaining key changes
-- Implement hover effects to highlight matching changes
+### 3. Diff Visualization Enhancements
+- Implement hover effects to highlight corresponding changes
+- Add line numbers for easier reference
+- Add scrollbar indicators for change locations
+- Implement inline comments or tooltips for significant changes
 
-#### Step 4.3: Finalize and polish
-- Conduct user testing
-- Make adjustments based on feedback
-- Add documentation and help tooltips
+### 4. User Experience
+- Create simple onboarding overlay for first-time users
 
-## Implementation Prompts
+### 5. Accessibility
+- Test with screen readers
 
-### Prompt 1: Setting up the basic template
+## Task-Specific Implementation Prompts
+
+### ✅ Prompt 1: PDF Caching and Performance Optimization (COMPLETED)
 ```
-Please create a Flask template for displaying original and customized resumes side by side. The template should:
+Implemented a database-backed caching mechanism that:
+- Uses SHA-256 hashing of PDF content as a cache key
+- Stores extracted content in the database with metadata
+- Tracks usage metrics (hit count, last accessed time)
+- Includes automatic cache cleanup to prevent unlimited growth
+- Features detailed logging of cache hits and misses
+- Significantly reduces processing time for previously seen PDFs
 
-1. Use Bootstrap for responsive layout
-2. Have a header with a summary section
-3. Divide the page into two equal columns (original and customized)
-4. Include placeholders for both resume contents
-5. Have a footer with action buttons
-6. Be compatible with the existing application structure
-
-The template should be saved as "templates/customized_resume_comparison.html" and inherit from the base template. Make it mobile-responsive so columns stack on smaller screens.
-```
-
-### Prompt 2: Storing and retrieving both resume versions
-```
-Update the resume customization endpoint to store and retrieve both the original and customized resume versions. Specifically:
-
-1. Modify the CustomizedResume model to ensure it properly stores both the original_content and customized_content
-2. Update the customize_resume_endpoint function to return both versions
-3. Pass both versions to the template
-4. Update the template to display both versions in their respective columns
-
-Please ensure the database model is properly set up and the endpoint correctly handles the data flow.
+Implementation details can be found in the pdf_extraction.md documentation.
 ```
 
-### Prompt 3: Basic side-by-side display
+### Prompt 2: PDF Fallback Extraction Method
 ```
-Implement a basic side-by-side display for the resume comparison. The implementation should:
+Implement a fallback extraction method for problematic PDF files that fail during the primary extraction process. Your implementation should:
 
-1. Take both the original and customized markdown content
-2. Render both using a markdown renderer (like markdown-it or similar)
-3. Display them in the two columns created earlier
-4. Add a simple title and timestamp for when the customization was performed
-5. Add a button to download either version
+1. Create a fallback extraction function using a different PDF parsing library (e.g., PyPDF2 if unstructured.io fails)
+2. Add logic to detect extraction failures and automatically attempt the fallback method
+3. Include appropriate error handling and logging
+4. Maintain as much document structure as possible in the fallback method
+5. Update the PDF extraction service to incorporate this fallback mechanism
+6. Add clear logging when fallback is used to help track problematic PDFs
 
-Make sure the styling looks professional and maintains the proper formatting of the resumes.
-```
-
-### Prompt 4: Adding JavaScript diff library
-```
-Integrate a JavaScript diff library to highlight the differences between the original and customized resumes. Please:
-
-1. Research and recommend a suitable JavaScript diff library (like diff2html, jsdiff, or Monaco Editor)
-2. Add the library to the project
-3. Create a JavaScript function that takes both resume texts and highlights the differences
-4. Update the template to include the necessary scripts
-5. Style the diff highlighting with appropriate colors (green for additions, red for deletions, yellow for changes)
-
-The implementation should be clean, with minimal dependencies, and should work for markdown-formatted resumes.
+The goal is to ensure PDF extraction succeeds even with problematic files, preventing extraction failures from blocking the comparison process.
 ```
 
-### Prompt 5: Generating a summary of changes
+### Prompt 3: Section Collapsing/Expanding Functionality
 ```
-Implement a functionality to generate and display a summary of changes made to the resume. The summary should:
+Implement section collapsing and expanding functionality for the resume comparison view. Your implementation should:
 
-1. Count the number of additions, deletions, and modifications
-2. Identify which sections of the resume were modified
-3. Create a human-readable summary (e.g., "12 improvements made across 4 sections")
-4. Display this summary at the top of the comparison page
-5. Include a small badge next to each section that was changed
+1. Identify resume sections based on headings or other structural elements
+2. Add UI controls (arrows or icons) to collapse/expand each identified section
+3. Create JavaScript functions to handle the collapse/expand interactions
+4. Ensure both the original and customized views stay synchronized when collapsing/expanding
+5. Add smooth animations for the collapse/expand actions
+6. Preserve the collapsed/expanded state when switching between different view modes
+7. Ensure the feature works on both desktop and mobile views
 
-The implementation should analyze the diff results from the previous step to generate this information.
-```
-
-### Prompt 6: DOCX file parsing and integration
-```
-Implement DOCX file parsing and integration with the comparison view. The implementation should:
-
-1. Use python-docx library to parse DOCX files
-2. Extract the content while preserving structure (headings, paragraphs, lists)
-3. Convert the extracted content to markdown format
-4. Update the existing file parser to handle DOCX files
-5. Connect this functionality to the comparison view
-6. Test with various DOCX formats to ensure reliability
-
-Ensure that the parsing preserves enough structure to make the diff meaningful.
+This will help users focus on specific sections of interest in longer resumes.
 ```
 
-### Prompt 7: PDF extraction with unstructured.io
+### Prompt 4: Search Function for Resume Content
 ```
-Implement PDF extraction using the unstructured.io library. The implementation should:
+Implement a search function that allows users to find specific content in either the original or customized resume. Your implementation should:
 
-1. Set up unstructured.io library in the project
-2. Create a function to extract structured content from PDF files
-3. Convert the extracted content to markdown or HTML for comparison
-4. Preserve document structure (headings, paragraphs, sections)
-5. Handle common resume layouts effectively
-6. Update the file parser to use this for PDF files
+1. Add a search input field with appropriate styling to match the existing UI
+2. Create JavaScript functions to perform real-time search as the user types
+3. Highlight all matching instances of the search term in both resume versions
+4. Add navigation controls to jump between multiple search results
+5. Show the number of matches found
+6. Include options to search in only the original, only the customized, or both versions
+7. Ensure the search works with the existing diff highlighting without visual conflicts
 
-Focus on extracting content in a way that maintains the logical structure of the resume for effective comparison.
-```
-
-### Prompt 8: Adding interactive controls
-```
-Implement interactive controls for the resume comparison view. The controls should include:
-
-1. Toggle buttons to switch between different view modes:
-   - Side-by-side view
-   - Original only
-   - Customized only
-   - Unified diff view
-2. Section collapsing/expanding functionality for easier navigation
-3. A search function to find specific content in either version
-4. Smooth animations for transitions between views
-5. Button to copy the customized resume to clipboard
-
-These controls should enhance the user experience without cluttering the interface.
+This feature will help users quickly locate specific information in either resume version.
 ```
 
-### Prompt 9: Enhancing the diff visualization
+### Prompt 5: Copy-to-Clipboard Functionality
 ```
-Improve the diff visualization to make it more intuitive and useful. The enhancements should include:
+Implement a copy-to-clipboard feature for the resume comparison. Your implementation should:
 
-1. Refined color scheme that's easy on the eyes and accessible
-2. Inline comments or tooltips explaining key changes
-3. Hover effects to highlight corresponding changes in both versions
-4. Line numbers for easier reference
-5. Option to toggle the level of detail in the diff
-6. Small indicators in the scrollbar showing where changes are located
+1. Add buttons to copy the entire customized resume to clipboard
+2. Add an option to copy selected sections only (working with the section identification)
+3. Create JavaScript functions to handle the clipboard operations
+4. Add visual feedback when content is successfully copied
+5. Include fallback mechanisms for browsers with restricted clipboard access
+6. Ensure the copied content maintains proper formatting
+7. Add options to copy as plain text, markdown, or HTML
 
-The goal is to make it immediately clear what has changed and why, helping users understand the improvements to their resume.
+This will make it easier for users to use their customized resume content in other applications.
 ```
 
-### Prompt 10: Final integration and testing
+### Prompt 6: Hover Effects for Corresponding Changes
 ```
-Complete the final integration and testing of the resume comparison feature. This should:
+Implement hover effects to highlight corresponding changes between the original and customized resume versions. Your implementation should:
 
-1. Ensure all components work together seamlessly
-2. Add proper error handling for all edge cases
-3. Implement logging for tracking usage and errors
-4. Create comprehensive tests for all file formats and scenarios
-5. Add user documentation and tooltips
-6. Optimize performance for large resumes
-7. Ensure accessibility compliance
+1. Modify the existing diff highlighting to add unique identifiers to corresponding changes
+2. Create JavaScript functions to detect mouse hover events on diff-highlighted elements
+3. Add visual effects that highlight the corresponding change in the other column
+4. Ensure the highlighting is obvious but not distracting (consider using a subtle background color or border)
+5. Make sure the feature works with all view modes
+6. Add smooth transitions for the highlighting effects
+7. Ensure the feature is performant, even with many changes
 
-Also, create a simple onboarding overlay that explains the feature to first-time users.
+This will help users easily see how specific content changed between versions.
+```
+
+### Prompt 7: Line Numbers and Reference Indicators
+```
+Add line numbers and reference indicators to the resume comparison view. Your implementation should:
+
+1. Add line numbers to both the original and customized resume columns
+2. Ensure line numbers stay synchronized when scrolling
+3. Make line numbers visually distinct but unobtrusive
+4. Add the ability to link to specific lines (for sharing purposes)
+5. Add visual indicators in the scrollbar showing where changes are located
+6. Color-code the scrollbar indicators based on the type of change (addition, deletion, modification)
+7. Ensure the feature works across different browsers and screen sizes
+
+This will improve navigation and help users quickly locate changes within longer resumes.
+```
+
+### Prompt 8: Inline Comments and Tooltips
+```
+Implement inline comments and tooltips to explain significant changes in the customized resume. Your implementation should:
+
+1. Add tooltips that appear when hovering over changed sections
+2. Include explanatory comments about why the change improves the resume
+3. Create a system that categorizes changes (e.g., clarity improvement, keyword addition, formatting)
+4. Add visual indicators for sections with explanatory tooltips
+5. Ensure tooltips don't obstruct the resume content
+6. Make tooltips accessible via keyboard navigation
+7. Include an option to show/hide all explanatory comments
+
+This feature will help users understand why specific changes were made and learn how to improve their resume writing.
+```
+
+### Prompt 9: First-Time User Onboarding Overlay
+```
+Create a simple onboarding overlay that explains the resume comparison feature to first-time users. Your implementation should:
+
+1. Design a clean, informative overlay highlighting key features of the comparison view
+2. Include annotated screenshots or illustrations explaining the different controls
+3. Add step-by-step walkthrough of how to use the comparison tools
+4. Create a mechanism to show this only to first-time users (using local storage or cookies)
+5. Add the ability to dismiss the overlay and an option to recall it later
+6. Make the overlay responsive for all device sizes
+7. Ensure the onboarding content is accessible
+
+This will help new users quickly understand and make the most of the comparison feature.
+```
+
+### Prompt 10: Screen Reader Compatibility Testing
+```
+Test and improve the resume comparison feature for screen reader compatibility. Your implementation should:
+
+1. Test the feature with common screen readers (NVDA, JAWS, VoiceOver)
+2. Identify and fix any accessibility issues found during testing
+3. Add appropriate ARIA attributes to interactive elements that aren't already accessible
+4. Ensure all dynamic content changes are properly announced by screen readers
+5. Make sure keyboard navigation works correctly with screen readers
+6. Update the accessibility documentation with screen reader testing results
+7. Prioritize fixes for any critical accessibility issues discovered
+
+The goal is to ensure the comparison feature is fully accessible to users who rely on screen readers.
 ```
 
 ## Implementation Guidelines
 
-1. **Incremental Development**: Each step builds on the previous one
-2. **Testing**: Test each component thoroughly before moving to the next step
-3. **User Focus**: Keep the end-user experience as the primary consideration
-4. **Accessibility**: Ensure the comparison is accessible to all users
-5. **Performance**: Optimize for speed, especially when handling large documents
-6. **Mobile Compatibility**: Ensure the feature works well on all device sizes
+1. **Priority Order**: Tasks are listed in recommended implementation order, but PDF improvements should be highest priority
+2. **Independent Development**: Each task can be implemented independently of others if needed
+3. **Testing**: Test each component thoroughly before considering it complete
+4. **User Focus**: Keep the end-user experience as the primary consideration
+5. **Code Quality**: Maintain clean, well-documented code that follows project conventions
+6. **Mobile Compatibility**: Ensure all new features work well on all device sizes
 
-## Technical Stack Recommendations
+## Technical Implementation Notes
 
-1. **Diff Visualization**: diff2html or react-diff-viewer
-2. **DOCX Parsing**: python-docx
-3. **PDF Extraction**: unstructured.io
-4. **Frontend Framework**: Continue with existing (HTMX + Bootstrap)
-5. **CSS Framework**: Bootstrap (already in use)
+1. **PDF Caching**: Consider using Redis or database for distributed environments, or file-system caching for simpler setups
+2. **Fallback Extraction**: PyPDF2 or pdfplumber are good fallback options for unstructured.io
+3. **Section Management**: Use heading detection, then add collapsible behavior with CSS/JavaScript
+4. **Search Implementation**: Consider using a library like mark.js for highlighting search results
+5. **Browser Compatibility**: Test features in Chrome, Firefox, Safari, and Edge
 
-This plan provides a comprehensive roadmap for implementing the resume comparison feature with a focus on incremental development and user experience. 
+This plan provides a clear roadmap for completing the remaining implementation tasks for the resume comparison feature, with a focus on usability, performance, and accessibility. 

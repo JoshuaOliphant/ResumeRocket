@@ -79,7 +79,7 @@
 - [x] Connect PDF processing pipeline to the comparison view
 - [x] Ensure PDF-sourced content renders correctly in the UI
 - [x] Test the entire flow from upload to comparison
-- [ ] Add caching mechanism to improve performance for large PDFs
+- [x] Add caching mechanism to improve performance for large PDFs
 - [ ] Implement fallback extraction method for problematic PDFs
 - [x] Add detailed logging for PDF processing
 

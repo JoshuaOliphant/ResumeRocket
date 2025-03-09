@@ -9,7 +9,7 @@ Run this script whenever the database schema changes.
 import os
 import logging
 from app import app, db
-from models import User, JobDescription, CustomizedResume
+from models import User, JobDescription, CustomizedResume, PDFCache
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -45,6 +45,13 @@ def init_db():
                 logger.info("CustomizedResume table exists")
             except Exception as e:
                 logger.error(f"CustomizedResume table check failed: {e}")
+                
+            try:
+                PDFCache.query.first()
+                table_count += 1
+                logger.info("PDFCache table exists")
+            except Exception as e:
+                logger.error(f"PDFCache table check failed: {e}")
                 
             logger.info(f"Verified {table_count} tables exist")
     except Exception as e:
