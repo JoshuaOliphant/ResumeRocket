@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Section Collapsing Component Test</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    
+    <style>
+        /* Section collapsing styling */
+        .resume-section {
+            margin-bottom: 1rem;
+        }
+
+        .section-toggle {
+            color: #6c757d;
+            background: transparent;
+            border: none;
+            margin-right: 0.5rem;
+            padding: 0.1rem 0.3rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .section-toggle:hover {
+            color: #0d6efd;
+            background-color: rgba(13, 110, 253, 0.1);
+            border-radius: 3px;
+        }
+
+        .section-content {
+            transition: max-height 0.3s ease-out, opacity 0.3s ease-out;
+            max-height: 9999px; /* Start expanded */
+            opacity: 1;
+            overflow: hidden;
+        }
+
+        /* Container styling */
+        .test-container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+        
+        .test-results {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 5px;
+        }
+        
+        .test-success {
+            background-color: rgba(40, 167, 69, 0.1);
+            border: 1px solid rgba(40, 167, 69, 0.2);
+        }
+        
+        .test-failure {
+            background-color: rgba(220, 53, 69, 0.1);
+            border: 1px solid rgba(220, 53, 69, 0.2);
+        }
+        
+        .test-log {
+            max-height: 300px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 0.9rem;
+            padding: 10px;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-4">
+        <h1 class="mb-4">Section Collapsing Component Test</h1>
+        
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                Test Controls
+            </div>
+            <div class="card-body">
+                <button id="run-tests" class="btn btn-success">Run Tests</button>
+                <button id="reset-tests" class="btn btn-secondary ms-2">Reset</button>
+            </div>
+        </div>
+        
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">Test Results</div>
+                    <div class="card-body">
+                        <div id="test-results">
+                            <p class="text-muted">Run tests to see results</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">Test Log</div>
+                    <div class="card-body">
+                        <div id="test-log" class="test-log">Logs will appear here...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card mt-4">
+            <div class="card-header">Test Fixture</div>
+            <div class="card-body">
+                <div id="original-resume-html" class="test-container">
+                    <!-- Test content will be inserted here -->
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Test code -->
+    <script>
+        // Test logging function
+        function log(message) {
+            const logElement = document.getElementById('test-log');
+            const timestamp = new Date().toLocaleTimeString();
+            logElement.innerHTML += `[${timestamp}] ${message}\n`;
+            logElement.scrollTop = logElement.scrollHeight;
+        }
+        
+        // Assertion function
+        function assert(condition, message, callback) {
+            if (!condition) {
+                log(`❌ ASSERTION FAILED: ${message}`);
+                if (callback) callback(false);
+                return false;
+            }
+            log(`✅ ${message}`);
+            if (callback) callback(true);
+            return true;
+        }
+        
+        // Create a test fixture with sample resume content
+        function createTestFixture() {
+            const testContainer = document.getElementById('original-resume-html');
+            testContainer.innerHTML = `
+                <h1>John Doe</h1>
+                <p>123 Main St, Anytown, USA | john.doe@example.com | (123) 456-7890</p>
+                
+                <h2>SUMMARY</h2>
+                <p>Experienced software engineer with 5+ years of experience in web development and cloud technologies.</p>
+                
+                <h2>EDUCATION</h2>
+                <p>Bachelor of Science in Computer Science</p>
+                <p>University of Technology, 2015-2019</p>
+                
+                <h2>EXPERIENCE</h2>
+                <p>Senior Software Engineer</p>
+                <p>Tech Company Inc., 2021-Present</p>
+                <ul>
+                    <li>Developed and maintained RESTful APIs using Flask</li>
+                    <li>Implemented CI/CD pipelines</li>
+                    <li>Optimized database queries resulting in 40% performance improvement</li>
+                </ul>
+                
+                <p>Software Engineer</p>
+                <p>Startup XYZ, 2019-2021</p>
+                <ul>
+                    <li>Built responsive web applications</li>
+                    <li>Integrated third-party APIs</li>
+                    <li>Collaborated with cross-functional teams</li>
+                </ul>
+                
+                <h2>SKILLS</h2>
+                <ul>
+                    <li>Programming Languages: Python, JavaScript, TypeScript</li>
+                    <li>Frameworks & Libraries: React, Flask, Express.js</li>
+                    <li>Tools & Technologies: Git, Docker, AWS</li>
+                </ul>
+            `;
+            log("Test fixture created");
+        }
+        
+        // Reset the test environment
+        function resetTests() {
+            document.getElementById('original-resume-html').innerHTML = '';
+            document.getElementById('test-results').innerHTML = '<p class="text-muted">Run tests to see results</p>';
+            document.getElementById('test-log').innerHTML = 'Logs will appear here...\n';
+            log("Test environment reset");
+        }
+        
+        // Functions from resume_comparison.js
+        // -- Start copy from resume_comparison.js --
+        
+        /**
+         * Process sections for collapsing/expanding
+         */
+        function processSectionsForCollapsing() {
+            log("Processing sections for collapsing/expanding...");
+            
+            const originalHtmlElement = document.getElementById('original-resume-html');
+            
+            if (!originalHtmlElement) {
+                log("Could not find resume HTML element");
+                return;
+            }
+            
+            // Process headers
+            log("Processing markdown headers...");
+            const headerCount = processHeadersForCollapsing(originalHtmlElement, 'original');
+            log(`Found ${headerCount} headers in total`);
+            
+            // Handle all-uppercase sections
+            log("Processing uppercase sections...");
+            const uppercaseCount = processUppercaseSectionsForCollapsing(originalHtmlElement, 'original');
+            log(`Found ${uppercaseCount} uppercase sections in total`);
+            
+            return { headerCount, uppercaseCount };
+        }
+        
+        /**
+         * Process markdown headers for collapsing
+         */
+        function processHeadersForCollapsing(container, prefix) {
+            // Find all h1-h3 tags that could be section headers
+            const headers = container.querySelectorAll('h1, h2, h3');
+            log(`Found ${headers.length} h1-h3 headers`);
+            
+            let processedCount = 0;
+            
+            headers.forEach((header, index) => {
+                // Skip if already processed
+                if (header.querySelector('.section-toggle')) {
+                    log(`Header ${index} already processed, skipping`);
+                    return;
+                }
+                
+                const headerText = header.textContent.trim();
+                log(`Processing header: "${headerText}"`);
+                
+                const sectionId = `${prefix}-section-${index}`;
+                const sectionContent = collectSectionContent(header);
+                
+                log(`Found ${sectionContent.length} content elements for this section`);
+                
+                if (sectionContent.length > 0) {
+                    // Create the section wrapper
+                    const sectionWrapper = document.createElement('div');
+                    sectionWrapper.classList.add('resume-section');
+                    sectionWrapper.id = sectionId;
+                    
+                    // Create toggle button
+                    const toggleButton = document.createElement('button');
+                    toggleButton.classList.add('section-toggle', 'btn', 'btn-sm');
+                    toggleButton.setAttribute('type', 'button');
+                    toggleButton.setAttribute('data-section', sectionId);
+                    toggleButton.setAttribute('data-section-title', headerText);
+                    toggleButton.innerHTML = '<i class="bi bi-chevron-down"></i>';
+                    toggleButton.title = 'Toggle section';
+                    
+                    // Add the toggle button to the header
+                    header.classList.add('d-flex', 'align-items-center', 'justify-content-between');
+                    header.prepend(toggleButton);
+                    
+                    // Create content container
+                    const contentContainer = document.createElement('div');
+                    contentContainer.classList.add('section-content');
+                    contentContainer.id = `${sectionId}-content`;
+                    
+                    // Move content into container
+                    sectionContent.forEach(element => {
+                        contentContainer.appendChild(element);
+                    });
+                    
+                    // Insert header and content container after the original header
+                    header.parentNode.insertBefore(sectionWrapper, header.nextSibling);
+                    sectionWrapper.appendChild(header);
+                    sectionWrapper.appendChild(contentContainer);
+                    
+                    // Set up event listener for toggle
+                    toggleButton.addEventListener('click', function() {
+                        toggleSection(sectionId);
+                    });
+                    
+                    processedCount++;
+                    log(`Successfully processed section: ${headerText}`);
+                } else {
+                    log(`No content for section: ${headerText}, skipping`);
+                }
+            });
+            
+            return processedCount;
+        }
+        
+        /**
+         * Process all-uppercase text sections for collapsing
+         */
+        function processUppercaseSectionsForCollapsing(container, prefix) {
+            // Find all p tags that could be uppercase section headers
+            const paragraphs = container.querySelectorAll('p');
+            log(`Found ${paragraphs.length} paragraphs`);
+            
+            let processedCount = 0;
+            
+            paragraphs.forEach((paragraph, index) => {
+                const text = paragraph.textContent.trim();
+                // Check if the paragraph text is all uppercase and at least 3 characters
+                if (text === text.toUpperCase() && text.length >= 3 && text === text.replace(/[^A-Z\s]/g, '')) {
+                    log(`Found uppercase paragraph: "${text}"`);
+                    
+                    // Skip if already processed
+                    if (paragraph.querySelector('.section-toggle')) {
+                        log(`Paragraph ${index} already processed, skipping`);
+                        return;
+                    }
+                    
+                    const sectionId = `${prefix}-uppercase-section-${index}`;
+                    const sectionContent = collectSectionContent(paragraph);
+                    
+                    log(`Found ${sectionContent.length} content elements for this uppercase section`);
+                    
+                    if (sectionContent.length > 0) {
+                        // Create the section wrapper
+                        const sectionWrapper = document.createElement('div');
+                        sectionWrapper.classList.add('resume-section');
+                        sectionWrapper.id = sectionId;
+                        
+                        // Make the paragraph look like a header
+                        paragraph.classList.add('fw-bold', 'fs-5', 'd-flex', 'align-items-center', 'justify-content-between');
+                        
+                        // Create toggle button
+                        const toggleButton = document.createElement('button');
+                        toggleButton.classList.add('section-toggle', 'btn', 'btn-sm');
+                        toggleButton.setAttribute('type', 'button');
+                        toggleButton.setAttribute('data-section', sectionId);
+                        toggleButton.setAttribute('data-section-title', text);
+                        toggleButton.innerHTML = '<i class="bi bi-chevron-down"></i>';
+                        toggleButton.title = 'Toggle section';
+                        
+                        // Add the toggle button to the paragraph
+                        paragraph.prepend(toggleButton);
+                        
+                        // Create content container
+                        const contentContainer = document.createElement('div');
+                        contentContainer.classList.add('section-content');
+                        contentContainer.id = `${sectionId}-content`;
+                        
+                        // Move content into container
+                        sectionContent.forEach(element => {
+                            contentContainer.appendChild(element);
+                        });
+                        
+                        // Insert paragraph and content container after the original paragraph
+                        paragraph.parentNode.insertBefore(sectionWrapper, paragraph.nextSibling);
+                        sectionWrapper.appendChild(paragraph);
+                        sectionWrapper.appendChild(contentContainer);
+                        
+                        // Set up event listener for toggle
+                        toggleButton.addEventListener('click', function() {
+                            toggleSection(sectionId);
+                        });
+                        
+                        processedCount++;
+                        log(`Successfully processed uppercase section: ${text}`);
+                    } else {
+                        log(`No content for uppercase section: ${text}, skipping`);
+                    }
+                }
+            });
+            
+            return processedCount;
+        }
+        
+        /**
+         * Collect all content elements that belong to a section
+         */
+        function collectSectionContent(header) {
+            const content = [];
+            let nextElement = header.nextElementSibling;
+            
+            // Get the header level to determine when to stop collecting
+            const headerTagName = header.tagName;
+            
+            if (!nextElement) {
+                return content;
+            }
+            
+            while (nextElement) {
+                // Stop when we hit another header of the same or higher level
+                if (nextElement.tagName && 
+                    (nextElement.tagName === headerTagName || isHigherLevelHeader(nextElement.tagName, headerTagName))) {
+                    break;
+                }
+                
+                // Store the element for moving later
+                const elementToMove = nextElement;
+                nextElement = nextElement.nextElementSibling;
+                content.push(elementToMove);
+            }
+            
+            return content;
+        }
+        
+        /**
+         * Check if one header is of higher level than another
+         */
+        function isHigherLevelHeader(headerTag1, headerTag2) {
+            const headerLevels = {
+                'H1': 1,
+                'H2': 2,
+                'H3': 3,
+                'H4': 4,
+                'H5': 5,
+                'H6': 6
+            };
+            
+            return headerLevels[headerTag1] <= headerLevels[headerTag2];
+        }
+        
+        /**
+         * Toggle the visibility of a section
+         */
+        function toggleSection(sectionId) {
+            const section = document.getElementById(sectionId);
+            const content = document.getElementById(`${sectionId}-content`);
+            const toggle = section.querySelector('.section-toggle');
+            
+            if (!content) return;
+            
+            // Toggle this section
+            if (content.style.display === 'none') {
+                // Expand
+                content.style.display = 'block';
+                content.style.maxHeight = content.scrollHeight + 'px';
+                toggle.innerHTML = '<i class="bi bi-chevron-down"></i>';
+            } else {
+                // Collapse
+                content.style.maxHeight = '0px';
+                setTimeout(() => {
+                    content.style.display = 'none';
+                }, 300); // Match the transition time
+                toggle.innerHTML = '<i class="bi bi-chevron-right"></i>';
+            }
+        }
+        
+        // -- End copy from resume_comparison.js --
+        
+        // Run all tests
+        function runTests() {
+            log("Starting tests...");
+            createTestFixture();
+            
+            let testsPassed = 0;
+            let testsFailed = 0;
+            
+            // Test 1: Process sections
+            log("\n--- Test 1: Process Sections ---");
+            const result = processSectionsForCollapsing();
+            
+            // Verify section counts
+            assert(
+                result.headerCount >= 3, 
+                `Should find at least 3 headers (found: ${result.headerCount})`,
+                success => success ? testsPassed++ : testsFailed++
+            );
+            
+            // Test 2: Verify toggle buttons
+            log("\n--- Test 2: Verify Toggle Buttons ---");
+            const toggleButtons = document.querySelectorAll('.section-toggle');
+            assert(
+                toggleButtons.length >= 3,
+                `Should find at least 3 toggle buttons (found: ${toggleButtons.length})`,
+                success => success ? testsPassed++ : testsFailed++
+            );
+            
+            // Test 3: Test collapse/expand functionality
+            log("\n--- Test 3: Collapse/Expand Functionality ---");
+            if (toggleButtons.length > 0) {
+                const firstButton = toggleButtons[0];
+                const sectionId = firstButton.getAttribute('data-section');
+                const contentDiv = document.getElementById(`${sectionId}-content`);
+                
+                // Verify initial state
+                assert(
+                    contentDiv && window.getComputedStyle(contentDiv).display !== 'none',
+                    "Section content should be visible initially",
+                    success => success ? testsPassed++ : testsFailed++
+                );
+                
+                // Test collapsing
+                log("Testing collapse action...");
+                firstButton.click();
+                
+                // We need to setTimeout because the collapse has a delay
+                setTimeout(() => {
+                    assert(
+                        contentDiv && window.getComputedStyle(contentDiv).display === 'none',
+                        "Section content should be hidden after collapse",
+                        success => success ? testsPassed++ : testsFailed++
+                    );
+                    
+                    // Test expanding
+                    log("Testing expand action...");
+                    firstButton.click();
+                    
+                    setTimeout(() => {
+                        assert(
+                            contentDiv && window.getComputedStyle(contentDiv).display !== 'none',
+                            "Section content should be visible after expand",
+                            success => success ? testsPassed++ : testsFailed++
+                        );
+                        
+                        // Display final results
+                        displayFinalResults(testsPassed, testsFailed);
+                    }, 500);
+                }, 500);
+            } else {
+                log("❌ Cannot test collapse/expand: no toggle buttons found");
+                testsFailed += 2;
+                displayFinalResults(testsPassed, testsFailed);
+            }
+        }
+        
+        function displayFinalResults(passed, failed) {
+            const resultsElement = document.getElementById('test-results');
+            const total = passed + failed;
+            
+            if (failed === 0) {
+                resultsElement.innerHTML = `
+                    <div class="test-results test-success">
+                        <h4>✅ All tests passed! (${passed}/${total})</h4>
+                        <p>The section collapsing functionality is working as expected.</p>
+                    </div>
+                `;
+            } else {
+                resultsElement.innerHTML = `
+                    <div class="test-results test-failure">
+                        <h4>❌ Tests failed (${passed}/${total} passed)</h4>
+                        <p>Some tests failed. Check the log for details.</p>
+                    </div>
+                `;
+            }
+            
+            log(`\nFinal results: ${passed} passed, ${failed} failed (${total} total)`);
+        }
+        
+        // Set up event listeners
+        document.getElementById('run-tests').addEventListener('click', runTests);
+        document.getElementById('reset-tests').addEventListener('click', resetTests);
+        
+        // Initialize
+        log("Test page loaded. Click 'Run Tests' to start.");
+    </script>
+    
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
