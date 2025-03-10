@@ -16,7 +16,7 @@ from pathlib import Path
 # Add parent directory to path to import from parent
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-def ensure_server_running(host="localhost", port=8080, max_wait=30):
+def ensure_server_running(host="localhost", port=5000, max_wait=30):
     """Check if the server is running, and start it if not"""
     import socket
     import time
@@ -27,7 +27,7 @@ def ensure_server_running(host="localhost", port=8080, max_wait=30):
             s.settimeout(1)
             s.connect((host, port))
             print(f"Server already running on {host}:{port}")
-            return True
+            return None  # No need to start a server, return None
     except (socket.error, socket.timeout):
         print(f"Server not running on {host}:{port}, attempting to start...")
     
@@ -70,6 +70,10 @@ def run_tests():
     print("Installing test dependencies...")
     subprocess.run(["npm", "install"], cwd=str(js_tests_dir), check=True)
     
+    # Install Playwright browsers if needed
+    print("Setting up Playwright browsers...")
+    subprocess.run(["npm", "run", "setup"], cwd=str(js_tests_dir), check=True)
+    
     # Run the test
     print("Running section collapsing test...")
     result = subprocess.run(
@@ -89,7 +93,9 @@ def main():
         # Start server if needed
         if not args.no_server:
             server_process = ensure_server_running()
-            if not server_process:
+            if server_process is None:
+                print("Server is already running, will not terminate it when done")
+            elif server_process is False:  # Failed to start
                 print("Failed to ensure server is running")
                 return 1
         

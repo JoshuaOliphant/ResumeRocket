@@ -4,7 +4,8 @@
   "description": "JavaScript tests for ResumeRocket",
   "main": "index.js",
   "scripts": {
-    "test": "node test_section_collapsing.js"
+    "test": "node test_section_collapsing.js",
+    "setup": "npx playwright install chromium"
   },
   "dependencies": {
     "playwright": "^1.42.1"

@@ -17,7 +17,7 @@
 const { chromium } = require('playwright');
 
 // Configuration
-const SERVER_URL = 'http://localhost:8080';
+const SERVER_URL = 'http://localhost:5000';
 const LOGIN_CREDENTIALS = {
   email: 'test@example.com',
   password: 'password123'
