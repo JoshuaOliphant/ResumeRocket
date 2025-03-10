@@ -99,6 +99,19 @@ def index():
     """Render the homepage."""
     return render_template('index.html')
 
+@app.route('/partials/toggle-input')
+def toggle_input_partial():
+    """Render the toggle input partial template."""
+    input_type = request.args.get('type', 'file')
+    upload_type = request.args.get('uploadType')
+    return render_template('partials/toggle_input.html', type=input_type, upload_type=upload_type)
+
+@app.route('/partials/toggle-job-input')
+def toggle_job_input_partial():
+    """Render the toggle job input partial template."""
+    input_type = request.args.get('type', 'url')
+    return render_template('partials/toggle_job_input.html', type=input_type)
+
 # Create uploads directory if it doesn't exist
 with app.app_context():
     os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)

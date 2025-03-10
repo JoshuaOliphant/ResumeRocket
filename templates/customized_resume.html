@@ -25,10 +25,10 @@
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h5 class="mb-0">Job Details</h5>
                     <div>
-                        <span class="badge bg-secondary">Original Score: {{ resume.original_ats_score|round(1) }}%</span>
-                        <span class="badge bg-success">New Score: {{ resume.ats_score|round(1) }}%</span>
+                        <span class="badge bg-secondary">Original Score: {{ resume.original_ats_score|default(0)|round(1) }}%</span>
+                        <span class="badge bg-success">New Score: {{ resume.ats_score|default(0)|round(1) }}%</span>
                         <span class="badge bg-info">
-                            Improved: {% set improvement = resume.ats_score - resume.original_ats_score %}
+                            Improved: {% set improvement = (resume.ats_score|default(0)) - (resume.original_ats_score|default(0)) %}
                             {% if improvement > 0 %}+{% endif %}{{ improvement|round(1) }}%
                         </span>
                     </div>
@@ -47,7 +47,7 @@
                         </div>
                         <div class="card-body">
                             <div class="d-flex flex-wrap gap-2">
-                                {% for keyword in resume.matching_keywords %}
+                                {% for keyword in resume.matching_keywords or [] %}
                                     <span class="badge bg-success">{{ keyword }}</span>
                                 {% endfor %}
                             </div>
@@ -61,7 +61,7 @@
                         </div>
                         <div class="card-body">
                             <div class="d-flex flex-wrap gap-2">
-                                {% for keyword in resume.missing_keywords %}
+                                {% for keyword in resume.missing_keywords or [] %}
                                     <span class="badge bg-warning">{{ keyword }}</span>
                                 {% endfor %}
                             </div>

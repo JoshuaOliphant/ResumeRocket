@@ -52,6 +52,7 @@ class CustomizedResume(db.Model):
     customized_content = db.Column(db.Text, nullable=False)
     job_description_id = db.Column(db.Integer, db.ForeignKey('job_description.id'), nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    original_id = db.Column(db.Integer, db.ForeignKey('customized_resume.id'), nullable=True)  # ID of the original resume this was customized from
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     original_ats_score = db.Column(db.Float)  # Original ATS score before customization
     ats_score = db.Column(db.Float)  # New ATS score after customization

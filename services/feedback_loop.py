@@ -359,7 +359,7 @@ class FeedbackLoop:
             
     def apply_winning_variant(self, test_id, optimization_id):
         """
-        Apply the winning variant from an A/B test to production
+        Apply the winning variant from an A/B test
         """
         try:
             # Get the A/B test
@@ -395,4 +395,37 @@ class FeedbackLoop:
             
         except Exception as e:
             logger.error(f"Error applying winning variant: {str(e)}")
-            return {"error": f"Failed to apply winning variant: {str(e)}"} 
+            return {"error": f"Failed to apply winning variant: {str(e)}"}
+    
+    def list_evaluations(self):
+        """
+        List all customization evaluations
+        """
+        try:
+            evaluations = CustomizationEvaluation.query.order_by(CustomizationEvaluation.created_at.desc()).all()
+            return evaluations
+        except Exception as e:
+            logger.error(f"Error listing evaluations: {str(e)}")
+            return []
+    
+    def list_optimizations(self):
+        """
+        List all optimization suggestions
+        """
+        try:
+            optimizations = OptimizationSuggestion.query.order_by(OptimizationSuggestion.created_at.desc()).all()
+            return optimizations
+        except Exception as e:
+            logger.error(f"Error listing optimizations: {str(e)}")
+            return []
+    
+    def list_ab_tests(self):
+        """
+        List all A/B tests
+        """
+        try:
+            tests = ABTest.query.order_by(ABTest.start_date.desc()).all()
+            return tests
+        except Exception as e:
+            logger.error(f"Error listing A/B tests: {str(e)}")
+            return [] 

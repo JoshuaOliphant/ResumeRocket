@@ -34,7 +34,7 @@ ENTRYPOINT []
 # Set environment variables for production
 ENV FLASK_APP=app.py
 ENV FLASK_ENV=production
-ENV DATABASE_URL=sqlite:///instance/resumerocket.db
+ENV DATABASE_URL=sqlite:///resumerocket.db
 ENV MAX_CONTENT_LENGTH=5242880
 
 # Note: Secret environment variables should be set during deployment

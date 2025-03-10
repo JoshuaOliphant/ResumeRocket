@@ -1,9 +1,10 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
 from flask_login import login_required, current_user
 from extensions import db
-from models import User, ABTest, OptimizationSuggestion
+from models import User, ABTest, OptimizationSuggestion, CustomizedResume, JobDescription
 from functools import wraps
 from services.feedback_loop import FeedbackLoop
+from sqlalchemy import func
 
 # Create admin blueprint
 admin_bp = Blueprint('admin', __name__)
@@ -75,12 +76,47 @@ def feedback_dashboard():
     optimizations = feedback_loop.list_optimizations()
     tests = feedback_loop.list_ab_tests()
     
+    # Get database models for stats
+    from models import CustomizedResume, JobDescription
+    from sqlalchemy import func
+    
+    # Calculate statistics for the dashboard
+    total_customizations = CustomizedResume.query.count()
+    
+    # Calculate average improvement if there are customizations
+    avg_improvement = 0
+    if total_customizations > 0:
+        avg_improvement_result = db.session.query(
+            func.avg(CustomizedResume.ats_score - CustomizedResume.original_ats_score)
+        ).scalar()
+        avg_improvement = round(avg_improvement_result or 0, 1)
+    
+    # Calculate feedback stats
+    feedback_count = CustomizedResume.query.filter(CustomizedResume.user_rating.isnot(None)).count()
+    feedback_rate = round((feedback_count / total_customizations) * 100, 1) if total_customizations > 0 else 0
+    
+    # Calculate average rating
+    avg_rating_result = db.session.query(func.avg(CustomizedResume.user_rating)).filter(
+        CustomizedResume.user_rating.isnot(None)
+    ).scalar()
+    avg_rating = round(avg_rating_result or 0, 1)
+    
+    # Compile stats
+    stats = {
+        'total_customizations': total_customizations,
+        'avg_improvement': avg_improvement,
+        'feedback_count': feedback_count,
+        'feedback_rate': feedback_rate,
+        'avg_rating': avg_rating
+    }
+    
     # Render template with data
     return render_template(
         'admin/feedback_dashboard.html',
         evaluations=evaluations,
         optimizations=optimizations,
-        tests=tests
+        tests=tests,
+        stats=stats
     )
 
 @admin_bp.route('/admin/users', methods=['GET'])

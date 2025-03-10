@@ -17,6 +17,44 @@ ai_suggestions = AISuggestions()
 resume_customizer = ResumeCustomizer()
 file_parser = FileParser()
 
+def handle_job_url_submission(job_url, resume_content=None):
+    """
+    Process a job URL submission and create a job description record.
+    Can be called from other blueprints.
+    
+    Args:
+        job_url: URL of the job posting to process
+        resume_content: Optional resume content for context
+        
+    Returns:
+        Dict with job_id on success or error message on failure
+    """
+    try:
+        if not job_url:
+            return {'error': 'Job URL is required'}
+            
+        # Process the job URL
+        job_data = job_processor.extract_from_url(job_url)
+        
+        if not job_data or not job_data.get('content'):
+            return {'error': 'Failed to extract job description from URL'}
+            
+        # Create new job description
+        job = JobDescription(
+            title=job_data.get('title', 'Job from URL'),
+            content=job_data.get('content'),
+            url=job_url,
+            user_id=current_user.id
+        )
+        
+        db.session.add(job)
+        db.session.commit()
+        
+        return {'job_id': job.id}
+    except Exception as e:
+        logger.error(f"Error processing job URL: {str(e)}")
+        return {'error': f'Error processing job URL: {str(e)}'}
+
 @jobs_bp.route('/job/text', methods=['POST'])
 @login_required
 def submit_job_text():

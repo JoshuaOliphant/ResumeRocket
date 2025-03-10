@@ -6,7 +6,7 @@
     <div class="alert alert-danger">
         <strong>Warning:</strong> JavaScript is disabled in your browser. The diff highlighting and interactive features 
         of this comparison view require JavaScript to function properly. Please enable JavaScript or 
-        <a href="{{ url_for('view_customized_resume', resume_id=resume.id) }}">view the basic version</a> instead.
+        <a href="{{ url_for('resume.view_customized_resume', resume_id=resume.id) }}">view the basic version</a> instead.
     </div>
 </noscript>
 
@@ -213,16 +213,16 @@
                     </div>
                     <div class="mb-2">
                         <button id="print-btn" class="btn btn-secondary" onclick="printComparison()">Print Comparison</button>
-                        <a id="download-original-btn" href="{{ url_for('export_resume', resume_id=resume.id, version='original') if resume else '#' }}" class="btn btn-outline-secondary">Download Original</a>
+                        <a id="download-original-btn" href="{{ url_for('resume.export_resume', resume_id=resume.id, version='original') if resume else '#' }}" class="btn btn-outline-secondary">Download Original</a>
                         
                         <div class="dropdown d-inline-block">
                             <button class="btn btn-success dropdown-toggle" type="button" id="downloadOptions" data-bs-toggle="dropdown" aria-expanded="false">
                                 Download Customized
                             </button>
                             <ul class="dropdown-menu" aria-labelledby="downloadOptions">
-                                <li><a class="dropdown-item" href="{{ url_for('download_resume', resume_id=resume.id, format='pdf') }}"><i class="bi bi-file-earmark-pdf me-2"></i>PDF</a></li>
-                                <li><a class="dropdown-item" href="{{ url_for('download_resume', resume_id=resume.id, format='docx') }}"><i class="bi bi-file-earmark-word me-2"></i>DOCX</a></li>
-                                <li><a class="dropdown-item" href="{{ url_for('download_resume', resume_id=resume.id, format='md') }}"><i class="bi bi-markdown me-2"></i>Markdown</a></li>
+                                <li><a class="dropdown-item" href="{{ url_for('resume.download_resume', resume_id=resume.id, format='pdf') }}"><i class="bi bi-file-earmark-pdf me-2"></i>PDF</a></li>
+                                <li><a class="dropdown-item" href="{{ url_for('resume.download_resume', resume_id=resume.id, format='docx') }}"><i class="bi bi-file-earmark-word me-2"></i>DOCX</a></li>
+                                <li><a class="dropdown-item" href="{{ url_for('resume.download_resume', resume_id=resume.id, format='md') }}"><i class="bi bi-markdown me-2"></i>Markdown</a></li>
                             </ul>
                         </div>
                     </div>

@@ -9,6 +9,7 @@ from services.ats_analyzer import EnhancedATSAnalyzer
 from services.ai_suggestions import AISuggestions
 from services.resume_customizer import ResumeCustomizer
 import logging
+from routes.jobs import handle_job_url_submission, jobs_bp
 
 # Initialize logger
 logger = logging.getLogger(__name__)
@@ -72,17 +73,29 @@ def customize_resume():
     logger.debug(f"Found original resume content with format: {file_format}")
     
     # Customize resume based on job description
-    customized_content, changes, keywords = resume_customizer.customize(
+    customization_result = resume_customizer.customize_resume(
         original_content, 
-        job.content,
-        file_format
+        job.content
     )
+    
+    customized_content = customization_result.get('customized_content')
+    comparison_data = customization_result.get('comparison_data', {})
+    
+    # Extract relevant data for display and saving
+    added_keywords = comparison_data.get('added_keywords', [])
+    total_changes = comparison_data.get('total_changes', 0)
+    
+    # Get ATS scores from the customization result
+    original_score = customization_result.get('original_score', 0)
+    new_score = customization_result.get('new_score', 0)
+    matching_keywords = customization_result.get('matching_keywords', [])
+    missing_keywords = customization_result.get('missing_keywords', [])
     
     logger.debug("Generated customized resume content")
     
     # Save customized resume to database
-    added_keywords_count = len(keywords['added'])
-    changes_count = sum(len(changes[section]) for section in changes)
+    added_keywords_count = len(added_keywords)
+    changes_count = total_changes
     
     logger.debug(f"Customization added {added_keywords_count} keywords with {changes_count} total changes")
     
@@ -90,15 +103,18 @@ def customize_resume():
     customized_resume = CustomizedResume(
         user_id=current_user.id, 
         job_description_id=job.id,
-        original_id=resume_id,
         original_content=original_content,
         customized_content=customized_content,
         file_format=file_format,
-        original_ats_score=original_resume.original_ats_score,
-        ats_score=original_resume.ats_score,
+        original_ats_score=original_score,
+        ats_score=new_score,
+        matching_keywords=matching_keywords,
+        missing_keywords=missing_keywords,
         added_keywords_count=added_keywords_count,
         changes_count=changes_count,
-        created_at=datetime.utcnow()
+        created_at=datetime.utcnow(),
+        original_id=original_resume.id,
+        comparison_data=comparison_data
     )
     
     # Add and commit to database
@@ -107,8 +123,15 @@ def customize_resume():
     
     logger.debug(f"Created customized resume with ID: {customized_resume.id}")
     
-    # Redirect to view customized resume
-    return redirect(url_for('resume.view_customized_resume', resume_id=customized_resume.id))
+    # Check if this is an HTMX request
+    if request.headers.get('HX-Request') == 'true':
+        # For HTMX requests, use HX-Redirect for proper client-side navigation
+        response = jsonify({"success": True})
+        response.headers['HX-Redirect'] = url_for('resume.compare_resume', resume_id=customized_resume.id)
+        return response
+    else:
+        # For regular requests, use standard redirect
+        return redirect(url_for('resume.compare_resume', resume_id=customized_resume.id))
 
 @resume_bp.route('/api/process_resume', methods=['POST'])
 @login_required
@@ -164,15 +187,16 @@ def analyze_resume():
     logger.debug(f"Files received: {request.files}")
     
     # Check if resume is provided as file or text
-    if 'resume' in request.files and request.files['resume'].filename:
+    if 'resume_file' in request.files and request.files['resume_file'].filename:
         # Get resume file
-        file = request.files['resume']
+        file = request.files['resume_file']
         logger.debug(f"Resume file received: {file.filename}")
         
         # Parse resume content from file
         try:
-            resume_content = file_parser.parse(file)
-            file_format = file_parser.determine_format(file)
+            resume_content = file_parser.parse_to_markdown(file)
+            # Determine file format from filename
+            file_format = file.filename.rsplit('.', 1)[1].lower() if '.' in file.filename else 'txt'
             original_filename = file.filename
         except Exception as e:
             return jsonify({'error': f'Error parsing resume file: {str(e)}'}), 400
@@ -200,10 +224,8 @@ def analyze_resume():
         
         if job_url:
             # Process job URL
-            from routes.jobs import jobs_bp
-            
             # Create job record via jobs blueprint
-            result = jobs_bp.handle_job_url_submission(job_url, resume_content)
+            result = handle_job_url_submission(job_url, resume_content)
             
             if 'error' in result:
                 return jsonify(result), 400
@@ -237,23 +259,22 @@ def analyze_resume():
     ats_results = ats_analyzer.analyze(resume_content, job_description)
     
     # Generate AI suggestions for improvements
-    suggestions = ai_suggestions.generate_suggestions(
+    suggestions = ai_suggestions.get_suggestions(
         resume_content, 
-        job_description, 
-        ats_results
+        job_description
     )
     
     logger.debug(f"Generated {len(suggestions)} AI suggestions")
     
     logger.debug(f"Rendering template with resume_id={resume_id}, job_id={job.id}")
     
-    # Return results as JSON
-    return jsonify({
-        'resume_id': resume_id,
-        'job_id': job.id,
-        'ats_score': ats_results,
-        'suggestions': suggestions
-    })
+    # Render the analysis results template
+    return render_template('partials/analysis_results.html', 
+        resume_id=resume_id,
+        job_id=job.id,
+        ats_score=ats_results,
+        suggestions=suggestions
+    )
 
 @resume_bp.route('/customized-resume/<int:resume_id>')
 @login_required

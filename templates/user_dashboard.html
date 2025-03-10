@@ -17,7 +17,7 @@
         <div class="col-md-6 col-lg-3 mb-3">
             <div class="card text-center h-100 border-0 shadow-sm">
                 <div class="card-body">
-                    <h3 class="display-4 fw-bold text-success">{{ avg_improvement }}%</h3>
+                    <h3 class="display-4 fw-bold text-success">{{ avg_improvement if avg_improvement is not none else 0 }}%</h3>
                     <p class="text-muted mb-0">Average Improvement</p>
                 </div>
             </div>
@@ -100,17 +100,17 @@
                             <div class="d-flex align-items-center">
                                 <div class="progress flex-grow-1 me-2" style="height: 8px;">
                                     <div class="progress-bar bg-primary" role="progressbar" 
-                                         style="width: {{ item.resume.ats_score }}%;" 
-                                         aria-valuenow="{{ item.resume.ats_score }}" 
+                                         style="width: {{ item.resume.ats_score if item.resume.ats_score is not none else 0 }}%;" 
+                                         aria-valuenow="{{ item.resume.ats_score if item.resume.ats_score is not none else 0 }}" 
                                          aria-valuemin="0" 
                                          aria-valuemax="100"></div>
                                 </div>
-                                <span class="text-nowrap">{{ item.resume.ats_score|round(1) }}%</span>
+                                <span class="text-nowrap">{{ (item.resume.ats_score|round(1) if item.resume.ats_score is not none else 0) }}%</span>
                             </div>
                         </td>
                         <td>
-                            <span class="badge {{ 'bg-success' if item.improvement > 0 else 'bg-secondary' }}">
-                                {{ '+' if item.improvement > 0 }}{{ item.improvement }}%
+                            <span class="badge {{ 'bg-success' if item.improvement is not none and item.improvement > 0 else 'bg-secondary' }}">
+                                {{ '+' if item.improvement is not none and item.improvement > 0 }}{{ item.improvement if item.improvement is not none else 0 }}%
                             </span>
                         </td>
                         <td>
@@ -129,20 +129,20 @@
                         </td>
                         <td class="text-end">
                             <div class="btn-group">
-                                <a href="{{ url_for('compare_resume', resume_id=item.resume.id) }}" class="btn btn-sm btn-outline-primary">
+                                <a href="{{ url_for('resume.compare_resume', resume_id=item.resume.id) }}" class="btn btn-sm btn-outline-primary">
                                     <i class="bi bi-eye me-1"></i>View
                                 </a>
                                 <button type="button" class="btn btn-sm btn-outline-primary dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" aria-expanded="false">
                                     <span class="visually-hidden">Toggle Dropdown</span>
                                 </button>
                                 <ul class="dropdown-menu dropdown-menu-end">
-                                    <li><a class="dropdown-item" href="{{ url_for('download_resume', resume_id=item.resume.id, format='pdf') }}">
+                                    <li><a class="dropdown-item" href="{{ url_for('resume.download_resume', resume_id=item.resume.id, format='pdf') }}">
                                         <i class="bi bi-file-earmark-pdf me-2"></i>Download PDF
                                     </a></li>
-                                    <li><a class="dropdown-item" href="{{ url_for('download_resume', resume_id=item.resume.id, format='docx') }}">
+                                    <li><a class="dropdown-item" href="{{ url_for('resume.download_resume', resume_id=item.resume.id, format='docx') }}">
                                         <i class="bi bi-file-earmark-word me-2"></i>Download DOCX
                                     </a></li>
-                                    <li><a class="dropdown-item" href="{{ url_for('download_resume', resume_id=item.resume.id, format='md') }}">
+                                    <li><a class="dropdown-item" href="{{ url_for('resume.download_resume', resume_id=item.resume.id, format='md') }}">
                                         <i class="bi bi-markdown me-2"></i>Download Markdown
                                     </a></li>
                                     <li><hr class="dropdown-divider"></li>
@@ -274,7 +274,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const resumeId = button.getAttribute('data-resume-id');
             const confirmDeleteBtn = document.getElementById('confirmDelete');
             
-            confirmDeleteBtn.href = `/resume/${resumeId}/delete`;
+            confirmDeleteBtn.href = `/dashboard/resume/${resumeId}/delete`;
         });
     }
 });
