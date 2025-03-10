@@ -62,13 +62,34 @@
                         </div>
                         <div class="col-md-4">
                             <div class="d-flex justify-content-end align-items-center">
-                                <h5 class="mb-0 me-2">ATS Score: <span id="ats-score" class="badge bg-primary">{{ resume.ats_score if resume else 'N/A' }}%</span></h5>
+                                <h5 class="mb-0 me-2">
+                                    <span class="badge bg-secondary">Original: {{ resume.original_ats_score|round(1) if resume else 'N/A' }}%</span>
+                                    <span class="badge bg-success">New: {{ resume.ats_score|round(1) if resume else 'N/A' }}%</span>
+                                    <span class="badge bg-info">
+                                        {% if resume %}
+                                            {% set improvement = resume.ats_score - resume.original_ats_score %}
+                                            {% if improvement > 0 %}+{% endif %}{{ improvement|round(1) }}%
+                                        {% else %}
+                                            N/A
+                                        {% endif %}
+                                    </span>
+                                </h5>
                             </div>
                             <div id="change-summary" class="mt-2 text-end">
-                                <p class="mb-1">Summary of changes: <span id="changes-count" class="badge bg-info">0 changes</span></p>
+                                <p class="mb-1">Summary of changes: 
+                                    <span id="changes-count" class="badge bg-info">
+                                        {{ resume.changes_count if resume and resume.changes_count else '0' }} changes
+                                    </span>
+                                </p>
                                 <div id="summary-details" class="small text-muted">
-                                    <!-- This will be populated with JavaScript -->
-                                    Changes will be highlighted in the comparison below.
+                                    {% if resume and resume.comparison_data %}
+                                        <span class="badge bg-success">{{ resume.comparison_data.new_keywords_count if resume.comparison_data.new_keywords_count else 0 }} keywords added</span>
+                                        {% if resume.comparison_data.keyword_density %}
+                                            <span class="badge bg-info">Keyword density: {{ resume.comparison_data.keyword_density.original|round(2) }}% → {{ resume.comparison_data.keyword_density.new|round(2) }}%</span>
+                                        {% endif %}
+                                    {% else %}
+                                        Changes will be highlighted in the comparison below.
+                                    {% endif %}
                                 </div>
                             </div>
                         </div>
@@ -79,6 +100,45 @@
                             <h5>Job Title: <span id="job-title">{{ job.title if job else 'N/A' }}</span></h5>
                             <p class="text-muted">Created: <span id="creation-date">{{ resume.created_at if resume else 'N/A' }}</span></p>
                         </div>
+                        {% if resume and resume.comparison_data and resume.comparison_data.added_keywords %}
+                        <div class="col-md-6">
+                            <div class="card mt-2 mb-3">
+                                <div class="card-header bg-light">
+                                    <h6 class="mb-0">Key Improvements</h6>
+                                </div>
+                                <div class="card-body py-2">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <small class="text-muted">Added Keywords:</small>
+                                            <div class="added-keywords mt-1">
+                                                {% for keyword in resume.comparison_data.added_keywords[:10] %}
+                                                    <span class="badge bg-success mb-1 me-1">{{ keyword }}</span>
+                                                {% endfor %}
+                                                {% if resume.comparison_data.added_keywords|length > 10 %}
+                                                    <span class="badge bg-secondary">+{{ resume.comparison_data.added_keywords|length - 10 }} more</span>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <small class="text-muted">Section Improvements:</small>
+                                            <div class="section-improvements mt-1">
+                                                {% for section, data in resume.comparison_data.section_improvements.items() %}
+                                                    {% if data.improvement > 0 %}
+                                                        <div class="small mb-1">
+                                                            {{ section|title }}: 
+                                                            <span class="text-secondary">{{ data.original|round(1) }}</span> → 
+                                                            <span class="text-success">{{ data.new|round(1) }}</span>
+                                                            <small class="text-info">(+{{ data.improvement|round(1) }})</small>
+                                                        </div>
+                                                    {% endif %}
+                                                {% endfor %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
                     </div>
                     
                     {% if resume and resume.file_format != 'md' %}
@@ -166,6 +226,60 @@
                             </ul>
                         </div>
                     </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Resume Feedback Form -->
+    <div class="row mb-5">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">Help Us Improve</h4>
+                </div>
+                <div class="card-body">
+                    <form id="resume-feedback-form">
+                        <div class="mb-3">
+                            <label class="form-label">How would you rate this resume customization?</label>
+                            <div class="rating-stars">
+                                {% for i in range(1, 6) %}
+                                <input type="radio" id="star{{ i }}" name="rating" value="{{ i }}" class="visually-hidden" {% if resume.user_rating == i %}checked{% endif %}>
+                                <label for="star{{ i }}" class="star-label fs-3" title="{{ i }} stars">★</label>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="feedback" class="form-label">Feedback (optional)</label>
+                            <textarea class="form-control" id="feedback" name="feedback" rows="3" placeholder="Please share your thoughts on the resume customization...">{{ resume.user_feedback if resume.user_feedback else '' }}</textarea>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <label class="form-label">Outcomes</label>
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" id="was_effective" name="was_effective" value="true" {% if resume.was_effective %}checked{% endif %}>
+                                <label class="form-check-label" for="was_effective">
+                                    This resume was effective in my job search
+                                </label>
+                            </div>
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" id="interview_secured" name="interview_secured" value="true" {% if resume.interview_secured %}checked{% endif %}>
+                                <label class="form-check-label" for="interview_secured">
+                                    I received an interview with this resume
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="job_secured" name="job_secured" value="true" {% if resume.job_secured %}checked{% endif %}>
+                                <label class="form-check-label" for="job_secured">
+                                    I received a job offer with this resume
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary" id="submit-feedback-btn">Submit Feedback</button>
+                        <div class="feedback-status mt-2"></div>
+                    </form>
                 </div>
             </div>
         </div>
@@ -435,6 +549,37 @@
         page-break-after: always;
     }
 }
+
+/* Rating stars styling */
+.rating-stars {
+    display: flex;
+    flex-direction: row-reverse;
+    justify-content: flex-end;
+}
+
+.star-label {
+    color: #ccc;
+    cursor: pointer;
+    padding: 0 0.2rem;
+    transition: color 0.2s;
+}
+
+.star-label:hover,
+.star-label:hover ~ .star-label,
+input[name="rating"]:checked ~ .star-label {
+    color: #FFD700;
+}
+
+.visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    border: 0;
+}
 </style>
 
 <!-- Include the jsdiff library -->
@@ -478,6 +623,9 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }, 1000);
     }, 500);
+    
+    // Set up the feedback form
+    setupFeedbackForm();
 });
 
 // Render content with diff highlighting
@@ -635,6 +783,66 @@ function printComparison() {
             customizedCol.classList.add('col-md-12');
         }
     }, 500); // Small delay to ensure print dialog has opened
+}
+
+// Set up the feedback form
+function setupFeedbackForm() {
+    const form = document.getElementById('resume-feedback-form');
+    const statusDiv = document.querySelector('.feedback-status');
+    
+    if (!form) {
+        console.error('Feedback form not found');
+        return;
+    }
+    
+    form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        // Get form data
+        const formData = {
+            rating: parseInt(document.querySelector('input[name="rating"]:checked')?.value) || null,
+            feedback: document.getElementById('feedback').value,
+            was_effective: document.getElementById('was_effective').checked,
+            interview_secured: document.getElementById('interview_secured').checked,
+            job_secured: document.getElementById('job_secured').checked
+        };
+        
+        // Show loading status
+        statusDiv.innerHTML = '<div class="alert alert-info">Submitting feedback...</div>';
+        
+        // Get resume ID from URL
+        const urlParts = window.location.pathname.split('/');
+        const resumeId = urlParts[urlParts.length - 1];
+        
+        // Get CSRF token from meta tag
+        const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+        
+        // Submit feedback
+        fetch(`/api/feedback/${resumeId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken
+            },
+            body: JSON.stringify(formData)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                statusDiv.innerHTML = '<div class="alert alert-success">Thank you for your feedback!</div>';
+                // Hide the success message after 3 seconds
+                setTimeout(() => {
+                    statusDiv.innerHTML = '';
+                }, 3000);
+            } else {
+                statusDiv.innerHTML = `<div class="alert alert-danger">Error: ${data.error}</div>`;
+            }
+        })
+        .catch(error => {
+            console.error('Error submitting feedback:', error);
+            statusDiv.innerHTML = '<div class="alert alert-danger">An error occurred while submitting feedback. Please try again.</div>';
+        });
+    });
 }
 </script>
 {% endblock %} 

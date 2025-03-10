@@ -91,8 +91,8 @@ class PDFExtractor:
                 
                 # Add additional formatting or structure if needed
                 if text.strip():
-                    # Add a markdown header for page number and the extracted text
-                    text_parts.append(f"## Page {i+1}\n\n{text}")
+                    # Just add the text without page markers that could confuse ATS systems
+                    text_parts.append(text)
             
             # Join all text parts with double newlines
             content = "\n\n".join(text_parts)

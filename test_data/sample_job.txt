@@ -1,0 +1,47 @@
+# Senior Python Developer
+
+## About Us
+We're a growing tech company focused on building innovative web applications. Our team is passionate about creating high-quality software that solves real problems for our users.
+
+## Requirements
+- 3+ years of experience with Python and Django
+- Strong knowledge of SQL and database design
+- Experience with RESTful API development
+- Familiarity with AWS services (EC2, S3, Lambda)
+- Understanding of frontend technologies (JavaScript, HTML, CSS)
+- Experience with version control systems (Git)
+- Knowledge of containerization tools (Docker, Kubernetes)
+- Experience with CI/CD pipelines
+- Bachelor's degree in Computer Science or equivalent experience
+
+## Responsibilities
+- Design and implement backend services using Python and Django
+- Work with the frontend team to integrate APIs
+- Optimize applications for performance and scalability
+- Participate in code reviews and mentor junior developers
+- Implement automated testing and deployment pipelines
+- Troubleshoot and debug issues in production environments
+- Collaborate with the product team to define requirements
+- Stay up-to-date with emerging technologies and best practices
+
+## Qualifications
+- Bachelor's degree in Computer Science or related field
+- Strong problem-solving skills and attention to detail
+- Excellent communication and teamwork abilities
+- Self-motivated and able to work independently
+- Passion for writing clean, maintainable code
+- Experience with Agile development methodologies
+
+## Benefits
+- Competitive salary and benefits package
+- Remote-first work environment
+- Flexible working hours
+- Professional development opportunities
+- Modern tech stack and tools
+- Collaborative and supportive team culture
+
+## Location
+This is a remote position with occasional team meetups.
+
+## How to Apply
+Please submit your resume and a brief cover letter explaining why you're interested in this position.

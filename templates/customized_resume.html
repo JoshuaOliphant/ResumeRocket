@@ -24,7 +24,14 @@
             <div class="card mb-4">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h5 class="mb-0">Job Details</h5>
-                    <span class="badge bg-primary">ATS Score: {{ resume.ats_score }}%</span>
+                    <div>
+                        <span class="badge bg-secondary">Original Score: {{ resume.original_ats_score|round(1) }}%</span>
+                        <span class="badge bg-success">New Score: {{ resume.ats_score|round(1) }}%</span>
+                        <span class="badge bg-info">
+                            Improved: {% set improvement = resume.ats_score - resume.original_ats_score %}
+                            {% if improvement > 0 %}+{% endif %}{{ improvement|round(1) }}%
+                        </span>
+                    </div>
                 </div>
                 <div class="card-body">
                     <h6>Job Title: {{ job.title }}</h6>

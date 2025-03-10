@@ -9,6 +9,9 @@ Run this script whenever the database schema changes.
 import os
 import logging
 from app import app, db
+
+# Print the database path for verification
+print(f"Using database at: {app.config['SQLALCHEMY_DATABASE_URI']}")
 from models import User, JobDescription, CustomizedResume, PDFCache
 
 # Configure logging

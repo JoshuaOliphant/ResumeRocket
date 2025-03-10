@@ -1,0 +1,282 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4 mb-5">
+    <h2 class="mb-4">Your Resume Dashboard</h2>
+    
+    <!-- Summary cards -->
+    <div class="row mb-4">
+        <div class="col-md-6 col-lg-3 mb-3">
+            <div class="card text-center h-100 border-0 shadow-sm">
+                <div class="card-body">
+                    <h3 class="display-4 fw-bold text-primary">{{ total_resumes }}</h3>
+                    <p class="text-muted mb-0">Customized Resumes</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6 col-lg-3 mb-3">
+            <div class="card text-center h-100 border-0 shadow-sm">
+                <div class="card-body">
+                    <h3 class="display-4 fw-bold text-success">{{ avg_improvement }}%</h3>
+                    <p class="text-muted mb-0">Average Improvement</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6 col-lg-3 mb-3">
+            <div class="card text-center h-100 border-0 shadow-sm">
+                <div class="card-body">
+                    <a href="{{ url_for('index') }}" class="btn btn-primary btn-lg d-block mb-2">
+                        <i class="bi bi-plus-circle me-2"></i>Create New
+                    </a>
+                    <p class="text-muted mb-0">Customize for a new job</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6 col-lg-3 mb-3">
+            <div class="card text-center h-100 border-0 shadow-sm">
+                <div class="card-body">
+                    <a href="#resume-tips" class="btn btn-outline-secondary btn-lg d-block mb-2">
+                        <i class="bi bi-lightbulb me-2"></i>Resume Tips
+                    </a>
+                    <p class="text-muted mb-0">Improve your base resume</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    {% if not dashboard_data %}
+    <div class="alert alert-info">
+        <h4 class="alert-heading"><i class="bi bi-info-circle me-2"></i>No resumes yet!</h4>
+        <p>You haven't created any customized resumes yet. Get started by creating your first customized resume.</p>
+        <hr>
+        <p class="mb-0">
+            <a href="{{ url_for('index') }}" class="btn btn-primary">
+                <i class="bi bi-plus-circle me-2"></i>Create Your First Resume
+            </a>
+        </p>
+    </div>
+    {% else %}
+    
+    <!-- Resume list -->
+    <div class="card shadow-sm">
+        <div class="card-header bg-white">
+            <div class="d-flex justify-content-between align-items-center">
+                <h4 class="mb-0">Your Customized Resumes</h4>
+                <div class="input-group" style="max-width: 300px;">
+                    <input type="text" id="resumeSearch" class="form-control" placeholder="Search resumes...">
+                    <span class="input-group-text bg-primary text-white">
+                        <i class="bi bi-search"></i>
+                    </span>
+                </div>
+            </div>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0" id="resumeTable">
+                <thead class="table-light">
+                    <tr>
+                        <th>Job Title</th>
+                        <th>Created</th>
+                        <th>ATS Score</th>
+                        <th>Improvement</th>
+                        <th>Status</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in dashboard_data %}
+                    <tr data-job-title="{{ item.job.title }}" data-date="{{ item.date }}">
+                        <td>
+                            <div class="d-flex flex-column">
+                                <span class="fw-medium">{{ item.job.title }}</span>
+                                {% if item.job.url %}
+                                <a href="{{ item.job.url }}" target="_blank" class="text-muted small text-truncate" style="max-width: 250px;">
+                                    <i class="bi bi-link-45deg"></i> {{ item.job.url }}
+                                </a>
+                                {% endif %}
+                            </div>
+                        </td>
+                        <td>{{ item.date }}</td>
+                        <td>
+                            <div class="d-flex align-items-center">
+                                <div class="progress flex-grow-1 me-2" style="height: 8px;">
+                                    <div class="progress-bar bg-primary" role="progressbar" 
+                                         style="width: {{ item.resume.ats_score }}%;" 
+                                         aria-valuenow="{{ item.resume.ats_score }}" 
+                                         aria-valuemin="0" 
+                                         aria-valuemax="100"></div>
+                                </div>
+                                <span class="text-nowrap">{{ item.resume.ats_score|round(1) }}%</span>
+                            </div>
+                        </td>
+                        <td>
+                            <span class="badge {{ 'bg-success' if item.improvement > 0 else 'bg-secondary' }}">
+                                {{ '+' if item.improvement > 0 }}{{ item.improvement }}%
+                            </span>
+                        </td>
+                        <td>
+                            {% if item.resume.user_rating %}
+                                <span class="badge bg-info">Feedback Provided</span>
+                            {% endif %}
+                            {% if item.resume.was_effective %}
+                                <span class="badge bg-success">Effective</span>
+                            {% endif %}
+                            {% if item.resume.interview_secured %}
+                                <span class="badge bg-success">Interview</span>
+                            {% endif %}
+                            {% if item.resume.job_secured %}
+                                <span class="badge bg-success">Job Secured</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-end">
+                            <div class="btn-group">
+                                <a href="{{ url_for('compare_resume', resume_id=item.resume.id) }}" class="btn btn-sm btn-outline-primary">
+                                    <i class="bi bi-eye me-1"></i>View
+                                </a>
+                                <button type="button" class="btn btn-sm btn-outline-primary dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" aria-expanded="false">
+                                    <span class="visually-hidden">Toggle Dropdown</span>
+                                </button>
+                                <ul class="dropdown-menu dropdown-menu-end">
+                                    <li><a class="dropdown-item" href="{{ url_for('download_resume', resume_id=item.resume.id, format='pdf') }}">
+                                        <i class="bi bi-file-earmark-pdf me-2"></i>Download PDF
+                                    </a></li>
+                                    <li><a class="dropdown-item" href="{{ url_for('download_resume', resume_id=item.resume.id, format='docx') }}">
+                                        <i class="bi bi-file-earmark-word me-2"></i>Download DOCX
+                                    </a></li>
+                                    <li><a class="dropdown-item" href="{{ url_for('download_resume', resume_id=item.resume.id, format='md') }}">
+                                        <i class="bi bi-markdown me-2"></i>Download Markdown
+                                    </a></li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li><a class="dropdown-item text-danger" href="#" data-bs-toggle="modal" data-bs-target="#deleteModal" data-resume-id="{{ item.resume.id }}">
+                                        <i class="bi bi-trash me-2"></i>Delete
+                                    </a></li>
+                                </ul>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- Resume tips section -->
+    <div class="card mt-5 shadow-sm" id="resume-tips">
+        <div class="card-header bg-white">
+            <h4 class="mb-0"><i class="bi bi-lightbulb me-2 text-warning"></i>Resume Tips</h4>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <h5>General Improvement Tips</h5>
+                    <ul class="list-group list-group-flush mb-4">
+                        <li class="list-group-item border-0 d-flex align-items-start">
+                            <i class="bi bi-check-circle-fill text-success me-2 mt-1"></i>
+                            <div>
+                                <strong>Tailor to each job</strong>
+                                <p class="text-muted mb-0">Each application should have a customized resume that matches the job description.</p>
+                            </div>
+                        </li>
+                        <li class="list-group-item border-0 d-flex align-items-start">
+                            <i class="bi bi-check-circle-fill text-success me-2 mt-1"></i>
+                            <div>
+                                <strong>Quantify achievements</strong>
+                                <p class="text-muted mb-0">Use numbers and percentages to demonstrate your impact.</p>
+                            </div>
+                        </li>
+                        <li class="list-group-item border-0 d-flex align-items-start">
+                            <i class="bi bi-check-circle-fill text-success me-2 mt-1"></i>
+                            <div>
+                                <strong>Focus on relevant experience</strong>
+                                <p class="text-muted mb-0">Highlight experience that directly relates to the job you're applying for.</p>
+                            </div>
+                        </li>
+                    </ul>
+                </div>
+                <div class="col-md-6">
+                    <h5>ATS Optimization Tips</h5>
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item border-0 d-flex align-items-start">
+                            <i class="bi bi-check-circle-fill text-success me-2 mt-1"></i>
+                            <div>
+                                <strong>Use relevant keywords</strong>
+                                <p class="text-muted mb-0">Include keywords from the job description to improve ATS matching.</p>
+                            </div>
+                        </li>
+                        <li class="list-group-item border-0 d-flex align-items-start">
+                            <i class="bi bi-check-circle-fill text-success me-2 mt-1"></i>
+                            <div>
+                                <strong>Simple formatting</strong>
+                                <p class="text-muted mb-0">Keep formatting clean and simple to ensure ATS readability.</p>
+                            </div>
+                        </li>
+                        <li class="list-group-item border-0 d-flex align-items-start">
+                            <i class="bi bi-check-circle-fill text-success me-2 mt-1"></i>
+                            <div>
+                                <strong>Standard section headers</strong>
+                                <p class="text-muted mb-0">Use standard section headings like "Experience" and "Education".</p>
+                            </div>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete confirmation modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteModalLabel">Confirm Delete</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                Are you sure you want to delete this resume? This action cannot be undone.
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <a href="#" id="confirmDelete" class="btn btn-danger">Delete</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Search functionality
+    const searchInput = document.getElementById('resumeSearch');
+    if (searchInput) {
+        searchInput.addEventListener('keyup', function() {
+            const searchTerm = this.value.toLowerCase();
+            const rows = document.querySelectorAll('#resumeTable tbody tr');
+            
+            rows.forEach(row => {
+                const jobTitle = row.getAttribute('data-job-title').toLowerCase();
+                const date = row.getAttribute('data-date').toLowerCase();
+                const rowText = row.textContent.toLowerCase();
+                
+                if (jobTitle.includes(searchTerm) || date.includes(searchTerm) || rowText.includes(searchTerm)) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        });
+    }
+    
+    // Delete modal functionality
+    const deleteModal = document.getElementById('deleteModal');
+    if (deleteModal) {
+        deleteModal.addEventListener('show.bs.modal', function(event) {
+            const button = event.relatedTarget;
+            const resumeId = button.getAttribute('data-resume-id');
+            const confirmDeleteBtn = document.getElementById('confirmDelete');
+            
+            confirmDeleteBtn.href = `/resume/${resumeId}/delete`;
+        });
+    }
+});
+</script>
+{% endblock %} 

@@ -1,4 +1,36 @@
-# Resume Comparison Feature Implementation Checklist
+# ResumeRocket Implementation Checklist
+
+## Phase 0: ATS Analysis Improvements
+
+### 0.1 Core ATS Analyzer Enhancements
+- [x] Implement weighted keyword matching (position, frequency, importance)
+- [x] Add n-gram analysis for multi-word phrases and skills
+- [x] Develop semantic matching using skills taxonomy
+- [x] Create section-based analysis for targeted scoring
+- [x] Implement benchmark scoring calibration
+- [x] Add skills taxonomy and hierarchy recognition
+- [x] Improve score calculation algorithm and distribution
+
+### 0.2 Claude Integration Optimization
+- [x] Develop two-stage resume customization process
+- [x] Refine Claude prompts with system/user separation
+- [x] Implement ATS simulation functionality
+- [x] Create industry-specific guidance capabilities
+- [x] Add analytics for identifying optimization effectiveness
+- [x] Enhance prompt structure for more efficient Claude interactions
+- [x] Improve LLM prompts to encourage more significant ATS-focused resume customization
+- [ ] Implement feedback loop for continuous improvement
+
+### 0.3 ATS-Enhanced UI (NEW PRIORITY)
+- [x] Create enhanced ATS score dashboard with section breakdowns
+- [x] Implement job type detection indicator and customized advice
+- [x] Add interactive keyword analysis visualization (matched/missing)
+- [ ] Create section-specific improvement guidance with visual indicators
+- [ ] Implement customization level controls (conservative/balanced/extensive)
+- [ ] Add ATS simulation results panel for multiple systems
+- [ ] Create visualization for the optimization plan with acceptance controls
+- [x] Enhance comparison view with before/after analytics
+- [ ] Implement feedback collection interface for continuous improvement
 
 ## Phase 1: Foundation and Markdown Support
 
@@ -106,6 +138,7 @@
 - [ ] Implement inline comments or tooltips for significant changes
 - [x] Ensure visualization works on all supported browsers
 - [x] Test with users for feedback on clarity and usefulness
+- [x] Fix PDF extraction to remove page markers that confuse the diff view
 
 ### 4.3 Finalization and Polish
 - [x] Conduct comprehensive testing with various resume formats
@@ -152,6 +185,7 @@
 - [x] Document any new environment variables or configurations
 - [x] Create rollback plan for production deployment
 - [x] Add monitoring for new functionality
+- [x] Create robust database migration utility for schema changes
 
 ## Final Deliverables
 - [x] Working comparison feature for Markdown documents

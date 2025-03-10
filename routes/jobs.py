@@ -3,7 +3,7 @@ from flask_login import login_required, current_user
 from extensions import db
 from models import JobDescription, CustomizedResume
 from services.job_description_processor import JobDescriptionProcessor
-from services.ats_analyzer import ATSAnalyzer
+from services.ats_analyzer import EnhancedATSAnalyzer
 from services.ai_suggestions import AISuggestions
 from services.resume_customizer import ResumeCustomizer
 from services.file_parser import FileParser
@@ -12,7 +12,7 @@ import logging
 logger = logging.getLogger(__name__)
 jobs_bp = Blueprint('jobs', __name__)
 job_processor = JobDescriptionProcessor()
-ats_analyzer = ATSAnalyzer()
+ats_analyzer = EnhancedATSAnalyzer()
 ai_suggestions = AISuggestions()
 resume_customizer = ResumeCustomizer()
 file_parser = FileParser()
@@ -50,10 +50,26 @@ def submit_job_text():
                 ats_score = ats_analyzer.analyze(resume_content, processed['content'])
                 suggestions = ai_suggestions.get_suggestions(resume_content, processed['content'])
             else:
-                ats_score = {'score': 0, 'matching_keywords': [], 'missing_keywords': []}
+                ats_score = {
+                    'score': 0, 
+                    'confidence': 'low',
+                    'matching_keywords': [], 
+                    'missing_keywords': [],
+                    'section_scores': {},
+                    'job_type': 'unknown',
+                    'suggestions': []
+                }
                 suggestions = []
         else:
-            ats_score = {'score': 0, 'matching_keywords': [], 'missing_keywords': []}
+            ats_score = {
+                'score': 0, 
+                'confidence': 'low',
+                'matching_keywords': [], 
+                'missing_keywords': [],
+                'section_scores': {},
+                'job_type': 'unknown',
+                'suggestions': []
+            }
             suggestions = []
 
         return jsonify({
