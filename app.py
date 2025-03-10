@@ -122,21 +122,35 @@ with app.app_context():
             logger.info("Database does not exist. Creating tables...")
             db.create_all()
             logger.info("Tables created successfully.")
-            
-            # Create a default admin user
-            admin_exists = User.query.filter_by(username='admin').first()
-            if not admin_exists:
-                admin_user = User(
-                    username='admin',
-                    email='admin@example.com',
-                    password_hash=generate_password_hash('admin'),
-                    is_admin=True
-                )
-                db.session.add(admin_user)
+        
+        # Get admin credentials from environment variables
+        admin_username = os.environ.get('ADMIN_USERNAME', 'admin')
+        admin_password = os.environ.get('ADMIN_PASSWORD', 'admin')
+        admin_email = os.environ.get('ADMIN_EMAIL', 'admin@example.com')
+        
+        # Check if the admin user exists
+        admin_exists = User.query.filter_by(username=admin_username).first()
+        
+        # Create or update the admin user
+        if not admin_exists:
+            # Create new admin user
+            admin_user = User(
+                username=admin_username,
+                email=admin_email,
+                password_hash=generate_password_hash(admin_password),
+                is_admin=True
+            )
+            db.session.add(admin_user)
+            db.session.commit()
+            logger.info(f"Admin user '{admin_username}' created successfully.")
+        else:
+            # Update existing admin password if it was changed in environment variables
+            if admin_password != 'admin':  # Only update if not using the default password
+                admin_exists.password_hash = generate_password_hash(admin_password)
                 db.session.commit()
-                logger.info("Default admin user created.")
+                logger.info(f"Admin user '{admin_username}' password updated.")
     except Exception as ex:
-        logger.error(f"Error checking database status: {str(ex)}")
+        logger.error(f"Error setting up admin user: {str(ex)}")
 
 # Uncomment below to run directly from this file (not recommended)
 # if __name__ == "__main__":
