@@ -576,6 +576,23 @@ def download_resume(resume_id, format):
             response.headers['Content-Type'] = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
             response.headers['Content-Disposition'] = f'attachment; filename=customized_resume.docx'
             return response
+            
+        elif format == 'pdf':
+            # Convert markdown to PDF and return
+            try:
+                content = file_parser.markdown_to_pdf(customized_resume.customized_content)
+                
+                response = make_response(content)
+                response.headers['Content-Type'] = 'application/pdf'
+                response.headers['Content-Disposition'] = f'attachment; filename=customized_resume.pdf'
+                return response
+            except Exception as pdf_error:
+                logger.error(f"Error creating PDF: {str(pdf_error)}")
+                flash('Failed to create PDF. Please try another format.', 'error')
+                return redirect(url_for('view_customized_resume', resume_id=resume_id))
+        else:
+            flash('Invalid format requested. Please select PDF, DOCX, or Markdown.', 'error')
+            return redirect(url_for('view_customized_resume', resume_id=resume_id))
 
     except Exception as e:
         logger.error(f"Error downloading resume: {str(e)}")

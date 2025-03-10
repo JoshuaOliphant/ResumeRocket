@@ -85,9 +85,20 @@
                 </div>
             </div>
 
-            <div class="mt-4">
+            <div class="mt-4 d-flex gap-2 align-items-center">
                 <a href="#" class="btn btn-primary" onclick="window.print()">Print Resume</a>
-                <a href="{{ url_for('export_resume', resume_id=resume.id) }}" class="btn btn-secondary">Export</a>
+                
+                <div class="dropdown">
+                    <button class="btn btn-secondary dropdown-toggle" type="button" id="downloadOptions" data-bs-toggle="dropdown" aria-expanded="false">
+                        Download
+                    </button>
+                    <ul class="dropdown-menu" aria-labelledby="downloadOptions">
+                        <li><a class="dropdown-item" href="{{ url_for('download_resume', resume_id=resume.id, format='pdf') }}"><i class="bi bi-file-earmark-pdf me-2"></i>PDF</a></li>
+                        <li><a class="dropdown-item" href="{{ url_for('download_resume', resume_id=resume.id, format='docx') }}"><i class="bi bi-file-earmark-word me-2"></i>DOCX</a></li>
+                        <li><a class="dropdown-item" href="{{ url_for('download_resume', resume_id=resume.id, format='md') }}"><i class="bi bi-markdown me-2"></i>Markdown</a></li>
+                    </ul>
+                </div>
+                
                 <a href="{{ url_for('compare_resume', resume_id=resume.id) }}" class="btn btn-info">Compare Changes</a>
             </div>
         </div>
