@@ -128,27 +128,59 @@ with app.app_context():
         admin_password = os.environ.get('ADMIN_PASSWORD', 'admin')
         admin_email = os.environ.get('ADMIN_EMAIL', 'admin@example.com')
         
-        # Check if the admin user exists
-        admin_exists = User.query.filter_by(username=admin_username).first()
+        # First check if a user with the admin email already exists
+        user_with_email = User.query.filter_by(email=admin_email).first()
         
-        # Create or update the admin user
-        if not admin_exists:
-            # Create new admin user
-            admin_user = User(
-                username=admin_username,
-                email=admin_email,
-                password_hash=generate_password_hash(admin_password),
-                is_admin=True
-            )
-            db.session.add(admin_user)
-            db.session.commit()
-            logger.info(f"Admin user '{admin_username}' created successfully.")
-        else:
-            # Update existing admin password if it was changed in environment variables
-            if admin_password != 'admin':  # Only update if not using the default password
-                admin_exists.password_hash = generate_password_hash(admin_password)
+        if user_with_email:
+            # If the user exists but username doesn't match the admin username,
+            # we'll just update this user to have admin privileges
+            if user_with_email.username != admin_username:
+                logger.info(f"User with email {admin_email} already exists with username {user_with_email.username}")
+                logger.info(f"Granting admin privileges to existing user {user_with_email.username}")
+                user_with_email.is_admin = True
+                
+                # Optionally update the password if specified and not default
+                if admin_password != 'admin':
+                    user_with_email.password_hash = generate_password_hash(admin_password)
+                    logger.info(f"Updated password for user {user_with_email.username}")
+                
                 db.session.commit()
-                logger.info(f"Admin user '{admin_username}' password updated.")
+            else:
+                # Email exists with matching username - this is the admin user
+                # Update password if needed
+                if admin_password != 'admin':
+                    user_with_email.password_hash = generate_password_hash(admin_password)
+                    db.session.commit()
+                    logger.info(f"Updated password for admin user {admin_username}")
+        else:
+            # No user with this email exists, check by username
+            admin_exists = User.query.filter_by(username=admin_username).first()
+        
+            # Create or update the admin user
+            if not admin_exists:
+                # Create new admin user
+                admin_user = User(
+                    username=admin_username,
+                    email=admin_email,
+                    password_hash=generate_password_hash(admin_password),
+                    is_admin=True
+                )
+                db.session.add(admin_user)
+                db.session.commit()
+                logger.info(f"Admin user '{admin_username}' created successfully.")
+            else:
+                # Admin with this username exists but different email
+                # Update email and password if needed
+                if admin_exists.email != admin_email:
+                    admin_exists.email = admin_email
+                    logger.info(f"Updated email for admin user {admin_username}")
+                
+                # Update password if needed
+                if admin_password != 'admin':
+                    admin_exists.password_hash = generate_password_hash(admin_password)
+                    logger.info(f"Updated password for admin user {admin_username}")
+                
+                db.session.commit()
     except Exception as ex:
         logger.error(f"Error setting up admin user: {str(ex)}")
 
