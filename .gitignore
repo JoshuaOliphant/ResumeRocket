@@ -45,6 +45,7 @@ build/
 Thumbs.db
 *.sublime*
 *~
+.cursor/
 
 # Logs
 *.log
@@ -67,4 +68,11 @@ tmp/
 # Documentation
 /site
 
+# Project specific
 CLAUDE.md
+attached_assets/
+.qodo/
+uv.lock
+replit.nix
+.replit
+generated-icon.png
