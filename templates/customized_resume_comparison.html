@@ -381,6 +381,16 @@ document.addEventListener('DOMContentLoaded', function() {
         console.log('Rendering content with diff highlighting');
         renderContentWithDiff();
         setupToggleButtons();
+        
+        // Process sections for collapsing AFTER content is rendered
+        console.log('Initializing collapsible sections');
+        setTimeout(function() {
+            if (typeof processSectionsForCollapsing === 'function') {
+                processSectionsForCollapsing();
+            } else {
+                console.error('processSectionsForCollapsing function not found');
+            }
+        }, 1000);
     }, 500);
 });
 

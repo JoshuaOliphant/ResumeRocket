@@ -428,18 +428,35 @@ function addSectionBadges() {
  * Adds toggle buttons to section headers and makes sections collapsible
  */
 function processSectionsForCollapsing() {
+    console.log("Processing sections for collapsing/expanding...");
+    
     const originalHtmlElement = document.getElementById('original-resume-html');
     const customizedHtmlElement = document.getElementById('customized-resume-html');
     
-    if (!originalHtmlElement || !customizedHtmlElement) return;
+    if (!originalHtmlElement || !customizedHtmlElement) {
+        console.error("Could not find resume HTML elements:", {
+            originalHtmlElement: Boolean(originalHtmlElement),
+            customizedHtmlElement: Boolean(customizedHtmlElement)
+        });
+        return;
+    }
+    
+    console.log("Original HTML content length:", originalHtmlElement.innerHTML.length);
+    console.log("Customized HTML content length:", customizedHtmlElement.innerHTML.length);
     
     // Process headers in both views
-    processHeadersForCollapsing(originalHtmlElement, 'original');
-    processHeadersForCollapsing(customizedHtmlElement, 'customized');
+    console.log("Processing markdown headers...");
+    const originalHeaderCount = processHeadersForCollapsing(originalHtmlElement, 'original');
+    const customizedHeaderCount = processHeadersForCollapsing(customizedHtmlElement, 'customized');
+    console.log(`Found ${originalHeaderCount} headers in original, ${customizedHeaderCount} in customized`);
     
     // Handle all-uppercase sections for both views
-    processUppercaseSectionsForCollapsing(originalHtmlElement, 'original');
-    processUppercaseSectionsForCollapsing(customizedHtmlElement, 'customized');
+    console.log("Processing uppercase sections...");
+    const originalUppercaseCount = processUppercaseSectionsForCollapsing(originalHtmlElement, 'original');
+    const customizedUppercaseCount = processUppercaseSectionsForCollapsing(customizedHtmlElement, 'customized');
+    console.log(`Found ${originalUppercaseCount} uppercase sections in original, ${customizedUppercaseCount} in customized`);
+    
+    console.log("Section processing complete");
 }
 
 /**
@@ -448,13 +465,29 @@ function processSectionsForCollapsing() {
 function processHeadersForCollapsing(container, prefix) {
     // Find all h1-h3 tags that could be section headers
     const headers = container.querySelectorAll('h1, h2, h3');
+    console.log(`Found ${headers.length} h1-h3 headers in ${prefix} view`);
+    
+    if (headers.length === 0) {
+        // Try to show some of the HTML to diagnose the issue
+        console.log(`${prefix} HTML sample:`, container.innerHTML.substring(0, 200) + '...');
+    }
+    
+    let processedCount = 0;
     
     headers.forEach((header, index) => {
         // Skip if already processed
-        if (header.querySelector('.section-toggle')) return;
+        if (header.querySelector('.section-toggle')) {
+            console.log(`Header ${index} already processed, skipping`);
+            return;
+        }
+        
+        const headerText = header.textContent.trim();
+        console.log(`Processing header: "${headerText}"`);
         
         const sectionId = `${prefix}-section-${index}`;
         const sectionContent = collectSectionContent(header);
+        
+        console.log(`Found ${sectionContent.length} content elements for this section`);
         
         if (sectionContent.length > 0) {
             // Create the section wrapper
@@ -467,7 +500,7 @@ function processHeadersForCollapsing(container, prefix) {
             toggleButton.classList.add('section-toggle', 'btn', 'btn-sm');
             toggleButton.setAttribute('type', 'button');
             toggleButton.setAttribute('data-section', sectionId);
-            toggleButton.setAttribute('data-section-title', header.textContent.trim());
+            toggleButton.setAttribute('data-section-title', headerText);
             toggleButton.innerHTML = '<i class="bi bi-chevron-down"></i>';
             toggleButton.title = 'Toggle section';
             
@@ -494,8 +527,15 @@ function processHeadersForCollapsing(container, prefix) {
             toggleButton.addEventListener('click', function() {
                 toggleSection(sectionId);
             });
+            
+            processedCount++;
+            console.log(`Successfully processed section: ${headerText}`);
+        } else {
+            console.log(`No content for section: ${headerText}, skipping`);
         }
     });
+    
+    return processedCount;
 }
 
 /**
@@ -504,16 +544,31 @@ function processHeadersForCollapsing(container, prefix) {
 function processUppercaseSectionsForCollapsing(container, prefix) {
     // Find all p tags that could be uppercase section headers
     const paragraphs = container.querySelectorAll('p');
+    console.log(`Found ${paragraphs.length} paragraphs in ${prefix} view`);
+    
+    if (paragraphs.length === 0) {
+        console.log(`No paragraphs found in ${prefix} view`);
+        return 0;
+    }
+    
+    let processedCount = 0;
     
     paragraphs.forEach((paragraph, index) => {
         const text = paragraph.textContent.trim();
         // Check if the paragraph text is all uppercase and at least 3 characters
         if (text === text.toUpperCase() && text.length >= 3 && text === text.replace(/[^A-Z\s]/g, '')) {
+            console.log(`Found uppercase paragraph: "${text}"`);
+            
             // Skip if already processed
-            if (paragraph.querySelector('.section-toggle')) return;
+            if (paragraph.querySelector('.section-toggle')) {
+                console.log(`Paragraph ${index} already processed, skipping`);
+                return;
+            }
             
             const sectionId = `${prefix}-uppercase-section-${index}`;
             const sectionContent = collectSectionContent(paragraph);
+            
+            console.log(`Found ${sectionContent.length} content elements for this uppercase section`);
             
             if (sectionContent.length > 0) {
                 // Create the section wrapper
@@ -555,25 +610,46 @@ function processUppercaseSectionsForCollapsing(container, prefix) {
                 toggleButton.addEventListener('click', function() {
                     toggleSection(sectionId);
                 });
+                
+                processedCount++;
+                console.log(`Successfully processed uppercase section: ${text}`);
+            } else {
+                console.log(`No content for uppercase section: ${text}, skipping`);
             }
         }
     });
+    
+    return processedCount;
 }
 
 /**
  * Collect all content elements that belong to a section
  */
 function collectSectionContent(header) {
+    console.log(`Collecting content for section with tag ${header.tagName} and text "${header.textContent.trim()}"`);
+    
     const content = [];
     let nextElement = header.nextElementSibling;
     
     // Get the header level to determine when to stop collecting
     const headerTagName = header.tagName;
+    console.log(`Header tag: ${headerTagName}`);
     
-    while (nextElement) {
+    if (!nextElement) {
+        console.log('No next element found after header');
+        return content;
+    }
+    
+    let count = 0;
+    while (nextElement && count < 20) { // Limit to prevent infinite loops
+        count++;
+        
+        console.log(`Examining element: ${nextElement.tagName}, text: "${nextElement.textContent.substring(0, 30).trim()}${nextElement.textContent.length > 30 ? '...' : ''}"`);
+        
         // Stop when we hit another header of the same or higher level
         if (nextElement.tagName && 
             (nextElement.tagName === headerTagName || isHigherLevelHeader(nextElement.tagName, headerTagName))) {
+            console.log(`Stopping at element with tag ${nextElement.tagName} (same or higher level than ${headerTagName})`);
             break;
         }
         
@@ -583,6 +659,7 @@ function collectSectionContent(header) {
         content.push(elementToMove);
     }
     
+    console.log(`Collected ${content.length} content elements for this section`);
     return content;
 }
 
