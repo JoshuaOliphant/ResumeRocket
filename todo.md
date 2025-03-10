@@ -92,7 +92,7 @@
 - [x] Implement customized-only view toggle
 - [x] Implement unified diff view toggle
 - [x] Create section collapsing/expanding functionality
-- [ ] Add search function for content in either version
+- [x] Add search function for content in either version
 - [x] Implement smooth transition animations
 - [ ] Add copy-to-clipboard functionality
 - [x] Create component tests for UI controls functionality

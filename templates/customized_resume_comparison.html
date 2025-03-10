@@ -19,22 +19,65 @@
                     <h2 class="mb-0">Resume Comparison</h2>
                 </div>
                 <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <h5>Job Title: <span id="job-title">{{ job.title if job else 'N/A' }}</span></h5>
-                            <p class="text-muted">Created: <span id="creation-date">{{ resume.created_at if resume else 'N/A' }}</span></p>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <h5>ATS Score: <span id="ats-score" class="badge bg-primary">{{ resume.ats_score if resume else 'N/A' }}%</span></h5>
+                    <div class="row mb-3">
+                        <div class="col-md-8">
+                            <div class="input-group mb-2">
+                                <span class="input-group-text bg-light">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-search" viewBox="0 0 16 16">
+                                        <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z"/>
+                                    </svg>
+                                </span>
+                                <input type="text" id="resume-search-input" class="form-control" placeholder="Search across both resume versions..." aria-label="Search resume content">
+                                <button class="btn btn-outline-secondary" type="button" id="clear-search-btn">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-x-lg" viewBox="0 0 16 16">
+                                        <path d="M2.146 2.854a.5.5 0 1 1 .708-.708L8 7.293l5.146-5.147a.5.5 0 0 1 .708.708L8.707 8l5.147 5.146a.5.5 0 0 1-.708.708L8 8.707l-5.146 5.147a.5.5 0 0 1-.708-.708L7.293 8 2.146 2.854Z"/>
+                                    </svg>
+                                </button>
                             </div>
-                            <div id="change-summary">
-                                <p>Summary of changes: <span id="changes-count" class="badge bg-info">0 changes</span></p>
+                            <div id="search-results-info" class="mb-2 d-none">
+                                <span id="search-count" class="badge bg-info me-2">0 results</span>
+                                <span class="text-muted small">Navigate: </span>
+                                <button id="prev-match-btn" class="btn btn-sm btn-outline-secondary me-1" disabled>
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" viewBox="0 0 16 16">
+                                        <path fill-rule="evenodd" d="M7.646 4.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1-.708.708L8 5.707l-5.646 5.647a.5.5 0 0 1-.708-.708l6-6z"/>
+                                    </svg> Previous
+                                </button>
+                                <button id="next-match-btn" class="btn btn-sm btn-outline-secondary" disabled>
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" viewBox="0 0 16 16">
+                                        <path fill-rule="evenodd" d="M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z"/>
+                                    </svg> Next
+                                </button>
+                                <span id="match-position" class="ms-2 small text-muted">Match 0 of 0</span>
+                            </div>
+                            <div class="btn-group" role="group" aria-label="Search scope">
+                                <input type="radio" class="btn-check" name="search-scope" id="search-both" autocomplete="off" checked>
+                                <label class="btn btn-outline-primary btn-sm" for="search-both">Both Versions</label>
+                                
+                                <input type="radio" class="btn-check" name="search-scope" id="search-original" autocomplete="off">
+                                <label class="btn btn-outline-secondary btn-sm" for="search-original">Original Only</label>
+                                
+                                <input type="radio" class="btn-check" name="search-scope" id="search-customized" autocomplete="off">
+                                <label class="btn btn-outline-success btn-sm" for="search-customized">Customized Only</label>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="d-flex justify-content-end align-items-center">
+                                <h5 class="mb-0 me-2">ATS Score: <span id="ats-score" class="badge bg-primary">{{ resume.ats_score if resume else 'N/A' }}%</span></h5>
+                            </div>
+                            <div id="change-summary" class="mt-2 text-end">
+                                <p class="mb-1">Summary of changes: <span id="changes-count" class="badge bg-info">0 changes</span></p>
                                 <div id="summary-details" class="small text-muted">
                                     <!-- This will be populated with JavaScript -->
                                     Changes will be highlighted in the comparison below.
                                 </div>
                             </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h5>Job Title: <span id="job-title">{{ job.title if job else 'N/A' }}</span></h5>
+                            <p class="text-muted">Created: <span id="creation-date">{{ resume.created_at if resume else 'N/A' }}</span></p>
                         </div>
                     </div>
                     
@@ -97,6 +140,7 @@
             </div>
         </div>
     </div>
+
 
     <!-- Footer with Action Buttons -->
     <div class="row mb-5">
@@ -291,6 +335,34 @@
 .delay-9 { animation-delay: 0.9s; }
 .delay-10 { animation-delay: 1s; }
 
+/* Search highlighting styles */
+.search-highlight {
+    background-color: rgba(255, 204, 0, 0.5);
+    padding: 2px 0;
+    border-radius: 2px;
+    box-shadow: 0 0 2px rgba(255, 204, 0, 0.5);
+}
+
+.search-active-match {
+    background-color: rgba(255, 153, 0, 0.85);
+    padding: 2px 0;
+    border-radius: 2px;
+    box-shadow: 0 0 4px rgba(255, 153, 0, 0.7);
+    position: relative;
+    z-index: 1;
+}
+
+/* Pulsing animation for active match */
+@keyframes matchPulse {
+    0% { background-color: rgba(255, 153, 0, 0.85); }
+    50% { background-color: rgba(255, 153, 0, 0.6); }
+    100% { background-color: rgba(255, 153, 0, 0.85); }
+}
+
+.search-match-pulse {
+    animation: matchPulse 1.5s ease-in-out infinite;
+}
+
 /* Media query for mobile responsiveness */
 @media (max-width: 768px) {
     .markdown-content {
@@ -314,7 +386,8 @@
     /* Hide elements not needed for printing */
     .card-header, .footer, #toggle-view-btn, #show-diff-btn, #print-btn, 
     #download-original-btn, #download-customized-btn, .toggle-markdown-view,
-    .alert-info, .section-toggle {
+    .alert-info, .section-toggle, #resume-search-input, #clear-search-btn,
+    #search-results-info, .btn-group[role="group"][aria-label="Search scope"] {
         display: none !important;
     }
     
@@ -340,6 +413,19 @@
     
     .diff-removed {
         background-color: rgba(255, 0, 0, 0.2) !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
+    
+    /* Ensure search highlighting is visible in print */
+    .search-highlight {
+        background-color: rgba(255, 204, 0, 0.5) !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
+    
+    .search-active-match {
+        background-color: rgba(255, 153, 0, 0.85) !important;
         -webkit-print-color-adjust: exact !important;
         print-color-adjust: exact !important;
     }

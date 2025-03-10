@@ -11,6 +11,15 @@ let diffResults = null;
 let modifiedSections = [];
 let sectionStates = {}; // Store collapse state of sections
 
+// Search functionality variables
+let searchMatches = {
+    original: [],
+    customized: []
+};
+let currentMatchIndex = -1;
+let currentSearchTerm = '';
+let searchScope = 'both'; // 'both', 'original', or 'customized'
+
 /**
  * Initialize the comparison view when the DOM is loaded
  */
@@ -48,6 +57,87 @@ function setupEventListeners() {
     const showDiffBtn = document.getElementById('show-diff-btn');
     if (showDiffBtn) {
         showDiffBtn.addEventListener('click', toggleDiffOnly);
+    }
+    
+    // Search functionality event listeners
+    setupSearchEventListeners();
+}
+
+/**
+ * Set up search-related event listeners
+ */
+function setupSearchEventListeners() {
+    const searchInput = document.getElementById('resume-search-input');
+    const clearSearchBtn = document.getElementById('clear-search-btn');
+    const prevMatchBtn = document.getElementById('prev-match-btn');
+    const nextMatchBtn = document.getElementById('next-match-btn');
+    const searchScopeOptions = document.querySelectorAll('input[name="search-scope"]');
+    
+    if (searchInput) {
+        // Add input event listener with debounce for real-time search
+        let debounceTimeout;
+        searchInput.addEventListener('input', function() {
+            clearTimeout(debounceTimeout);
+            debounceTimeout = setTimeout(() => {
+                const searchTerm = this.value.trim();
+                if (searchTerm.length >= 2) {
+                    performSearch(searchTerm);
+                } else if (searchTerm.length === 0) {
+                    clearSearch();
+                }
+            }, 300); // 300ms debounce delay
+        });
+        
+        // Add key event listener for Enter key navigation
+        searchInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                if (e.shiftKey) {
+                    goToPreviousMatch();
+                } else {
+                    goToNextMatch();
+                }
+            }
+        });
+    }
+    
+    if (clearSearchBtn) {
+        clearSearchBtn.addEventListener('click', function() {
+            if (searchInput) {
+                searchInput.value = '';
+                clearSearch();
+                searchInput.focus();
+            }
+        });
+    }
+    
+    if (prevMatchBtn) {
+        prevMatchBtn.addEventListener('click', goToPreviousMatch);
+    }
+    
+    if (nextMatchBtn) {
+        nextMatchBtn.addEventListener('click', goToNextMatch);
+    }
+    
+    // Add search scope change listeners
+    if (searchScopeOptions.length > 0) {
+        searchScopeOptions.forEach(option => {
+            option.addEventListener('change', function() {
+                if (this.checked) {
+                    if (this.id === 'search-both') {
+                        searchScope = 'both';
+                    } else if (this.id === 'search-original') {
+                        searchScope = 'original';
+                    } else if (this.id === 'search-customized') {
+                        searchScope = 'customized';
+                    }
+                    
+                    // Re-run search with new scope if there's an active search
+                    if (currentSearchTerm) {
+                        performSearch(currentSearchTerm);
+                    }
+                }
+            });
+        });
     }
 }
 
@@ -773,6 +863,385 @@ function restoreCollapseStates() {
  */
 function escapeRegExp(string) {
     return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/**
+ * Perform search across both resume versions
+ */
+function performSearch(searchTerm) {
+    // Store the current search term
+    currentSearchTerm = searchTerm;
+    
+    // Clear previous search results
+    clearSearchHighlights();
+    
+    // Reset match data
+    searchMatches = {
+        original: [],
+        customized: []
+    };
+    currentMatchIndex = -1;
+    
+    // Get the containers to search in
+    const originalHtmlElement = document.getElementById('original-resume-html');
+    const customizedHtmlElement = document.getElementById('customized-resume-html');
+    
+    if (!originalHtmlElement || !customizedHtmlElement) {
+        console.error('Resume content containers not found');
+        return;
+    }
+    
+    if (searchScope === 'both' || searchScope === 'original') {
+        // Search original resume
+        searchMatches.original = searchInContainer(originalHtmlElement, searchTerm);
+    }
+    
+    if (searchScope === 'both' || searchScope === 'customized') {
+        // Search customized resume
+        searchMatches.customized = searchInContainer(customizedHtmlElement, searchTerm);
+    }
+    
+    // Total match count
+    const totalMatches = searchMatches.original.length + searchMatches.customized.length;
+    
+    // Update UI with search results
+    const searchResultsInfo = document.getElementById('search-results-info');
+    const searchCount = document.getElementById('search-count');
+    const prevMatchBtn = document.getElementById('prev-match-btn');
+    const nextMatchBtn = document.getElementById('next-match-btn');
+    const matchPosition = document.getElementById('match-position');
+    
+    if (searchResultsInfo && searchCount) {
+        if (totalMatches > 0) {
+            searchResultsInfo.classList.remove('d-none');
+            searchCount.textContent = `${totalMatches} match${totalMatches !== 1 ? 'es' : ''}`;
+            
+            // Enable navigation buttons
+            if (prevMatchBtn) prevMatchBtn.disabled = totalMatches <= 1;
+            if (nextMatchBtn) nextMatchBtn.disabled = totalMatches <= 1;
+            
+            // Set initial match position
+            if (matchPosition) matchPosition.textContent = 'Match 0 of ' + totalMatches;
+            
+            // Go to first match
+            goToNextMatch();
+        } else {
+            searchResultsInfo.classList.remove('d-none');
+            searchCount.textContent = 'No matches';
+            
+            // Disable navigation buttons
+            if (prevMatchBtn) prevMatchBtn.disabled = true;
+            if (nextMatchBtn) nextMatchBtn.disabled = true;
+            
+            // Clear match position
+            if (matchPosition) matchPosition.textContent = 'Match 0 of 0';
+        }
+    }
+}
+
+/**
+ * Search for text in a container and highlight matches
+ */
+function searchInContainer(container, searchTerm) {
+    const matches = [];
+    
+    if (!container || !searchTerm || searchTerm.length < 2) return matches;
+    
+    // Escape special characters in the search term for regex
+    const escSearchTerm = escapeRegExp(searchTerm);
+    
+    // Create a regex that matches the search term (case insensitive)
+    const regex = new RegExp(escSearchTerm, 'gi');
+    
+    // Get all text nodes in the container
+    const textNodes = getTextNodesIn(container);
+    
+    // Keep track of replaced nodes to avoid double-processing
+    const processedNodes = new Set();
+    
+    // Process each text node
+    textNodes.forEach(node => {
+        if (processedNodes.has(node)) return;
+        
+        const text = node.nodeValue;
+        if (!text || regex.test(text) === false) return;
+        
+        // Reset regex lastIndex
+        regex.lastIndex = 0;
+        
+        const parent = node.parentNode;
+        const originalHTML = parent.innerHTML;
+        
+        // Split text into segments with or without matches
+        const segments = [];
+        let lastIndex = 0;
+        let match;
+        
+        // Create a new regex for each iteration to avoid lastIndex issues
+        const matchRegex = new RegExp(escSearchTerm, 'gi');
+        while ((match = matchRegex.exec(text)) !== null) {
+            // Add text before match
+            if (match.index > lastIndex) {
+                segments.push({
+                    text: text.slice(lastIndex, match.index),
+                    isMatch: false
+                });
+            }
+            
+            // Add match
+            segments.push({
+                text: match[0],
+                isMatch: true,
+                position: {
+                    container: container.id,
+                    node: Array.from(container.querySelectorAll('*')).indexOf(parent),
+                    start: match.index,
+                    end: match.index + match[0].length
+                }
+            });
+            
+            // Store match info for navigation
+            matches.push({
+                container: container.id,
+                element: parent,
+                matchText: match[0],
+                startOffset: match.index,
+                endOffset: matchRegex.lastIndex
+            });
+            
+            lastIndex = matchRegex.lastIndex;
+        }
+        
+        // Add remaining text after last match
+        if (lastIndex < text.length) {
+            segments.push({
+                text: text.slice(lastIndex),
+                isMatch: false
+            });
+        }
+        
+        // If we found matches, replace the node with highlighted content
+        if (segments.length > 1) {
+            let html = '';
+            segments.forEach(segment => {
+                if (segment.isMatch) {
+                    html += `<span class="search-highlight" data-match-container="${container.id}" data-match-index="${matches.length - 1}">${segment.text}</span>`;
+                } else {
+                    html += segment.text;
+                }
+            });
+            
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = html;
+            
+            // Replace the original content with the highlighted version
+            while (tempDiv.firstChild) {
+                parent.insertBefore(tempDiv.firstChild, node);
+                processedNodes.add(tempDiv.firstChild);
+            }
+            
+            // Remove the original node
+            parent.removeChild(node);
+        }
+    });
+    
+    return matches;
+}
+
+/**
+ * Get all text nodes within a container
+ */
+function getTextNodesIn(container) {
+    const textNodes = [];
+    const walk = document.createTreeWalker(container, NodeFilter.SHOW_TEXT, null, false);
+    
+    let node;
+    while (node = walk.nextNode()) {
+        // Skip if node's parent is already a search highlight or in a script/style tag
+        const parent = node.parentNode;
+        if (parent.classList && parent.classList.contains('search-highlight')) continue;
+        if (parent.nodeName === 'SCRIPT' || parent.nodeName === 'STYLE') continue;
+        
+        textNodes.push(node);
+    }
+    
+    return textNodes;
+}
+
+/**
+ * Go to the next search match
+ */
+function goToNextMatch() {
+    if (!searchMatches) return;
+    
+    const totalMatches = searchMatches.original.length + searchMatches.customized.length;
+    if (totalMatches === 0) return;
+    
+    // Increment current match index
+    currentMatchIndex = (currentMatchIndex + 1) % totalMatches;
+    
+    // Navigate to the current match
+    navigateToMatch(currentMatchIndex);
+}
+
+/**
+ * Go to the previous search match
+ */
+function goToPreviousMatch() {
+    if (!searchMatches) return;
+    
+    const totalMatches = searchMatches.original.length + searchMatches.customized.length;
+    if (totalMatches === 0) return;
+    
+    // Decrement current match index
+    currentMatchIndex = (currentMatchIndex - 1 + totalMatches) % totalMatches;
+    
+    // Navigate to the current match
+    navigateToMatch(currentMatchIndex);
+}
+
+/**
+ * Navigate to a specific match by index
+ */
+function navigateToMatch(index) {
+    // Remove active match highlighting from all matches
+    const allHighlights = document.querySelectorAll('.search-highlight');
+    allHighlights.forEach(highlight => {
+        highlight.classList.remove('search-active-match', 'search-match-pulse');
+    });
+    
+    // Calculate which array and index to use
+    let matchObj = null;
+    if (index < searchMatches.original.length) {
+        matchObj = searchMatches.original[index];
+    } else {
+        matchObj = searchMatches.customized[index - searchMatches.original.length];
+    }
+    
+    if (!matchObj) return;
+    
+    // Find the highlight element for this match
+    const highlightElement = document.querySelector(`.search-highlight[data-match-container="${matchObj.container}"][data-match-index="${index < searchMatches.original.length ? index : index - searchMatches.original.length}"]`);
+    
+    if (highlightElement) {
+        // Add active match class
+        highlightElement.classList.add('search-active-match', 'search-match-pulse');
+        
+        // Scroll to the match
+        highlightElement.scrollIntoView({
+            behavior: 'smooth',
+            block: 'center'
+        });
+        
+        // If match is in a collapsed section, expand it
+        const parentSection = findParentSection(highlightElement);
+        if (parentSection) {
+            const content = document.getElementById(parentSection.id + '-content');
+            const toggle = parentSection.querySelector('.section-toggle');
+            
+            if (content && toggle && content.style.display === 'none') {
+                // Expand the section
+                content.style.display = 'block';
+                content.style.maxHeight = content.scrollHeight + 'px';
+                toggle.innerHTML = '<i class="bi bi-chevron-down"></i>';
+                
+                // Update section state
+                const title = toggle.getAttribute('data-section-title');
+                sectionStates[title] = 'expanded';
+                
+                // Also expand the matching section in the other view if needed
+                const otherPrefix = parentSection.id.startsWith('original') ? 'customized' : 'original';
+                const otherToggles = document.querySelectorAll(`.section-toggle[data-section-title="${title.replace(/"/g, '\\"')}"]`);
+                otherToggles.forEach(btn => {
+                    if (btn.getAttribute('data-section').startsWith(otherPrefix)) {
+                        const otherSectionId = btn.getAttribute('data-section');
+                        const otherContent = document.getElementById(`${otherSectionId}-content`);
+                        
+                        if (otherContent && otherContent.style.display === 'none') {
+                            otherContent.style.display = 'block';
+                            otherContent.style.maxHeight = otherContent.scrollHeight + 'px';
+                            btn.innerHTML = '<i class="bi bi-chevron-down"></i>';
+                        }
+                    }
+                });
+            }
+        }
+        
+        // Update match position display
+        const matchPosition = document.getElementById('match-position');
+        if (matchPosition) {
+            const totalMatches = searchMatches.original.length + searchMatches.customized.length;
+            matchPosition.textContent = `Match ${index + 1} of ${totalMatches}`;
+        }
+    }
+}
+
+/**
+ * Find the parent section of an element
+ */
+function findParentSection(element) {
+    let current = element;
+    while (current) {
+        if (current.classList && current.classList.contains('resume-section')) {
+            return current;
+        }
+        current = current.parentElement;
+    }
+    return null;
+}
+
+/**
+ * Clear all search highlights
+ */
+function clearSearchHighlights() {
+    const originalHtml = document.getElementById('original-resume-html');
+    const customizedHtml = document.getElementById('customized-resume-html');
+    
+    if (originalHtml) {
+        // Replace all highlighted spans with their text content
+        const highlights = originalHtml.querySelectorAll('.search-highlight');
+        highlights.forEach(highlight => {
+            const textNode = document.createTextNode(highlight.textContent);
+            highlight.parentNode.replaceChild(textNode, highlight);
+        });
+    }
+    
+    if (customizedHtml) {
+        // Replace all highlighted spans with their text content
+        const highlights = customizedHtml.querySelectorAll('.search-highlight');
+        highlights.forEach(highlight => {
+            const textNode = document.createTextNode(highlight.textContent);
+            highlight.parentNode.replaceChild(textNode, highlight);
+        });
+    }
+}
+
+/**
+ * Clear all search results and highlights
+ */
+function clearSearch() {
+    // Clear highlights
+    clearSearchHighlights();
+    
+    // Reset match data
+    searchMatches = {
+        original: [],
+        customized: []
+    };
+    currentMatchIndex = -1;
+    currentSearchTerm = '';
+    
+    // Update UI
+    const searchResultsInfo = document.getElementById('search-results-info');
+    if (searchResultsInfo) {
+        searchResultsInfo.classList.add('d-none');
+    }
+    
+    // Disable navigation buttons
+    const prevMatchBtn = document.getElementById('prev-match-btn');
+    const nextMatchBtn = document.getElementById('next-match-btn');
+    if (prevMatchBtn) prevMatchBtn.disabled = true;
+    if (nextMatchBtn) nextMatchBtn.disabled = true;
 }
 
 /**
