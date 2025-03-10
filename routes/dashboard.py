@@ -38,7 +38,7 @@ def user_dashboard():
         JobDescription.url.label('job_url')
     ).join(
         JobDescription,
-        CustomizedResume.job_id == JobDescription.id
+        CustomizedResume.job_description_id == JobDescription.id
     ).filter(
         CustomizedResume.user_id == current_user.id
     )
@@ -54,14 +54,46 @@ def user_dashboard():
     # Get all results
     results = query.order_by(CustomizedResume.created_at.desc()).all()
     
+    # Process results into the format expected by the template
+    dashboard_data = []
+    for resume_tuple in results:
+        resume = resume_tuple[0]  # The CustomizedResume object
+        job_title = resume_tuple.job_title  # Using the label from query
+        job_url = resume_tuple.job_url      # Using the label from query
+        
+        # Calculate improvement if possible
+        improvement = 0
+        if resume.original_ats_score is not None and resume.ats_score is not None:
+            improvement = round(resume.ats_score - resume.original_ats_score, 1)
+        
+        # Create a job object for the template
+        job = {
+            'title': job_title,
+            'url': job_url
+        }
+        
+        # Add to dashboard data
+        dashboard_data.append({
+            'resume': resume,
+            'job': job,
+            'improvement': improvement,
+            'date': resume.created_at.strftime('%Y-%m-%d %H:%M')
+        })
+    
+    # Calculate overall statistics
+    total_resumes = len(dashboard_data)
+    avg_improvement = sum(item['improvement'] for item in dashboard_data) / total_resumes if total_resumes > 0 else 0
+    
     # Return dashboard template with results
     return render_template(
         'user_dashboard.html',
-        resumes=results,
+        dashboard_data=dashboard_data,
+        total_resumes=total_resumes,
+        avg_improvement=round(avg_improvement, 1),
         search_query=search_query
     )
 
-@dashboard_bp.route('/resume/<int:resume_id>/delete', methods=['GET'])
+@dashboard_bp.route('/dashboard/resume/<int:resume_id>/delete', methods=['GET'])
 @login_required
 def delete_resume(resume_id):
     """Delete a customized resume."""

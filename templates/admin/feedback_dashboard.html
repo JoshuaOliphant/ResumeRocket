@@ -9,17 +9,17 @@
                 <div class="card-body p-2">
                     <ul class="nav nav-pills">
                         <li class="nav-item">
-                            <a class="nav-link active" href="{{ url_for('feedback_loop_dashboard') }}">
+                            <a class="nav-link active" href="{{ url_for('admin.feedback_dashboard') }}">
                                 <i class="bi bi-speedometer2 me-1"></i>Dashboard
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="{{ url_for('admin_users') }}">
+                            <a class="nav-link" href="{{ url_for('admin.manage_users') }}">
                                 <i class="bi bi-people me-1"></i>User Management
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="{{ url_for('list_evaluations') }}">
+                            <a class="nav-link" href="{{ url_for('admin.feedback_evaluations') }}">
                                 <i class="bi bi-clipboard-data me-1"></i>Evaluations
                             </a>
                         </li>

@@ -66,7 +66,7 @@ def customize_resume():
         return redirect(url_for('resume.analyze_resume'))
     
     # Get original resume content and format
-    original_content = original_resume.content
+    original_content = original_resume.original_content
     file_format = original_resume.file_format
     
     logger.debug(f"Found original resume content with format: {file_format}")
@@ -89,13 +89,14 @@ def customize_resume():
     # Create new customized resume record
     customized_resume = CustomizedResume(
         user_id=current_user.id, 
-        job_id=job.id,
+        job_description_id=job.id,
         original_id=resume_id,
-        content=customized_content,
-        filename=f"customized_{original_resume.filename}",
+        original_content=original_content,
+        customized_content=customized_content,
         file_format=file_format,
+        original_ats_score=original_resume.original_ats_score,
         ats_score=original_resume.ats_score,
-        keywords_added=added_keywords_count,
+        added_keywords_count=added_keywords_count,
         changes_count=changes_count,
         created_at=datetime.utcnow()
     )
@@ -267,7 +268,7 @@ def view_customized_resume(resume_id):
         return redirect(url_for('dashboard.user_dashboard'))
     
     # Get job description
-    job = JobDescription.query.get(resume.job_id)
+    job = JobDescription.query.get(resume.job_description_id)
     
     # Render template with data
     return render_template(
@@ -294,7 +295,7 @@ def compare_resume(resume_id):
         original = CustomizedResume.query.get(resume.original_id)
     
     # Get job description
-    job = JobDescription.query.get(resume.job_id)
+    job = JobDescription.query.get(resume.job_description_id)
     
     # Render template with data
     return render_template(
@@ -320,13 +321,13 @@ def download_resume(resume_id, format):
     if format == 'pdf':
         # Convert to PDF
         from services.pdf_extractor import generate_pdf
-        pdf_bytes = generate_pdf(resume.content, resume.file_format)
+        pdf_bytes = generate_pdf(resume.customized_content, resume.file_format)
         
         # Create file-like object
         file_obj = BytesIO(pdf_bytes)
         
         # Generate filename
-        filename = f"{resume.filename.rsplit('.', 1)[0]}.pdf"
+        filename = f"resume_{resume_id}.pdf"
         
         # Send file
         return send_file(
@@ -390,8 +391,8 @@ def submit_feedback(resume_id):
         return jsonify({'error': 'Invalid rating. Must be between 1 and 5.'}), 400
         
     # Update resume with feedback
-    resume.user_feedback_rating = rating
-    resume.user_feedback_text = comments
+    resume.user_rating = rating
+    resume.user_feedback = comments
     resume.status = status if status else resume.status
     
     # Save changes
@@ -406,9 +407,9 @@ def save_resume(content, filename, file_format, job_id):
     # Create resume record
     resume = CustomizedResume(
         user_id=current_user.id,
-        job_id=job_id,
-        content=content,
-        filename=filename,
+        job_description_id=job_id,
+        original_content=content,
+        customized_content=content,  # Initially, customized content is the same as original
         file_format=file_format,
         created_at=datetime.utcnow()
     )

@@ -96,17 +96,19 @@
                 <a href="#" class="btn btn-primary" onclick="window.print()">Print Resume</a>
                 
                 <div class="dropdown">
-                    <button class="btn btn-secondary dropdown-toggle" type="button" id="downloadOptions" data-bs-toggle="dropdown" aria-expanded="false">
-                        Download
+                    <button class="btn btn-outline-primary dropdown-toggle" type="button" id="exportDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="bi bi-download me-2"></i>Export
                     </button>
-                    <ul class="dropdown-menu" aria-labelledby="downloadOptions">
-                        <li><a class="dropdown-item" href="{{ url_for('download_resume', resume_id=resume.id, format='pdf') }}"><i class="bi bi-file-earmark-pdf me-2"></i>PDF</a></li>
-                        <li><a class="dropdown-item" href="{{ url_for('download_resume', resume_id=resume.id, format='docx') }}"><i class="bi bi-file-earmark-word me-2"></i>DOCX</a></li>
-                        <li><a class="dropdown-item" href="{{ url_for('download_resume', resume_id=resume.id, format='md') }}"><i class="bi bi-markdown me-2"></i>Markdown</a></li>
+                    <ul class="dropdown-menu" aria-labelledby="exportDropdown">
+                        <li><a class="dropdown-item" href="{{ url_for('resume.download_resume', resume_id=resume.id, format='pdf') }}"><i class="bi bi-file-earmark-pdf me-2"></i>PDF</a></li>
+                        <li><a class="dropdown-item" href="{{ url_for('resume.download_resume', resume_id=resume.id, format='docx') }}"><i class="bi bi-file-earmark-word me-2"></i>DOCX</a></li>
+                        <li><a class="dropdown-item" href="{{ url_for('resume.download_resume', resume_id=resume.id, format='md') }}"><i class="bi bi-markdown me-2"></i>Markdown</a></li>
                     </ul>
                 </div>
                 
-                <a href="{{ url_for('compare_resume', resume_id=resume.id) }}" class="btn btn-info">Compare Changes</a>
+                <div class="ms-2">
+                    <a href="{{ url_for('resume.compare_resume', resume_id=resume.id) }}" class="btn btn-info">Compare Changes</a>
+                </div>
             </div>
         </div>
     </div>
