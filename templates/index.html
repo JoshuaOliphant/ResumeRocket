@@ -9,12 +9,12 @@
             </div>
             <div class="card-body">
                 <form id="resumeForm" 
-                      hx-post="/api/analyze_resume"
-                      hx-target="#results-content"
-                      hx-swap="innerHTML"
-                      hx-indicator="#loading-indicator"
                       enctype="multipart/form-data"
-                      hx-on:htmx:responseError="if(event.detail.xhr.status === 401) { window.location.href = '/auth/login'; }">
+                      hx-on:htmx:responseError="if(event.detail.xhr.status === 401) { window.location.href = '/auth/login'; }"
+                      data-stream-form="true">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="resume_id" id="resume_id" value="">
+                    <input type="hidden" name="job_id" id="job_id" value="">
                     <div class="mb-3">
                         <label class="form-label">Resume Upload Method</label>
                         <div class="form-check">
@@ -82,8 +82,10 @@
                     </div>
 
                     <button type="submit" class="btn btn-primary">
+                        {% if current_user.is_authenticated %}
                         <span class="spinner-border spinner-border-sm htmx-indicator" id="loading-indicator" role="status" aria-hidden="true"></span>
-                        Analyze Job Description
+                        {% endif %}
+                        {% if current_user.is_authenticated %}Analyze Job Description{% else %}Login to Analyze{% endif %}
                     </button>
                 </form>
             </div>
@@ -96,7 +98,8 @@
                 <h5 class="card-title">Analysis Results</h5>
             </div>
             <div id="results-content" class="card-body">
-                <!-- Results will be loaded here by HTMX -->
+                {% if current_user.is_authenticated %}
+                <!-- Results will be loaded here by streaming -->
                 <div id="results-loading-placeholder" class="text-center d-none">
                     <div class="spinner-border my-5" role="status">
                         <span class="visually-hidden">Loading...</span>
@@ -104,20 +107,62 @@
                     <p>Analyzing your resume against the job description...</p>
                     <p class="text-muted">This may take 15-30 seconds</p>
                 </div>
+                {% else %}
+                <!-- Login prompt for users who aren't authenticated -->
+                <div class="text-center p-4">
+                    <i class="bi bi-shield-lock display-4 mb-3"></i>
+                    <h5>Login Required</h5>
+                    <p>Please <a href="/auth/login">log in</a> or <a href="/auth/register">register</a> to analyze your resume.</p>
+                    <div class="alert alert-info mt-3">
+                        <p class="mb-0"><i class="bi bi-info-circle-fill me-2"></i>ResumeRocket helps you optimize your resume for specific job descriptions using advanced AI analysis.</p>
+                    </div>
+                </div>
+                {% endif %}
             </div>
         </div>
+        
+        <!-- Streaming configuration element -->
+        {% if current_user.is_authenticated %}
+        <div id="streaming-config" 
+             data-stream 
+             data-stream-form="resumeForm"
+             data-stream-endpoint="/api/stream_suggestions"
+             data-stream-container="results-content"></div>
+        {% endif %}
     </div>
 </div>
 
 <script>
-    // Show loading placeholder when form is submitted
-    document.getElementById('resumeForm').addEventListener('htmx:beforeRequest', function() {
-        document.getElementById('results-loading-placeholder').classList.remove('d-none');
-    });
-    
-    // Hide loading placeholder when response is received
-    document.getElementById('resumeForm').addEventListener('htmx:afterSwap', function() {
-        document.getElementById('results-loading-placeholder').classList.add('d-none');
+    document.addEventListener('DOMContentLoaded', function() {
+        const form = document.getElementById('resumeForm');
+        const resultsContent = document.getElementById('results-content');
+        
+        form.addEventListener('submit', function(e) {
+            // Check if user is logged in
+            {% if current_user.is_authenticated %}
+                document.getElementById('results-loading-placeholder').classList.remove('d-none');
+                // Let the form submit continue normally
+            {% else %}
+                e.preventDefault(); // Stop form submission
+                
+                // Show login required message
+                resultsContent.innerHTML = `
+                    <div class="alert alert-warning">
+                        <h5>Login Required</h5>
+                        <p>Please <a href="/auth/login" class="alert-link">log in</a> or <a href="/auth/register" class="alert-link">register</a> to analyze your resume.</p>
+                        <p>Creating an account is free and allows you to save your resume and job descriptions for future use.</p>
+                    </div>
+                `;
+            {% endif %}
+        });
+        
+        // Initialize streaming only if user is authenticated
+        {% if current_user.is_authenticated %}
+            const streamingConfig = document.getElementById('streaming-config');
+            if (streamingConfig) {
+                setupStreamingElement(streamingConfig);
+            }
+        {% endif %}
     });
 </script>
 {% endblock %}
