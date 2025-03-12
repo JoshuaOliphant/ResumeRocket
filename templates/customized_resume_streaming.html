@@ -1,0 +1,410 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Customizing Resume for {{ job.title }}</h5>
+                    <div>
+                        {% if resume.streaming_progress > 0 and resume.streaming_progress < 100 %}
+                        <div class="progress" style="width: 200px; height: 20px;">
+                            <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: {{ resume.streaming_progress }}%">
+                                {{ resume.streaming_progress }}%
+                            </div>
+                        </div>
+                        {% else %}
+                        {% set orig_score = 0 if original.ats_score is none else original.ats_score %}
+                        {% set new_score = 0 if resume.ats_score is none else resume.ats_score %}
+                        {% set improvement = new_score - orig_score %}
+                        <span class="badge bg-secondary">Original Score: {{ "%.1f"|format(orig_score) }}%</span>
+                        <span class="badge bg-success">New Score: {{ "%.1f"|format(new_score) }}%</span>
+                        <span class="badge bg-info">
+                            Improved: {% if improvement > 0 %}+{% endif %}{{ "%.1f"|format(improvement) }}%
+                        </span>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div id="customization-status" class="mb-4">
+                        {% if resume.is_placeholder %}
+                        <div class="alert alert-info">
+                            <h5>Customizing your resume...</h5>
+                            <p>We're tailoring your resume to match the job description. This process typically takes 30-60 seconds.</p>
+                            <div id="status-message">
+                                <span class="streaming-status">{{ resume.streaming_status or 'Starting customization process...' }}</span>
+                                <div class="spinner-border spinner-border-sm text-primary" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <div class="card h-100">
+                                <div class="card-header text-dark">
+                                    <h5 class="mb-0">Original Resume</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="markdown-content" id="original-content">
+                                        {{ original.original_content | safe }}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card h-100">
+                                <div class="card-header text-dark">
+                                    <h5 class="mb-0">Customized Resume</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="markdown-content" id="customized-content">
+                                        {{ resume.customized_content | safe }}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div id="optimization-details" class="mb-4" style="display: {% if resume.is_placeholder %}none{% else %}block{% endif %};">
+                        <h5>Optimization Details</h5>
+                        <div class="card bg-dark border-secondary">
+                            <div class="card-body">
+                                <div id="optimization-content">
+                                    {% if resume.optimization_data %}
+                                    <div class="mb-3">
+                                        <h6 class="text-light">Summary</h6>
+                                        <p>{{ resume.optimization_data.summary }}</p>
+                                    </div>
+                                    
+                                    {% if resume.optimization_data.recommendations %}
+                                    <div class="mb-3">
+                                        <h6 class="text-light">Key Improvements</h6>
+                                        <ul class="list-group list-group-flush bg-dark">
+                                            {% for rec in resume.optimization_data.recommendations %}
+                                            <li class="list-group-item bg-dark text-light">
+                                                <strong>{{ rec.section }}:</strong> {{ rec.what }}
+                                            </li>
+                                            {% endfor %}
+                                        </ul>
+                                    </div>
+                                    {% endif %}
+                                    
+                                    {% if resume.optimization_data.keywords_added %}
+                                    <div class="mb-3">
+                                        <h6 class="text-light">Added Keywords</h6>
+                                        <div class="d-flex flex-wrap gap-2">
+                                            {% for keyword in resume.optimization_data.keywords_added %}
+                                            <span class="badge bg-success">{{ keyword }}</span>
+                                            {% endfor %}
+                                        </div>
+                                    </div>
+                                    {% endif %}
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-4 d-flex gap-2 justify-content-between">
+                        <div>
+                            <a href="{{ url_for('dashboard.user_dashboard') }}" class="btn btn-outline-secondary">
+                                Back to Dashboard
+                            </a>
+                        </div>
+                        
+                        <div id="actions-container" style="display: {% if resume.is_placeholder %}none{% else %}flex{% endif %};" class="gap-2">
+                            <a href="#" class="btn btn-primary" onclick="window.print()">
+                                <i class="bi bi-printer me-1"></i> Print Resume
+                            </a>
+                            
+                            <div class="dropdown">
+                                <button class="btn btn-outline-primary dropdown-toggle" type="button" id="exportDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                                    <i class="bi bi-download me-1"></i>Export
+                                </button>
+                                <ul class="dropdown-menu" aria-labelledby="exportDropdown">
+                                    <li><a class="dropdown-item" href="{{ url_for('resume.download_resume', resume_id=resume.id, format='pdf') }}">
+                                        <i class="bi bi-file-earmark-pdf me-2"></i>PDF
+                                    </a></li>
+                                    <li><a class="dropdown-item" href="{{ url_for('resume.download_resume', resume_id=resume.id, format='docx') }}">
+                                        <i class="bi bi-file-earmark-word me-2"></i>DOCX
+                                    </a></li>
+                                    <li><a class="dropdown-item" href="{{ url_for('resume.download_resume', resume_id=resume.id, format='md') }}">
+                                        <i class="bi bi-markdown me-2"></i>Markdown
+                                    </a></li>
+                                </ul>
+                            </div>
+                            
+                            <a href="{{ url_for('resume.compare_resume', resume_id=resume.id) }}" class="btn btn-info">
+                                <i class="bi bi-grid-3x2-gap me-1"></i> View Diff
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.markdown-content {
+    white-space: pre-wrap;
+    font-family: 'Source Sans Pro', sans-serif;
+    line-height: 1.6;
+    max-height: 500px;
+    overflow-y: auto;
+}
+
+.streaming-status {
+    animation: fade 1.5s infinite;
+}
+
+@keyframes fade {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.6; }
+}
+</style>
+
+<!-- Streaming JavaScript -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Check if the resume is a placeholder and needs streaming updates
+    const resumeId = {{ resume.id }};
+    const isPlaceholder = {{ 'true' if resume.is_placeholder else 'false' }};
+    
+    console.log('Streaming page loaded. Resume ID:', resumeId, 'Is placeholder:', isPlaceholder);
+    
+    if (isPlaceholder) {
+        console.log('Starting EventSource connection for streaming updates');
+        // Start polling for updates after a short delay to ensure backend is ready
+        setTimeout(pollForUpdates, 500);
+    } else {
+        console.log('Resume is not a placeholder, no streaming needed');
+    }
+    
+    function pollForUpdates() {
+        // Create event source for streaming with error handling and auto-reconnect
+        console.log('Creating dual streaming approach');
+        
+        // Use direct streaming instead of SSE (like the job description analysis)
+        console.log('Setting up direct streaming (non-SSE)');
+        
+        // Set up form data
+        const directUrl = '/api/customize_resume_streaming';
+        const formData = new FormData();
+        formData.append('resume_id', resumeId);
+        formData.append('job_id', {{ job.id }});
+        formData.append('customization_level', '{{ resume.customization_level }}');
+        formData.append('industry', '{{ resume.industry }}');
+        formData.append('csrf_token', '{{ csrf_token() }}');
+        
+        // Show connecting status
+        document.getElementById('status-message').innerHTML = 
+            '<span class="streaming-status">Connecting to customization service...</span>' + 
+            '<div class="spinner-border spinner-border-sm text-primary ms-2" role="status"></div>';
+        
+        // Start the direct streaming request
+        fetch(directUrl, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRFToken': '{{ csrf_token() }}'
+            }
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! Status: ${response.status}`);
+            }
+            
+            console.log('Direct streaming connection established');
+            document.getElementById('status-message').innerHTML = 
+                '<span class="streaming-status">Customizing resume...</span>' + 
+                '<div class="spinner-border spinner-border-sm text-primary ms-2" role="status"></div>';
+            
+            // Get a reader from the response body
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            let buffer = '';
+            
+            // Process the stream
+            function processStream({ done, value }) {
+                // If we're done, return
+                if (done) {
+                    console.log('Stream complete');
+                    return;
+                }
+                
+                // Decode the current chunk and add it to our buffer
+                buffer += decoder.decode(value, { stream: true });
+                
+                // Process complete lines from the buffer
+                const lines = buffer.split('\n');
+                buffer = lines.pop(); // Keep the last potentially incomplete line
+                
+                lines.forEach(line => {
+                    if (line.trim() === '') return;
+                    
+                    try {
+                        console.log('Processing JSON chunk:', line);
+                        const data = JSON.parse(line);
+                        
+                        if (data.type === 'status') {
+                            updateStatus(data.message || data.stage, data.progress);
+                        } 
+                        else if (data.type === 'analysis_complete') {
+                            updateStatus('Analysis complete. Planning optimizations...', 30);
+                        }
+                        else if (data.type === 'planning_chunk') {
+                            // Just log planning chunks
+                            console.log('Planning chunk received');
+                        }
+                        else if (data.type === 'planning_complete') {
+                            updateStatus('Optimization plan created. Implementing changes...', 50);
+                        }
+                        else if (data.type === 'implementation_chunk') {
+                            // For implementation chunks, update the content
+                            if (data.content) {
+                                appendToContent(data.content);
+                            }
+                        }
+                        else if (data.type === 'implementation_complete') {
+                            updateStatus('Implementation complete. Analyzing results...', 80);
+                        }
+                        else if (data.type === 'final_analysis_complete' || data.type === 'comparison_complete') {
+                            updateStatus('Finalizing results...', 90);
+                        }
+                        else if (data.type === 'customization_complete') {
+                            // Handle final data
+                            updateContent(data.data.customized_content);
+                            finishStreaming(data.data);
+                            updateStatus('Customization complete!', 100);
+                        }
+                        else if (data.type === 'error') {
+                            // Show error
+                            document.getElementById('status-message').innerHTML = 
+                                `<span class="text-danger">Error: ${data.message}</span>`;
+                        }
+                    } catch (e) {
+                        console.error('Error parsing streaming data:', e, line);
+                    }
+                });
+                
+                // Continue reading
+                return reader.read().then(processStream);
+            }
+            
+            // Start processing
+            return reader.read().then(processStream);
+        })
+        .catch(error => {
+            console.error('Streaming error:', error);
+            document.getElementById('status-message').innerHTML = 
+                `<span class="text-danger">Error: ${error.message}</span>`;
+        });
+    }
+    
+    function updateStatus(message, progress) {
+        // Update the status message
+        const statusEl = document.querySelector('.streaming-status');
+        if (statusEl) {
+            statusEl.textContent = message;
+        }
+        
+        // Update progress bar if provided
+        if (progress !== undefined && progress !== null) {
+            const progressBar = document.querySelector('.progress-bar');
+            if (progressBar) {
+                progressBar.style.width = progress + '%';
+                progressBar.textContent = progress + '%';
+            }
+        }
+    }
+    
+    function updateContent(content) {
+        // Update the customized content
+        const contentEl = document.getElementById('customized-content');
+        if (contentEl) {
+            contentEl.innerHTML = content;
+        }
+    }
+    
+    function appendToContent(content) {
+        // Append to existing content
+        const contentEl = document.getElementById('customized-content');
+        if (contentEl) {
+            contentEl.innerHTML += content;
+        }
+    }
+    
+    function finishStreaming(data) {
+        // Show all the final elements
+        document.getElementById('customization-status').innerHTML = 
+            '<div class="alert alert-success"><h5>Customization Complete!</h5>' +
+            '<p>Your resume has been customized to match the job requirements.</p></div>';
+        
+        document.getElementById('optimization-details').style.display = 'block';
+        document.getElementById('actions-container').style.display = 'flex';
+        
+        // Update optimization details
+        if (data.optimization_data) {
+            const optimizationEl = document.getElementById('optimization-content');
+            let html = '';
+            
+            // Add summary
+            if (data.optimization_data.summary) {
+                html += `<div class="mb-3">
+                    <h6 class="text-light">Summary</h6>
+                    <p>${data.optimization_data.summary}</p>
+                </div>`;
+            }
+            
+            // Add recommendations
+            if (data.optimization_data.recommendations && data.optimization_data.recommendations.length > 0) {
+                html += `<div class="mb-3">
+                    <h6 class="text-light">Key Improvements</h6>
+                    <ul class="list-group list-group-flush bg-dark">`;
+                
+                for (const rec of data.optimization_data.recommendations) {
+                    html += `<li class="list-group-item bg-dark text-light">
+                        <strong>${rec.section}:</strong> ${rec.what}
+                    </li>`;
+                }
+                
+                html += `</ul></div>`;
+            }
+            
+            // Add keywords
+            if (data.optimization_data.keywords_added && data.optimization_data.keywords_added.length > 0) {
+                html += `<div class="mb-3">
+                    <h6 class="text-light">Added Keywords</h6>
+                    <div class="d-flex flex-wrap gap-2">`;
+                
+                for (const keyword of data.optimization_data.keywords_added) {
+                    html += `<span class="badge bg-success">${keyword}</span>`;
+                }
+                
+                html += `</div></div>`;
+            }
+            
+            optimizationEl.innerHTML = html;
+        }
+        
+        // Update score badges
+        const headerDiv = document.querySelector('.card-header > div');
+        if (headerDiv && data.scores) {
+            const improvement = (data.scores.new_score || 0) - (data.scores.original_score || 0);
+            headerDiv.innerHTML = `
+                <span class="badge bg-secondary">Original Score: ${(data.scores.original_score || 0).toFixed(1)}%</span>
+                <span class="badge bg-success">New Score: ${(data.scores.new_score || 0).toFixed(1)}%</span>
+                <span class="badge bg-info">
+                    Improved: ${improvement > 0 ? '+' : ''}${improvement.toFixed(1)}%
+                </span>
+            `;
+        }
+    }
+});
+</script>
+{% endblock %}
