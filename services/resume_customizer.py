@@ -956,7 +956,7 @@ class ResumeCustomizer:
                     chunk = response_text[i:i+chunk_size]
                     yield chunk
             else:
-                # Stream the response from Claude - FIXED: Moved cache_control inside system array
+                # Stream the response from Claude
                 response_text = ""
                 with self.client.messages.stream(
                     model=self.model,
@@ -1148,7 +1148,7 @@ class ResumeCustomizer:
                     chunk = response_text[i:i+chunk_size]
                     yield chunk
             else:
-                # Stream the response from Claude - FIXED: Moved cache_control inside system array
+                # Stream the response from Claude
                 response_text = ""
                 with self.client.messages.stream(
                     model=self.model,

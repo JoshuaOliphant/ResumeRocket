@@ -26,41 +26,6 @@
     border-radius: 2px;
 }
 
-#diff-container .diff-line {
-    white-space: pre-wrap;
-    word-break: break-word;
-    font-family: monospace;
-    padding: 2px 0;
-}
-
-#diff-container .diff-marker {
-    display: inline-block;
-    width: 20px;
-    user-select: none;
-    color: #6c757d;
-}
-
-#diff-container .diff-added {
-    background-color: rgba(87, 171, 90, 0.15);
-}
-
-#diff-container .diff-removed {
-    background-color: rgba(229, 83, 75, 0.15);
-}
-
-#diff-container .diff-added .diff-marker {
-    color: #2e7d32;
-}
-
-#diff-container .diff-removed .diff-marker {
-    color: #c62828;
-}
-
-/* Resume content styling */
-.resume-content {
-    @apply whitespace-pre-wrap font-sans leading-relaxed max-h-[600px] overflow-y-auto;
-}
-
 /* Diff line classes */
 .diff-line {
     @apply px-4 whitespace-pre-wrap break-words border-l-3 border-transparent;
@@ -98,54 +63,6 @@
     @apply py-2 px-4 text-center bg-gray-100 dark:bg-gray-700 border-y border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-400;
 }
 
-.collapsed-content {
-    @apply mt-2 border-t border-gray-200 dark:border-gray-600 pt-2;
-}
-
-/* Legend styles */
-.diff-legend {
-    @apply text-sm text-gray-500 dark:text-gray-400 mt-4 py-2 px-4 bg-gray-50 dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700;
-}
-
-/* Section collapsing styling */
-.resume-section {
-    @apply mb-4;
-}
-
-.section-content {
-    @apply transition-[max-height,opacity] duration-300 ease-out max-h-[9999px] opacity-100 overflow-hidden;
-}
-
-/* Animation classes for expandable sections */
-.section-expanding {
-    animation: expandSection 0.3s ease-out forwards;
-}
-
-.section-collapsing {
-    animation: collapseSection 0.3s ease-out forwards;
-}
-
-@keyframes expandSection {
-    from { max-height: 0; opacity: 0; }
-    to { max-height: 9999px; opacity: 1; }
-}
-
-@keyframes collapseSection {
-    from { max-height: 9999px; opacity: 1; }
-    to { max-height: 0; opacity: 0; }
-}
-
-/* Animation for summary highlight */
-@keyframes highlightPulse {
-    0% { box-shadow: 0 0 0 0 rgba(0, 0, 0, 0); }
-    50% { box-shadow: 0 0 0 10px theme('colors.accent-light.DEFAULT / 0.1'); }
-    100% { box-shadow: 0 0 0 0 rgba(0, 0, 0, 0); }
-}
-
-.highlight-pulse {
-    animation: highlightPulse 2s ease-out;
-}
-
 /* Search highlighting styles */
 .search-highlight {
     @apply bg-accent-light/30 py-0.5 rounded shadow-sm;
@@ -164,6 +81,11 @@
 
 .search-match-pulse {
     animation: matchPulse 1.5s ease-in-out infinite;
+}
+
+/* Resume content styling */
+.resume-content {
+    @apply whitespace-pre-wrap font-sans leading-relaxed max-h-[600px] overflow-y-auto;
 }
 
 /* Print-specific styles */
@@ -194,820 +116,20 @@
         page-break-after: always;
     }
 }
-
-/* Add these CSS styles to fix the diff view */
-.diff-line {
-    padding: 2px 0;
-    white-space: pre-wrap;
-    word-break: break-word;
-}
-
-.diff-line.diff-added {
-    background-color: rgba(0, 128, 0, 0.1);
-    color: #006600;
-}
-
-.diff-line.diff-removed {
-    background-color: rgba(255, 0, 0, 0.1);
-    color: #cc0000;
-}
-
-.diff-marker {
-    display: inline-block;
-    width: 1em;
-    font-weight: bold;
-    user-select: none;
-}
-
-.diff-line.diff-added .diff-marker {
-    color: #006600;
-}
-
-.diff-line.diff-removed .diff-marker {
-    color: #cc0000;
-}
-
-/* Animation for progress bar */
-@keyframes progress {
-    0% { width: 0; }
-    100% { width: 100%; }
-}
-.animate-progress {
-    animation: progress 2s ease-in-out infinite;
-}
-
-/* Force visibility of key sections */
-#side-by-side-view {
-    display: block !important;
-}
-
-.customization-details-section {
-    display: block !important;
-}
-
-/* Ensure feedback form is visible */
-#feedback-section {
-    display: block !important;
-}
-
-.resume-content {
-    min-height: 300px !important;
-    background-color: white !important;  
-    color: #333 !important;
-}
 </style>
 
-<!-- Include the jsdiff library -->
+<!-- Include the jsdiff library for diff generation -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jsdiff/5.1.0/diff.min.js"></script>
 
-<!-- Include the marked library for Markdown rendering -->
-<script src="https://cdn.jsdelivr.net/npm/marked@4.3.0/marked.min.js"></script>
-
-<!-- Include Bootstrap Icons -->
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
-
-<!-- Include our custom JavaScript -->
-<script src="{{ url_for('static', filename='js/resume_comparison.js') }}"></script>
-
-<!-- Add HTMX for future enhancements -->
-<script src="https://unpkg.com/htmx.org@1.9.0"></script>
-
-<script>
-// Configure marked.js settings
-marked.setOptions({
-    breaks: true,        // Add line breaks on single newlines
-    gfm: true,           // GitHub Flavored Markdown
-    headerIds: true,     // Add IDs to headers
-    sanitize: false      // Allow HTML tags (important for diff highlighting)
-});
-
-// Create debug div for logging
-const debugDiv = document.createElement('div');
-debugDiv.style.padding = '10px';
-debugDiv.style.backgroundColor = '#fcf8e3';
-debugDiv.style.color = '#8a6d3b';
-debugDiv.style.display = 'none'; // Initially hidden
-debugDiv.style.position = 'fixed';
-debugDiv.style.bottom = '10px';
-debugDiv.style.right = '10px';
-debugDiv.style.maxWidth = '400px';
-debugDiv.style.maxHeight = '200px';
-debugDiv.style.overflow = 'auto';
-debugDiv.style.zIndex = '9999';
-debugDiv.style.border = '1px solid #ddb064';
-debugDiv.style.borderRadius = '4px';
-document.body.appendChild(debugDiv);
-
-// Global debug logger function
-function logDebug(message) {
-    console.log(message);
-    debugDiv.innerHTML += message + '<br>';
-}
-
-// Initialize the page when DOM is loaded
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('HTML rendering script loaded');
+<div class="container mx-auto px-4 py-6" 
+     x-data="resumeComparison({
+        resumeId: {{ resume.id|default(0) }}, 
+        originalScore: {{ resume.original_ats_score|default(0)|round(1) }},
+        customizedScore: {{ resume.ats_score|default(0)|round(1) }},
+        compareUrl: '{{ url_for('resume.compare_resume', resume_id=resume.id) }}',
+        exportUrl: '{{ url_for('resume.export_resume', resume_id=resume.id, version='customized') }}'
+     })">
     
-    // Make debug div visible for troubleshooting when needed
-    // debugDiv.style.display = 'block';
-    
-    // Initialize tooltips
-    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-    tooltipTriggerList.map(function (tooltipTriggerEl) {
-        try {
-            return new bootstrap.Tooltip(tooltipTriggerEl);
-        } catch (e) {
-            logDebug('Tooltip error: ' + e.message);
-            return null;
-        }
-    });
-    
-    // Get resume content
-    const originalResumeElem = document.getElementById('original-resume');
-    const customizedResumeElem = document.getElementById('customized-resume');
-    
-    if (!originalResumeElem) {
-        logDebug('Missing original resume element');
-    }
-    
-    if (!customizedResumeElem) {
-        logDebug('Missing customized resume element');
-    }
-    
-    if (!originalResumeElem || !customizedResumeElem) {
-        logDebug('Missing resume content elements');
-        return;
-    }
-    
-    let originalContent = originalResumeElem.innerHTML;
-    let customizedContent = customizedResumeElem.innerHTML;
-    
-    logDebug('Original content length: ' + (originalContent ? originalContent.length : 0));
-    logDebug('Customized content length: ' + (customizedContent ? customizedContent.length : 0));
-    
-    // If resume content is not immediately available in the DOM, try to parse it from JSON
-    if (!originalContent || !customizedContent || originalContent.trim() === '' || customizedContent.trim() === '') {
-        logDebug('Resume content empty or not found in the DOM');
-        
-        // Try to get it from JSON data
-        try {
-            const resumeData = JSON.parse('{{ resume_json|tojson|safe }}');
-            if (resumeData) {
-                originalContent = resumeData.original_content || '';
-                customizedContent = resumeData.customized_content || '';
-                logDebug('Loaded resume content from JSON data');
-            }
-        } catch (e) {
-            logDebug('Error parsing resume data: ' + e.message);
-        }
-    }
-    
-    console.log('Original content length:', originalContent ? originalContent.length : 0);
-    console.log('Customized content length:', customizedContent ? customizedContent.length : 0);
-    
-    // Set up view toggle handlers
-    const sideByeSideViewBtn = document.getElementById('side-by-side-view-btn');
-    const diffViewBtn = document.getElementById('diff-view-btn');
-    const sideByeSideView = document.getElementById('side-by-side-view');
-    const diffView = document.getElementById('diff-view');
-    
-    logDebug('Button elements found: ' + !!sideByeSideViewBtn + ', ' + !!diffViewBtn);
-    logDebug('View elements found: ' + !!sideByeSideView + ', ' + !!diffView);
-    
-    // Display debug info only when needed
-    debugDiv.style.display = 'none';
-
-    // Make sure we have content to work with
-    if (!originalContent || !customizedContent || originalContent.trim() === '' || customizedContent.trim() === '') {
-        logDebug('ERROR: No resume content available for rendering views');
-        debugDiv.style.display = 'block';
-        
-        // Fallback content to show something is working
-        originalContent = 'SAMPLE ORIGINAL CONTENT\n\nThis is placeholder text because we could not load the original resume content.\n\nPlease check the browser console for errors.';
-        customizedContent = 'SAMPLE CUSTOMIZED CONTENT\n\nThis is placeholder text because we could not load the customized resume content.\n\nPlease check the browser console for errors.';
-    }
-    
-    if (sideByeSideViewBtn && diffViewBtn && sideByeSideView && diffView) {
-        sideByeSideViewBtn.addEventListener('click', function() {
-            console.log('Side-by-side button clicked');
-            if (sideByeSideView) sideByeSideView.style.display = 'block';
-            if (diffView) diffView.style.display = 'none';
-            
-            // Toggle button appearance
-            sideByeSideViewBtn.classList.remove('bg-transparent', 'text-white', 'hover:bg-white/10');
-            sideByeSideViewBtn.classList.add('bg-white', 'text-accent-dark', 'hover:bg-white/90');
-            
-            diffViewBtn.classList.remove('bg-white', 'text-accent-dark', 'hover:bg-white/90');
-            diffViewBtn.classList.add('bg-transparent', 'text-white', 'hover:bg-white/10');
-            
-            renderSideBySideView(originalContent, customizedContent);
-        });
-        
-        diffViewBtn.addEventListener('click', function() {
-            console.log('Diff view button clicked');
-            if (sideByeSideView) sideByeSideView.style.display = 'none';
-            if (diffView) diffView.style.display = 'block';
-            
-            // Toggle button appearance
-            diffViewBtn.classList.remove('bg-transparent', 'text-white', 'hover:bg-white/10');
-            diffViewBtn.classList.add('bg-white', 'text-accent-dark', 'hover:bg-white/90');
-            
-            sideByeSideViewBtn.classList.remove('bg-white', 'text-accent-dark', 'hover:bg-white/90');
-            sideByeSideViewBtn.classList.add('bg-transparent', 'text-white', 'hover:bg-white/10');
-            
-            renderDiffView(originalContent, customizedContent);
-        });
-        
-        // Initialize with side-by-side view
-        logDebug('Initializing with side-by-side view');
-        try {
-            renderSideBySideView(originalContent, customizedContent);
-            logDebug('Side-by-side view successfully rendered');
-        } catch (e) {
-            logDebug('Error rendering side-by-side view: ' + e.message);
-            debugDiv.style.display = 'block';
-            
-            // If side-by-side view fails, try diff view as fallback
-            try {
-                sideByeSideView.style.display = 'none';
-                diffView.style.display = 'block';
-                renderDiffView(originalContent, customizedContent);
-                logDebug('Fell back to diff view');
-            } catch (e2) {
-                logDebug('CRITICAL: Both view renderers failed: ' + e2.message);
-            }
-        }
-    } else {
-        logDebug('Missing view toggle elements');
-    }
-    
-    // Set up the feedback form
-    if (typeof setupFeedbackForm === 'function') {
-        setupFeedbackForm();
-    }
-});
-
-// Render the side-by-side view
-function renderSideBySideView(originalContent, customizedContent) {
-    logDebug('Rendering side-by-side view');
-    const originalContentElem = document.getElementById('original-content');
-    const customizedContentElem = document.getElementById('customized-content');
-    
-    if (!originalContentElem || !customizedContentElem) {
-        logDebug('CRITICAL: Missing content containers for side-by-side view');
-        return;
-    }
-    
-    // Clean content by removing HTML tags
-    const originalClean = originalContent.replace(/<[^>]*>/g, '');
-    const customizedClean = customizedContent.replace(/<[^>]*>/g, '');
-    
-    // Apply word-by-word diff for more granular highlighting
-    const wordDiff = Diff.diffWords(originalClean, customizedClean);
-    
-    // Build HTML with diff highlighting for both sides
-    let originalHtml = '';
-    let customizedHtml = '';
-    
-    wordDiff.forEach(part => {
-        // Escape HTML to prevent tags from being rendered
-        const escapedValue = escapeHtml(part.value);
-        
-        if (part.added) {
-            // Added parts only show in customized
-            customizedHtml += `<span class="diff-added">${escapedValue}</span>`;
-        } else if (part.removed) {
-            // Removed parts only show in original
-            originalHtml += `<span class="diff-removed">${escapedValue}</span>`;
-        } else {
-            // Unchanged parts show in both
-            originalHtml += escapedValue;
-            customizedHtml += escapedValue;
-        }
-    });
-    
-    // Update the content with highlighting
-    originalContentElem.innerHTML = `<pre class="whitespace-pre-wrap font-mono text-sm leading-relaxed">${originalHtml}</pre>`;
-    customizedContentElem.innerHTML = `<pre class="whitespace-pre-wrap font-mono text-sm leading-relaxed">${customizedHtml}</pre>`;
-    
-    // Add a simple legend at the bottom of each side
-    const legend = `
-    <div class="mt-4 pt-2 text-xs text-gray-600 dark:text-gray-400 border-t border-gray-200 dark:border-gray-700">
-        <div class="flex items-center">
-            <span class="inline-block w-3 h-3 mr-1 bg-red-100 dark:bg-red-900/20 border border-red-500"></span>
-            <span class="text-red-500 dark:text-red-400">Removed content</span>
-        </div>
-    </div>`;
-    
-    const legendAdded = `
-    <div class="mt-4 pt-2 text-xs text-gray-600 dark:text-gray-400 border-t border-gray-200 dark:border-gray-700">
-        <div class="flex items-center">
-            <span class="inline-block w-3 h-3 mr-1 bg-green-100 dark:bg-green-900/20 border border-green-500"></span>
-            <span class="text-green-600 dark:text-green-400">Added content</span>
-        </div>
-    </div>`;
-    
-    originalContentElem.innerHTML += legend;
-    customizedContentElem.innerHTML += legendAdded;
-}
-
-// Render the diff view
-function renderDiffView(originalContent, customizedContent) {
-    console.log('Rendering diff view');
-    const diffContainer = document.getElementById('diff-container');
-    
-    if (!diffContainer) {
-        console.error('Missing diff container');
-        return;
-    }
-    
-    // If content wasn't passed, try to get it from the page
-    if (!originalContent || !customizedContent) {
-        const originalResumeElem = document.getElementById('original-resume');
-        const customizedResumeElem = document.getElementById('customized-resume');
-        
-        if (originalResumeElem) {
-            originalContent = originalResumeElem.innerHTML || '';
-        }
-        
-        if (customizedResumeElem) {
-            customizedContent = customizedResumeElem.innerHTML || '';
-        }
-        
-        // If content still not available, check session storage
-        if ((!customizedContent || customizedContent.length < 50) && 
-            window.sessionStorage && window.sessionStorage.getItem('completedResumeContent')) {
-            customizedContent = window.sessionStorage.getItem('completedResumeContent');
-        }
-    }
-    
-    // Clean content by removing HTML tags
-    originalContent = originalContent ? originalContent.replace(/<[^>]*>/g, '') : '';
-    customizedContent = customizedContent ? customizedContent.replace(/<[^>]*>/g, '') : '';
-    
-    // Check if we have content to work with
-    if (!originalContent || !customizedContent) {
-        diffContainer.innerHTML = '<p class="text-red-500 p-4">Cannot display diff view - missing content</p>';
-        return;
-    }
-    
-    try {
-        // Apply line-by-line diff
-        const diffOutput = Diff.createPatch('resume', 
-                                          originalContent, 
-                                          customizedContent,
-                                          'Original Resume', 
-                                          'Customized Resume');
-                                          
-        // Convert the diff to HTML
-        let diffHtml = '';
-        const lines = diffOutput.split('\n').slice(5); // Skip the header lines
-        
-        lines.forEach(line => {
-            if (!line) return;
-            
-            // Escape HTML
-            const escapedLine = line
-                .replace(/&/g, '&amp;')
-                .replace(/</g, '&lt;')
-                .replace(/>/g, '&gt;')
-                .replace(/"/g, '&quot;')
-                .replace(/'/g, '&#039;');
-                
-            // Format based on line type
-            if (line.startsWith('+')) {
-                diffHtml += `<div class="diff-line diff-added"><span class="diff-marker">+</span>${escapedLine.slice(1)}</div>`;
-            } else if (line.startsWith('-')) {
-                diffHtml += `<div class="diff-line diff-removed"><span class="diff-marker">-</span>${escapedLine.slice(1)}</div>`;
-            } else {
-                diffHtml += `<div class="diff-line"><span class="diff-marker">&nbsp;</span>${escapedLine}</div>`;
-            }
-        });
-        
-        diffContainer.innerHTML = diffHtml;
-        console.log('Diff view rendered successfully');
-    } catch (e) {
-        console.error('Error rendering diff view:', e);
-        diffContainer.innerHTML = `<p class="text-red-500 p-4">Error rendering diff: ${e.message}</p>`;
-    }
-}
-
-/**
- * Calculate which lines are different between original and customized content
- */
-function calculateDiffMap(originalLines, customizedLines) {
-    const diffMap = {
-        changed: new Set(),
-        added: new Set(),
-        removed: new Set()
-    };
-    
-    // Find changed lines
-    const minLength = Math.min(originalLines.length, customizedLines.length);
-    for (let i = 0; i < minLength; i++) {
-        if (originalLines[i] !== customizedLines[i]) {
-            diffMap.changed.add(i);
-        }
-    }
-    
-    // Find added lines
-    if (customizedLines.length > originalLines.length) {
-        for (let i = originalLines.length; i < customizedLines.length; i++) {
-            diffMap.added.add(i);
-        }
-    }
-    
-    // Find removed lines
-    if (originalLines.length > customizedLines.length) {
-        for (let i = customizedLines.length; i < originalLines.length; i++) {
-            diffMap.removed.add(i);
-        }
-    }
-    
-    return diffMap;
-}
-
-/**
- * Group consecutive unchanged lines for better readability
- */
-function groupDiffLines(originalLines, customizedLines, diffMap) {
-    const groups = [];
-    let currentGroup = null;
-    const maxLines = Math.max(originalLines.length, customizedLines.length);
-    
-    // Helper to determine if a line index is changed
-    const isLineChanged = (index) => {
-        return diffMap.changed.has(index) || 
-               diffMap.added.has(index) || 
-               diffMap.removed.has(index) ||
-               (index >= customizedLines.length && index < originalLines.length) ||
-               (index >= originalLines.length && index < customizedLines.length);
-    };
-    
-    // Process each line
-    for (let i = 0; i < maxLines; i++) {
-        if (isLineChanged(i)) {
-            // This is a changed/added/removed line
-            
-            // If we were collecting unchanged lines, finalize that group
-            if (currentGroup && currentGroup.type === 'unchanged') {
-                groups.push(currentGroup);
-                currentGroup = null;
-            }
-            
-            // Start a new changed group if needed
-            if (!currentGroup || currentGroup.type !== 'changed') {
-                currentGroup = {
-                    type: 'changed',
-                    lines: []
-                };
-                groups.push(currentGroup);
-            }
-            
-            // Add this line pair to the current group
-            currentGroup.lines.push({
-                original: i < originalLines.length ? originalLines[i] : null,
-                customized: i < customizedLines.length ? customizedLines[i] : null
-            });
-            
-        } else {
-            // This is an unchanged line
-            
-            // Show a small number of unchanged lines between changes for context
-            const isNearChange = (i > 0 && isLineChanged(i - 1)) || 
-                               (i < maxLines - 1 && isLineChanged(i + 1)) ||
-                               (i > 1 && isLineChanged(i - 2)) ||
-                               (i < maxLines - 2 && isLineChanged(i + 2));
-            
-            if (isNearChange) {
-                // This is near a change, so include it individually for context
-                if (currentGroup && currentGroup.type === 'unchanged' && currentGroup.lines.length > 5) {
-                    // If we have a large unchanged group, finalize it
-                    groups.push(currentGroup);
-                    currentGroup = null;
-                }
-                
-                // Start a new changed group if needed (for context lines)
-                if (!currentGroup || currentGroup.type !== 'changed') {
-                    currentGroup = {
-                        type: 'changed', // We treat context lines as part of changed group
-                        lines: []
-                    };
-                    groups.push(currentGroup);
-                }
-            } else {
-                // This is far from changes, group with other unchanged lines
-                if (currentGroup && currentGroup.type === 'changed') {
-                    // Finalize the changed group
-                    groups.push(currentGroup);
-                    currentGroup = null;
-                }
-                
-                // Start a new unchanged group if needed
-                if (!currentGroup) {
-                    currentGroup = {
-                        type: 'unchanged',
-                        lines: []
-                    };
-                    groups.push(currentGroup);
-                }
-            }
-            
-            // Add this line pair to the current group
-            currentGroup.lines.push({
-                original: originalLines[i],
-                customized: customizedLines[i]
-            });
-        }
-    }
-    
-    // Finalize the last group if needed
-    if (currentGroup) {
-        groups.push(currentGroup);
-    }
-    
-    return groups;
-}
-
-/**
- * Escape HTML special characters
- */
-function escapeHtml(text) {
-    if (!text) return '';
-    return text
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#039;');
-}
-
-// Set up toggle buttons
-function setupToggleButtons() {
-    const toggleButtons = document.querySelectorAll('.toggle-markdown-view');
-    toggleButtons.forEach(button => {
-        button.addEventListener('click', function() {
-            const targetId = this.getAttribute('data-target');
-            const markdownElement = document.getElementById(targetId);
-            const htmlElement = document.getElementById(targetId + '-html');
-            
-            if (!markdownElement || !htmlElement) {
-                console.error('Toggle target elements not found');
-                return;
-            }
-            
-            // Toggle visibility
-            if (markdownElement.classList.contains('d-none')) {
-                // Show markdown, hide HTML
-                markdownElement.classList.remove('d-none');
-                htmlElement.classList.add('d-none');
-                this.querySelector('.toggle-text').textContent = 'Show Formatted HTML';
-            } else {
-                // Show HTML, hide markdown
-                markdownElement.classList.add('d-none');
-                htmlElement.classList.remove('d-none');
-                this.querySelector('.toggle-text').textContent = 'Show Raw Markdown';
-            }
-        });
-    });
-}
-
-// Custom print function to ensure side-by-side view is maintained
-function printComparison() {
-    // Make sure we're in side-by-side view before printing
-    const originalCol = document.querySelector('.col-md-6:first-child');
-    const customizedCol = document.querySelector('.col-md-6:last-child');
-    
-    // Store current view state
-    const originalHidden = originalCol.classList.contains('d-none');
-    const customizedHidden = customizedCol.classList.contains('d-none');
-    const originalWidth = originalCol.className.includes('col-md-12');
-    const customizedWidth = customizedCol.className.includes('col-md-12');
-    
-    // Temporarily switch to side-by-side view if not already
-    if (originalHidden || customizedHidden || originalWidth || customizedWidth) {
-        // Reset to side-by-side view
-        originalCol.classList.remove('d-none', 'col-md-12');
-        customizedCol.classList.remove('d-none', 'col-md-12');
-        originalCol.classList.add('col-md-6');
-        customizedCol.classList.add('col-md-6');
-    }
-    
-    // Print the page
-    window.print();
-    
-    // Restore previous view state
-    setTimeout(() => {
-        if (originalHidden) {
-            originalCol.classList.add('d-none');
-        }
-        if (customizedHidden) {
-            customizedCol.classList.add('d-none');
-        }
-        if (originalWidth) {
-            originalCol.classList.remove('col-md-6');
-            originalCol.classList.add('col-md-12');
-        }
-        if (customizedWidth) {
-            customizedCol.classList.remove('col-md-6');
-            customizedCol.classList.add('col-md-12');
-        }
-    }, 500); // Small delay to ensure print dialog has opened
-}
-
-// Set up the feedback form
-function setupFeedbackForm() {
-    const form = document.getElementById('resume-feedback-form');
-    const statusDiv = document.querySelector('.feedback-status');
-    
-    if (!form) {
-        console.error('Feedback form not found');
-        return;
-    }
-    
-    form.addEventListener('submit', function(e) {
-        e.preventDefault();
-        
-        // Get form data
-        const formData = {
-            rating: parseInt(document.querySelector('input[name="rating"]:checked')?.value) || null,
-            feedback: document.getElementById('feedback').value,
-            was_effective: document.getElementById('was_effective').checked,
-            interview_secured: document.getElementById('interview_secured').checked,
-            job_secured: document.getElementById('job_secured').checked
-        };
-        
-        // Show loading status
-        statusDiv.innerHTML = '<div class="alert alert-info">Submitting feedback...</div>';
-        
-        // Get resume ID from URL
-        const urlParts = window.location.pathname.split('/');
-        const resumeId = urlParts[urlParts.length - 1];
-        
-        // Get CSRF token from meta tag
-        const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
-        
-        // Submit feedback to server
-        fetch(`/api/feedback/${resumeId}`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': csrfToken
-            },
-            body: JSON.stringify(formData)
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                statusDiv.innerHTML = '<div class="alert alert-success">Thank you for your feedback!</div>';
-                // Hide the success message after 3 seconds
-                setTimeout(() => {
-                    statusDiv.innerHTML = '';
-                }, 3000);
-            } else {
-                statusDiv.innerHTML = `<div class="alert alert-danger">Error: ${data.error}</div>`;
-            }
-        })
-        .catch(error => {
-            console.error('Error submitting feedback:', error);
-            statusDiv.innerHTML = '<div class="alert alert-danger">An error occurred while submitting feedback. Please try again.</div>';
-        });
-    });
-}
-
-// Add improved content loading script after the current JavaScript
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    console.log("DOM loaded - Starting direct database content display");
-    
-    // Create debugging console (hidden by default for production)
-    const debugConsole = document.createElement('div');
-    debugConsole.id = 'debug-console';
-    debugConsole.style.position = 'fixed';
-    debugConsole.style.bottom = '10px';
-    debugConsole.style.right = '10px';
-    debugConsole.style.width = '400px';
-    debugConsole.style.maxHeight = '300px';
-    debugConsole.style.overflowY = 'auto';
-    debugConsole.style.backgroundColor = 'rgba(0,0,0,0.8)';
-    debugConsole.style.color = '#00ff00';
-    debugConsole.style.padding = '10px';
-    debugConsole.style.fontFamily = 'monospace';
-    debugConsole.style.fontSize = '12px';
-    debugConsole.style.zIndex = '9999';
-    debugConsole.style.border = '1px solid #00ff00';
-    debugConsole.style.display = 'none'; // Hidden by default in production
-    document.body.appendChild(debugConsole);
-    
-    function debug(message, type = 'info') {
-        console.log(`RESUME COMPARISON: ${message}`);
-        const colors = {
-            info: '#00ff00',
-            warning: '#ffff00',
-            error: '#ff0000',
-            success: '#00ffff'
-        };
-        const timestamp = new Date().toLocaleTimeString();
-        debugConsole.innerHTML += `<div style="color:${colors[type]||'#00ff00'}">[${timestamp}] ${message}</div>`;
-        debugConsole.scrollTop = debugConsole.scrollHeight;
-    }
-    
-    // Force elements to be visible
-    function forceDisplayElements() {
-        document.querySelector('.customization-details-section')?.style.setProperty('display', 'block', 'important');
-        document.querySelector('.side-by-side-container')?.style.setProperty('display', 'flex', 'important');
-        document.querySelector('#side-by-side-view')?.style.setProperty('display', 'flex', 'important');
-        document.querySelector('#feedback-section')?.style.setProperty('display', 'block', 'important');
-        debug('Forced visibility of key elements', 'success');
-    }
-    
-    // The resume content should already be in the page directly from the server
-    // We just need to make sure all elements are visible and properly formatted
-    forceDisplayElements();
-    
-    // Check if we have content elements
-    const originalContentElem = document.getElementById('original-content');
-    const customizedContentElem = document.getElementById('customized-content');
-    
-    if (originalContentElem && customizedContentElem) {
-        debug('Content elements found, ensuring proper display', 'info');
-        
-        // Clean and display the content in the view containers
-        function cleanContent(content) {
-            if (!content || typeof content !== 'string') return '';
-            
-            // Basic cleaning for display
-            content = content
-                .replace(/```\w*\n/g, '') // Remove markdown code block start markers
-                .replace(/```\s*$/g, '')  // Remove markdown code block end markers
-                .replace(/\n/g, '<br>');  // Convert newlines to HTML breaks
-                
-            return content;
-        }
-        
-        // No need to clean content as it should already be properly formatted from the server
-        debug('Content ready for display', 'success');
-    }
-    
-    // Set up side-by-side view and diff view buttons
-    const sideByeSideViewBtn = document.getElementById('side-by-side-view-btn');
-    const diffViewBtn = document.getElementById('diff-view-btn');
-    
-    if (sideByeSideViewBtn && diffViewBtn) {
-        debug('Setting up view toggle buttons', 'info');
-        
-        // Set up event listeners
-        sideByeSideViewBtn.addEventListener('click', function() {
-            debug('Side-by-side view button clicked');
-            document.getElementById('side-by-side-view').style.display = 'flex';
-            document.getElementById('diff-view').style.display = 'none';
-            sideByeSideViewBtn.classList.add('active');
-            diffViewBtn.classList.remove('active');
-        });
-        
-        diffViewBtn.addEventListener('click', function() {
-            debug('Diff view button clicked');
-            document.getElementById('side-by-side-view').style.display = 'none';
-            document.getElementById('diff-view').style.display = 'block';
-            diffViewBtn.classList.add('active');
-            sideByeSideViewBtn.classList.remove('active');
-            
-            // Initialize diff view using server-side provided data
-            renderDiffView(
-                document.getElementById('original-resume').innerHTML,
-                document.getElementById('customized-resume').innerHTML
-            );
-        });
-        
-        // Default to side-by-side view
-        document.getElementById('side-by-side-view').style.display = 'flex';
-        document.getElementById('diff-view').style.display = 'none';
-        sideByeSideViewBtn.classList.add('active');
-        diffViewBtn.classList.remove('active');
-    }
-    
-    // Add a button to toggle debugging (hidden by default in production)
-    const debugButton = document.createElement('button');
-    debugButton.textContent = 'Toggle Debug';
-    debugButton.style.position = 'fixed';
-    debugButton.style.bottom = '10px';
-    debugButton.style.right = '10px';
-    debugButton.style.zIndex = '10000';
-    debugButton.style.padding = '5px 10px';
-    debugButton.style.backgroundColor = '#333';
-    debugButton.style.color = '#fff';
-    debugButton.style.border = 'none';
-    debugButton.style.borderRadius = '3px';
-    debugButton.style.opacity = '0.3';
-    debugButton.style.cursor = 'pointer';
-    debugButton.onclick = function() {
-        debugConsole.style.display = debugConsole.style.display === 'none' ? 'block' : 'none';
-    };
-    document.body.appendChild(debugButton);
-});
-</script>
-
-<div class="container mx-auto px-4 py-6">
     <!-- Header with Summary Section -->
     <div class="grid gap-6 mb-6">
         <div class="col-span-12">
@@ -1018,48 +140,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 <div class="p-6">
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
                         <div class="md:col-span-2">
-                            <div class="relative flex items-center mb-4">
-                                <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-gray-500 dark:text-gray-400">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                                    </svg>
-                                </div>
-                                <input type="text" id="resume-search-input" class="w-full pl-10 pr-10 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-accent-light focus:border-accent-light" placeholder="Search across both resume versions..." aria-label="Search resume content">
-                                <button id="clear-search-btn" class="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                                    </svg>
-                                </button>
-                            </div>
-                            
-                            <div id="search-results-info" class="mb-4 hidden">
-                                <span id="search-count" class="px-2.5 py-0.5 bg-accent-light text-white text-xs font-medium rounded-full mr-2">0 results</span>
-                                <span class="text-sm text-gray-600 dark:text-gray-400">Navigate: </span>
-                                <button id="prev-match-btn" class="px-2 py-1 mr-1 text-xs font-medium border border-gray-300 dark:border-gray-600 rounded text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50" disabled>
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="inline-block w-3 h-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7" />
-                                    </svg> 
-                                    Previous
-                                </button>
-                                <button id="next-match-btn" class="px-2 py-1 text-xs font-medium border border-gray-300 dark:border-gray-600 rounded text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50" disabled>
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="inline-block w-3 h-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-                                    </svg>
-                                    Next
-                                </button>
-                                <span id="match-position" class="ml-2 text-sm text-gray-600 dark:text-gray-400">Match 0 of 0</span>
-                            </div>
-                            
-                            <div class="inline-flex rounded-md shadow-sm mb-4" role="group" aria-label="Search scope">
-                                <input type="radio" class="sr-only peer" name="search-scope" id="search-both" checked>
-                                <label for="search-both" class="px-3 py-1.5 text-xs font-medium rounded-l-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 peer-checked:bg-accent-light peer-checked:text-white peer-checked:border-accent-light dark:peer-checked:bg-accent-light">Both Versions</label>
-                                
-                                <input type="radio" class="sr-only peer" name="search-scope" id="search-original">
-                                <label for="search-original" class="px-3 py-1.5 text-xs font-medium border-t border-b border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 peer-checked:bg-accent-light peer-checked:text-white peer-checked:border-accent-light dark:peer-checked:bg-accent-light">Original Only</label>
-                                
-                                <input type="radio" class="sr-only peer" name="search-scope" id="search-customized">
-                                <label for="search-customized" class="px-3 py-1.5 text-xs font-medium rounded-r-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 peer-checked:bg-accent-light peer-checked:text-white peer-checked:border-accent-light dark:peer-checked:bg-accent-light">Customized Only</label>
-                            </div>
+                            <!-- Search input -->
+                            <div x-show="initialLoadComplete" x-html="searchTemplate"></div>
                         </div>
                         
                         <div class="md:col-span-1">
@@ -1113,41 +195,40 @@ document.addEventListener('DOMContentLoaded', function() {
                         </div>
                         {% if resume and resume.comparison_data and resume.comparison_data.added_keywords %}
                         <div>
-                            <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden shadow-sm">
-                                <div class="bg-gray-100 dark:bg-gray-700 px-4 py-2">
-                                    <h6 class="font-medium text-gray-900 dark:text-white">Key Improvements</h6>
-                                </div>
-                                <div class="p-4">
-                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {% include "components/resume/section_collapsible.html" with {
+                                "title": "Key Improvements",
+                                "expanded": true,
+                                "content": "
+                                    <div class='grid grid-cols-1 md:grid-cols-2 gap-4'>
                                         <div>
-                                            <span class="text-xs text-gray-600 dark:text-gray-400">Added Keywords:</span>
-                                            <div class="flex flex-wrap gap-1 mt-1">
+                                            <span class='text-xs text-gray-600 dark:text-gray-400'>Added Keywords:</span>
+                                            <div class='flex flex-wrap gap-1 mt-1'>
                                                 {% for keyword in resume.comparison_data.added_keywords[:10] %}
-                                                    <span class="px-2 py-0.5 text-xs font-medium rounded-full bg-accent-light/80 text-white">{{ keyword }}</span>
+                                                    <span class='px-2 py-0.5 text-xs font-medium rounded-full bg-accent-light/80 text-white'>{{ keyword }}</span>
                                                 {% endfor %}
                                                 {% if resume.comparison_data.added_keywords|length > 10 %}
-                                                    <span class="px-2 py-0.5 text-xs font-medium rounded-full bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300">+{{ resume.comparison_data.added_keywords|length - 10 }} more</span>
+                                                    <span class='px-2 py-0.5 text-xs font-medium rounded-full bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300'>+{{ resume.comparison_data.added_keywords|length - 10 }} more</span>
                                                 {% endif %}
                                             </div>
                                         </div>
                                         <div>
-                                            <span class="text-xs text-gray-600 dark:text-gray-400">Section Improvements:</span>
-                                            <div class="mt-1">
+                                            <span class='text-xs text-gray-600 dark:text-gray-400'>Section Improvements:</span>
+                                            <div class='mt-1'>
                                                 {% for section, data in resume.comparison_data.section_improvements.items() %}
                                                     {% if data.improvement > 0 %}
-                                                        <div class="text-xs mb-1">
+                                                        <div class='text-xs mb-1'>
                                                             {{ section|title }}: 
-                                                            <span class="text-gray-600 dark:text-gray-400">{{ data.original|round(1) }}</span> → 
-                                                            <span class="text-accent-dark dark:text-accent-light">{{ data.new|round(1) }}</span>
-                                                            <span class="text-accent-light/90">(+{{ data.improvement|round(1) }})</span>
+                                                            <span class='text-gray-600 dark:text-gray-400'>{{ data.original|round(1) }}</span> → 
+                                                            <span class='text-accent-dark dark:text-accent-light'>{{ data.new|round(1) }}</span>
+                                                            <span class='text-accent-light/90'>(+{{ data.improvement|round(1) }})</span>
                                                         </div>
                                                     {% endif %}
                                                 {% endfor %}
                                             </div>
                                         </div>
                                     </div>
-                                </div>
-                            </div>
+                                "
+                            } %}
                         </div>
                         {% endif %}
                     </div>
@@ -1164,10 +245,18 @@ document.addEventListener('DOMContentLoaded', function() {
                     <h4 class="text-lg font-bold">Before & After</h4>
                     <div class="flex items-center space-x-2">
                         <div class="inline-flex rounded-md shadow-sm" role="group">
-                            <button type="button" class="px-3 py-1.5 text-xs font-medium rounded-lg bg-white text-accent-dark hover:bg-white/90 border border-white" id="side-by-side-view-btn">Side-by-Side</button>
-                            <button type="button" class="px-3 py-1.5 text-xs font-medium rounded-lg border border-white bg-transparent text-white hover:bg-white/10" id="diff-view-btn">Diff View</button>
+                            <button type="button" 
+                                    class="px-3 py-1.5 text-xs font-medium rounded-lg"
+                                    :class="viewType === 'side-by-side' ? 'bg-white text-accent-dark hover:bg-white/90 border border-white' : 'bg-transparent text-white hover:bg-white/10 border border-white'"
+                                    @click="changeViewType('side-by-side')"
+                                    id="side-by-side-view-btn">Side-by-Side</button>
+                            <button type="button" 
+                                    class="px-3 py-1.5 text-xs font-medium rounded-lg"
+                                    :class="viewType === 'diff' ? 'bg-white text-accent-dark hover:bg-white/90 border border-white' : 'bg-transparent text-white hover:bg-white/10 border border-white'"
+                                    @click="changeViewType('diff')"
+                                    id="diff-view-btn">Diff View</button>
                         </div>
-                        <a href="{{ url_for('resume.export_resume', resume_id=resume.id, version='customized') }}" class="flex items-center px-3 py-1.5 text-xs font-medium rounded bg-accent-light text-white hover:bg-accent-light/90 transition-colors">
+                        <a :href="exportUrl" class="flex items-center px-3 py-1.5 text-xs font-medium rounded bg-accent-light text-white hover:bg-accent-light/90 transition-colors">
                             <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                             </svg>
@@ -1176,42 +265,18 @@ document.addEventListener('DOMContentLoaded', function() {
                     </div>
                 </div>
                 <div class="p-6">
-                    <!-- Side-by-Side View -->
-                    <div id="side-by-side-view" style="display: block;">
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div>
-                                <div class="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden shadow-sm">
-                                    <div class="bg-gray-200 dark:bg-gray-700 px-4 py-3 flex justify-between items-center">
-                                        <h5 class="font-medium text-gray-900 dark:text-white">Original Resume</h5>
-                                        <span class="px-2.5 py-0.5 text-xs font-medium rounded bg-white dark:bg-gray-600 text-gray-800 dark:text-gray-200">
-                                            {{ resume.original_ats_score|round(1) if resume.original_ats_score else 'N/A' }}%
-                                        </span>
-                                    </div>
-                                    <div class="p-0">
-                                        <div id="original-content" class="p-4 resume-content bg-white dark:bg-gray-800 text-gray-900 dark:text-white overflow-auto min-h-[500px]"></div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div>
-                                <div class="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden shadow-sm">
-                                    <div class="bg-accent-light/20 dark:bg-accent-dark/20 px-4 py-3 flex justify-between items-center">
-                                        <h5 class="font-medium text-accent-dark dark:text-accent-light">Customized Resume</h5>
-                                        <span class="px-2.5 py-0.5 text-xs font-medium rounded bg-white dark:bg-gray-600 text-gray-800 dark:text-gray-200">
-                                            {{ resume.ats_score|round(1) if resume.ats_score else 'N/A' }}%
-                                        </span>
-                                    </div>
-                                    <div class="p-0">
-                                        <div id="customized-content" class="p-4 resume-content bg-white dark:bg-gray-800 text-gray-900 dark:text-white overflow-auto min-h-[500px]"></div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+                    <!-- Content loading indicator -->
+                    <div x-show="!initialLoadComplete" class="flex justify-center items-center py-12">
+                        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-accent-light"></div>
+                        <span class="ml-3 text-gray-600 dark:text-gray-400">Loading comparison...</span>
                     </div>
                     
-                    <!-- Diff View -->
-                    <div id="diff-view" style="display: none;">
-                        <div id="diff-container" class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden shadow-sm min-h-[400px] p-4"></div>
-                    </div>
+                    <!-- Content diff component -->
+                    <div x-show="initialLoadComplete" x-html="contentTemplate" 
+                         hx-get="{{ url_for('resume.compare_resume_content', resume_id=resume.id) }}"
+                         hx-trigger="load"
+                         hx-swap="outerHTML"
+                         hx-indicator=".loading-indicator"></div>
                     
                     <!-- Hidden containers for raw content -->
                     <div id="original-resume" style="display: none;">
@@ -1228,8 +293,6 @@ document.addEventListener('DOMContentLoaded', function() {
                             Sample customized resume content - No content was provided.
                         {% endif %}
                     </div>
-                    <div id="original-resume-html" style="display: none;"></div>
-                    <div id="customized-resume-html" style="display: none;"></div>
                 </div>
             </div>
         </div>
@@ -1244,84 +307,94 @@ document.addEventListener('DOMContentLoaded', function() {
                 </div>
                 <div class="p-6">
                     <div class="mb-6">
-                        <h5 class="text-lg font-medium text-gray-900 dark:text-white mb-4">Customization Notes</h5>
-                        <div class="bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg p-4 text-gray-700 dark:text-gray-300">
-                            {% if resume and resume.customization_notes %}
-                                {{ resume.customization_notes | safe }}
-                            {% else %}
-                                <p>No specific customization notes were provided for this resume.</p>
-                            {% endif %}
-                        </div>
+                        {% include "components/resume/section_collapsible.html" with {
+                            "title": "Customization Notes",
+                            "expanded": true,
+                            "content": "
+                                <div class='bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg p-4 text-gray-700 dark:text-gray-300'>
+                                    {% if resume and resume.customization_notes %}
+                                        {{ resume.customization_notes | safe }}
+                                    {% else %}
+                                        <p>No specific customization notes were provided for this resume.</p>
+                                    {% endif %}
+                                </div>
+                            "
+                        } %}
                     </div>
                     
                     {% if resume and resume.user_rating is none %}
                         <div class="mt-6" id="feedback-section">
-                            <h5 class="text-lg font-medium text-gray-900 dark:text-white mb-4">Provide Feedback</h5>
-                            <div class="bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg p-4">
-                                <form id="resume-feedback-form" class="space-y-4">
-                                    <div class="feedback-status"></div>
-                                    
-                                    <div>
-                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">How would you rate this customized resume?</label>
-                                            <div class="flex items-center space-x-4">
-                                                <div class="flex items-center">
-                                                    <input type="radio" id="rating-1" name="rating" value="1" class="w-4 h-4 text-accent-light focus:ring-accent-light">
-                                                    <label for="rating-1" class="ml-2 text-sm text-gray-700 dark:text-gray-300">1</label>
+                            {% include "components/resume/section_collapsible.html" with {
+                                "title": "Provide Feedback",
+                                "expanded": true,
+                                "content": "
+                                    <div class='bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg p-4'>
+                                        <form id='resume-feedback-form' class='space-y-4' hx-post='/api/feedback/{{ resume.id }}' hx-swap='none' hx-on::after-request='showFeedbackStatus($event)'>
+                                            <div class='feedback-status'></div>
+                                            
+                                            <div>
+                                                <label class='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2'>How would you rate this customized resume?</label>
+                                                    <div class='flex items-center space-x-4'>
+                                                        <div class='flex items-center'>
+                                                            <input type='radio' id='rating-1' name='rating' value='1' class='w-4 h-4 text-accent-light focus:ring-accent-light'>
+                                                            <label for='rating-1' class='ml-2 text-sm text-gray-700 dark:text-gray-300'>1</label>
+                                                        </div>
+                                                        <div class='flex items-center'>
+                                                            <input type='radio' id='rating-2' name='rating' value='2' class='w-4 h-4 text-accent-light focus:ring-accent-light'>
+                                                            <label for='rating-2' class='ml-2 text-sm text-gray-700 dark:text-gray-300'>2</label>
+                                                        </div>
+                                                        <div class='flex items-center'>
+                                                            <input type='radio' id='rating-3' name='rating' value='3' class='w-4 h-4 text-accent-light focus:ring-accent-light'>
+                                                            <label for='rating-3' class='ml-2 text-sm text-gray-700 dark:text-gray-300'>3</label>
+                                                        </div>
+                                                        <div class='flex items-center'>
+                                                            <input type='radio' id='rating-4' name='rating' value='4' class='w-4 h-4 text-accent-light focus:ring-accent-light'>
+                                                            <label for='rating-4' class='ml-2 text-sm text-gray-700 dark:text-gray-300'>4</label>
+                                                        </div>
+                                                        <div class='flex items-center'>
+                                                            <input type='radio' id='rating-5' name='rating' value='5' class='w-4 h-4 text-accent-light focus:ring-accent-light'>
+                                                            <label for='rating-5' class='ml-2 text-sm text-gray-700 dark:text-gray-300'>5</label>
+                                                        </div>
+                                                    </div>
+                                                    <div class='flex items-center text-xs text-gray-500 dark:text-gray-400 mt-1'>
+                                                        <span class='flex-1 text-left'>Poor</span>
+                                                        <span class='flex-1 text-center'>Average</span>
+                                                        <span class='flex-1 text-right'>Excellent</span>
+                                                    </div>
+                                            </div>
+                                            
+                                            <div>
+                                                <label for='feedback' class='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2'>Additional Feedback</label>
+                                                <textarea id='feedback' name='feedback' rows='4' class='w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-accent-light focus:border-accent-light' placeholder='Tell us what you think about the customized resume...'></textarea>
+                                            </div>
+                                            
+                                            <div class='flex flex-col space-y-2'>
+                                                <div class='flex items-center'>
+                                                    <input type='checkbox' id='was_effective' name='was_effective' class='w-4 h-4 text-accent-light focus:ring-accent-light'>
+                                                    <label for='was_effective' class='ml-2 text-sm text-gray-700 dark:text-gray-300'>This customization was effective for my job application</label>
                                                 </div>
-                                                <div class="flex items-center">
-                                                    <input type="radio" id="rating-2" name="rating" value="2" class="w-4 h-4 text-accent-light focus:ring-accent-light">
-                                                    <label for="rating-2" class="ml-2 text-sm text-gray-700 dark:text-gray-300">2</label>
+                                                <div class='flex items-center'>
+                                                    <input type='checkbox' id='interview_secured' name='interview_secured' class='w-4 h-4 text-accent-light focus:ring-accent-light'>
+                                                    <label for='interview_secured' class='ml-2 text-sm text-gray-700 dark:text-gray-300'>I secured an interview with this resume</label>
                                                 </div>
-                                                <div class="flex items-center">
-                                                    <input type="radio" id="rating-3" name="rating" value="3" class="w-4 h-4 text-accent-light focus:ring-accent-light">
-                                                    <label for="rating-3" class="ml-2 text-sm text-gray-700 dark:text-gray-300">3</label>
-                                                </div>
-                                                <div class="flex items-center">
-                                                    <input type="radio" id="rating-4" name="rating" value="4" class="w-4 h-4 text-accent-light focus:ring-accent-light">
-                                                    <label for="rating-4" class="ml-2 text-sm text-gray-700 dark:text-gray-300">4</label>
-                                                </div>
-                                                <div class="flex items-center">
-                                                    <input type="radio" id="rating-5" name="rating" value="5" class="w-4 h-4 text-accent-light focus:ring-accent-light">
-                                                    <label for="rating-5" class="ml-2 text-sm text-gray-700 dark:text-gray-300">5</label>
+                                                <div class='flex items-center'>
+                                                    <input type='checkbox' id='job_secured' name='job_secured' class='w-4 h-4 text-accent-light focus:ring-accent-light'>
+                                                    <label for='job_secured' class='ml-2 text-sm text-gray-700 dark:text-gray-300'>I secured a job with this resume</label>
                                                 </div>
                                             </div>
-                                            <div class="flex items-center text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                                <span class="flex-1 text-left">Poor</span>
-                                                <span class="flex-1 text-center">Average</span>
-                                                <span class="flex-1 text-right">Excellent</span>
+                                            
+                                            <div class='flex justify-end'>
+                                                <button type='submit' class='inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-accent-dark hover:bg-accent-dark/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent-light'>
+                                                    <svg xmlns='http://www.w3.org/2000/svg' class='h-4 w-4 mr-2' fill='none' viewBox='0 0 24 24' stroke='currentColor'>
+                                                        <path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M5 13l4 4L19 7' />
+                                                    </svg>
+                                                    Submit Feedback
+                                                </button>
                                             </div>
+                                        </form>
                                     </div>
-                                    
-                                    <div>
-                                        <label for="feedback" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Additional Feedback</label>
-                                        <textarea id="feedback" name="feedback" rows="4" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-accent-light focus:border-accent-light" placeholder="Tell us what you think about the customized resume..."></textarea>
-                                    </div>
-                                    
-                                    <div class="flex flex-col space-y-2">
-                                        <div class="flex items-center">
-                                            <input type="checkbox" id="was_effective" name="was_effective" class="w-4 h-4 text-accent-light focus:ring-accent-light">
-                                            <label for="was_effective" class="ml-2 text-sm text-gray-700 dark:text-gray-300">This customization was effective for my job application</label>
-                                        </div>
-                                        <div class="flex items-center">
-                                            <input type="checkbox" id="interview_secured" name="interview_secured" class="w-4 h-4 text-accent-light focus:ring-accent-light">
-                                            <label for="interview_secured" class="ml-2 text-sm text-gray-700 dark:text-gray-300">I secured an interview with this resume</label>
-                                        </div>
-                                        <div class="flex items-center">
-                                            <input type="checkbox" id="job_secured" name="job_secured" class="w-4 h-4 text-accent-light focus:ring-accent-light">
-                                            <label for="job_secured" class="ml-2 text-sm text-gray-700 dark:text-gray-300">I secured a job with this resume</label>
-                                        </div>
-                                    </div>
-                                    
-                                    <div class="flex justify-end">
-                                        <button type="submit" class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-accent-dark hover:bg-accent-dark/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent-light">
-                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                                            </svg>
-                                            Submit Feedback
-                                        </button>
-                                    </div>
-                                </form>
-                            </div>
+                                "
+                            } %}
                         </div>
                     {% endif %}
                 </div>
@@ -1329,4 +402,81 @@ document.addEventListener('DOMContentLoaded', function() {
         </div>
     </div>
 </div>
-{% endblock %} 
+
+<script>
+document.addEventListener('alpine:init', () => {
+    Alpine.data('resumeComparison', (params) => ({
+        resumeId: params.resumeId || 0,
+        originalScore: params.originalScore || 0,
+        customizedScore: params.customizedScore || 0,
+        compareUrl: params.compareUrl || '',
+        exportUrl: params.exportUrl || '',
+        viewType: 'side-by-side',
+        initialLoadComplete: false,
+        
+        // Templates for dynamic content
+        contentTemplate: '<div class="loading-indicator flex justify-center items-center py-12"><div class="animate-spin rounded-full h-12 w-12 border-b-2 border-accent-light"></div></div>',
+        searchTemplate: document.getElementById('search-template') ? document.getElementById('search-template').innerHTML : '',
+        
+        init() {
+            // HTMX event handling
+            document.body.addEventListener('htmx:afterSwap', (event) => {
+                if (event.detail.target.id === 'content-diff-component') {
+                    this.initialLoadComplete = true;
+                    console.log('Content loaded successfully');
+                }
+            });
+            
+            document.body.addEventListener('htmx:responseError', (event) => {
+                console.error('Error loading content:', event.detail.xhr.status);
+                this.contentTemplate = `
+                    <div class="p-4 text-red-500 bg-red-50 dark:bg-red-900/20 rounded-md">
+                        <p class="font-medium">Error loading comparison content</p>
+                        <p class="text-sm mt-2">Please try refreshing the page or contact support if the problem persists.</p>
+                    </div>
+                `;
+                this.initialLoadComplete = true;
+            });
+        },
+        
+        changeViewType(type) {
+            this.viewType = type;
+            
+            // Find the content diff component and update its view
+            const diffComponent = document.querySelector('#content-diff-component');
+            if (diffComponent && diffComponent.__x) {
+                // Use Alpine.js to update the component's view type
+                diffComponent.__x.dataStack[0].viewType = type;
+                diffComponent.__x.dataStack[0].renderView();
+            } else {
+                console.error('Content diff component not found or not initialized');
+            }
+        },
+        
+        showFeedbackStatus(event) {
+            const status = event.detail.successful ? 'success' : 'error';
+            const message = event.detail.successful ? 'Thank you for your feedback!' : 'Error submitting feedback. Please try again.';
+            
+            const statusDiv = document.querySelector('.feedback-status');
+            if (statusDiv) {
+                statusDiv.innerHTML = `
+                    <div class="p-4 mb-4 rounded-md ${status === 'success' ? 'bg-green-50 dark:bg-green-900/20 text-green-800 dark:text-green-100' : 'bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-100'}">
+                        ${message}
+                    </div>
+                `;
+                
+                // Clear the status after 3 seconds if successful
+                if (status === 'success') {
+                    setTimeout(() => {
+                        statusDiv.innerHTML = '';
+                    }, 3000);
+                    
+                    // Reset the form
+                    document.getElementById('resume-feedback-form').reset();
+                }
+            }
+        }
+    }));
+});
+</script>
+{% endblock %}

@@ -157,8 +157,8 @@ class AISuggestions:
             with self.client.messages.stream(
                 model=self.model,
                 max_tokens=8192,  # Maximum token limit for comprehensive responses
-                messages=messages,
-                cache_control=[{"type": "ephemeral"}]  # Proper cache_control parameter for Claude's caching
+                messages=messages
+                # Removed cache_control parameter as it's not supported in messages.stream()
             ) as stream:
                 # Yield each text delta as it comes in
                 for text in stream.text_stream:

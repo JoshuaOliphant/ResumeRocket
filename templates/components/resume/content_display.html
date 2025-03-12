@@ -1,0 +1,19 @@
+<div class="bg-white dark:bg-gray-800 rounded-lg shadow border dark:border-gray-700 overflow-hidden">
+    <div class="bg-gray-100 dark:bg-gray-900 px-4 py-3 border-b dark:border-gray-700 flex justify-between">
+        <h5 class="text-lg font-semibold text-gray-800 dark:text-white">{{ title }}</h5>
+        {% if badges %}
+        <div class="flex items-center space-x-2">
+            {% for badge in badges %}
+            <span class="px-3 py-1 text-sm {{ badge.class|default('bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200') }} rounded-full">
+                {{ badge.text }}
+            </span>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+    <div class="p-4">
+        <div class="markdown-content {{ content_class }}" id="{{ content_id }}">
+            {{ content | safe }}
+        </div>
+    </div>
+</div>

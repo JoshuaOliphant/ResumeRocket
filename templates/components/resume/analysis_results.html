@@ -1,0 +1,201 @@
+{% if error %}
+<div class="bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-100 p-4 rounded-md mb-4">{{ error }}</div>
+{% else %}
+<div class="mb-6">
+    <div class="flex justify-between items-center mb-2">
+        <h3 class="text-lg font-semibold text-gray-900 dark:text-white">ATS Score</h3>
+        {% if ats_score.confidence is defined %}
+        <span class="text-sm text-gray-500 dark:text-gray-400">(Confidence: {{ ats_score.confidence }})</span>
+        {% endif %}
+    </div>
+    <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-6 overflow-hidden">
+        <div class="h-full bg-accent-dark text-center text-black font-semibold leading-6 rounded-full"
+             style="width: {{ ats_score.score }}%">
+            {{ "%.1f"|format(ats_score.score) }}%
+        </div>
+    </div>
+    {% if ats_score.job_type is defined %}
+    <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Detected Job Type: {{ ats_score.job_type|title }}</p>
+    {% endif %}
+</div>
+
+{% if ats_score.section_scores is defined %}
+<div class="mb-6">
+    <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-3">Section Scores</h3>
+    <div class="space-y-3">
+    {% for section, score in ats_score.section_scores.items() %}
+        <div>
+            <div class="flex justify-between items-center mb-1">
+                <span class="text-gray-700 dark:text-gray-300">{{ section|title }}</span>
+                <span class="text-gray-700 dark:text-gray-300">{{ "%.1f"|format(score) }}%</span>
+            </div>
+            <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5 overflow-hidden">
+                <div class="h-full bg-blue-500 dark:bg-blue-600 rounded-full"
+                     style="width: {{ score }}%"></div>
+            </div>
+        </div>
+    {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+<div class="mb-6">
+    <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-3">Matching Keywords</h3>
+    <div class="flex flex-wrap gap-2">
+        {% for keyword in ats_score.matching_keywords %}
+            <span class="px-2.5 py-1 text-sm bg-green-100 dark:bg-green-800 text-green-800 dark:text-green-100 rounded-full">
+                {{ keyword }}
+            </span>
+        {% endfor %}
+    </div>
+</div>
+
+<div class="mb-6">
+    <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-3">Missing Keywords</h3>
+    <div class="flex flex-wrap gap-2">
+        {% for keyword in ats_score.missing_keywords %}
+            <span class="px-2.5 py-1 text-sm bg-accent-light dark:bg-accent-dark text-black dark:text-black rounded-full">
+                {{ keyword }}
+            </span>
+        {% endfor %}
+    </div>
+</div>
+
+{% if ats_score.suggestions is defined %}
+<div class="mb-6">
+    <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-3">ATS Improvement Suggestions</h3>
+    <div class="space-y-2 border dark:border-gray-700 rounded-md divide-y dark:divide-gray-700">
+        {% for suggestion in ats_score.suggestions %}
+            <div class="p-3 bg-white dark:bg-gray-800 first:rounded-t-md last:rounded-b-md">
+                <p class="text-gray-800 dark:text-gray-200">
+                    <span class="font-semibold">{{ suggestion.title }}</span>: {{ suggestion.content }}
+                </p>
+            </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+<div class="mb-6">
+    <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-3">AI Suggestions</h3>
+    <div class="space-y-2 border dark:border-gray-700 rounded-md divide-y dark:divide-gray-700">
+        {% for suggestion in suggestions %}
+            <div class="p-3 bg-white dark:bg-gray-800 first:rounded-t-md last:rounded-b-md">
+                <p class="text-gray-800 dark:text-gray-200">{{ suggestion }}</p>
+            </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- This placeholder is required for the JavaScript to add customization controls -->
+<div id="customize-controls-placeholder"></div>
+
+{% if resume_id is defined and job_id is defined %}
+<div class="mt-6 pt-6 border-t dark:border-gray-700">
+    <form method="POST" action="{{ url_for('resume.customize_resume') }}"
+          hx-headers='{"Content-Type": "application/x-www-form-urlencoded"}'
+          hx-indicator="#customize-loading-indicator">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="resume_id" value="{{ resume_id }}">
+        <input type="hidden" name="job_id" value="{{ job_id }}">
+        <input type="hidden" name="use_streaming" value="true">
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <div>
+                <label for="customization_level" class="block text-gray-700 dark:text-gray-300 font-semibold mb-2">
+                    Customization Level
+                </label>
+                <select class="w-full px-3 py-2 border rounded-md 
+                             text-gray-700 bg-white dark:bg-gray-700 
+                             border-gray-300 dark:border-gray-600
+                             dark:text-white focus:outline-none 
+                             focus:ring-2 focus:ring-accent-light" 
+                        id="customization_level" name="customization_level">
+                    <option value="conservative">Conservative - Minimal changes</option>
+                    <option value="balanced" selected>Balanced - Default level</option>
+                    <option value="extensive">Extensive - More aggressive optimization</option>
+                </select>
+                <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                    Choose how extensively you want your resume customized
+                </p>
+            </div>
+            
+            <div>
+                <label for="industry" class="block text-gray-700 dark:text-gray-300 font-semibold mb-2">
+                    Target Industry (Optional)
+                </label>
+                <select class="w-full px-3 py-2 border rounded-md 
+                             text-gray-700 bg-white dark:bg-gray-700 
+                             border-gray-300 dark:border-gray-600
+                             dark:text-white focus:outline-none 
+                             focus:ring-2 focus:ring-accent-light" 
+                        id="industry" name="industry">
+                    <option value="">No specific industry</option>
+                    <option value="technology">Technology</option>
+                    <option value="healthcare">Healthcare</option>
+                    <option value="finance">Finance</option>
+                    <option value="marketing">Marketing</option>
+                    <option value="education">Education</option>
+                    <option value="manufacturing">Manufacturing</option>
+                    <option value="retail">Retail</option>
+                </select>
+                <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                    Selecting an industry will optimize terminology for that field
+                </p>
+            </div>
+        </div>
+        
+        <div class="space-y-4 mt-6">
+            <button id="streaming-button" 
+                    class="w-full py-3 bg-accent-dark hover:bg-opacity-90 
+                          text-black font-semibold rounded-md
+                          focus:outline-none focus:ring-2 focus:ring-offset-2 
+                          focus:ring-accent-light transition" 
+                    type="button">
+                <i class="bi bi-lightning mr-2"></i> Customize Resume Now
+            </button>
+            
+            <div class="flex flex-col sm:flex-row justify-between gap-3 mt-3">
+                <a href="{{ url_for('resume.review_recommendations', resume_id=resume_id, job_id=job_id) }}" 
+                   class="px-4 py-2 border border-accent-dark text-accent-dark dark:text-accent-light
+                          dark:border-accent-light hover:bg-accent-dark hover:text-black
+                          font-medium rounded-md text-center transition">
+                    Review Recommendations First
+                </a>
+                <button type="submit" 
+                        class="px-4 py-2 border border-gray-300 dark:border-gray-600
+                              text-gray-700 dark:text-gray-300 hover:bg-gray-100 
+                              dark:hover:bg-gray-700 font-medium rounded-md text-center transition">
+                    Customize Resume
+                </button>
+            </div>
+        </div>
+        
+        <script>
+            document.getElementById('streaming-button').addEventListener('click', function() {
+                // Get form values
+                const customizationLevel = document.getElementById('customization_level').value;
+                const industry = document.getElementById('industry').value;
+                
+                // Construct URL with all necessary parameters
+                let url = '{{ url_for('resume.customize_resume_view', resume_id=resume_id, job_id=job_id) }}';
+                
+                // Add parameters correctly, checking if we need ? or &
+                if (url.includes('?')) {
+                    url += '&customization_level=' + encodeURIComponent(customizationLevel);
+                } else {
+                    url += '?customization_level=' + encodeURIComponent(customizationLevel);
+                }
+                
+                if (industry) {
+                    url += '&industry=' + encodeURIComponent(industry);
+                }
+                
+                // Navigate to the streaming view
+                window.location.href = url;
+            });
+        </script>
+    </form>
+</div>
+{% endif %}
+{% endif %}

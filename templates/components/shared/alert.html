@@ -1,0 +1,18 @@
+{% set bg_class = {
+    'success': 'bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100',
+    'danger': 'bg-red-100 text-red-800 dark:bg-red-800 dark:text-red-100',
+    'error': 'bg-red-100 text-red-800 dark:bg-red-800 dark:text-red-100',
+    'warning': 'bg-yellow-100 text-yellow-800 dark:bg-yellow-800 dark:text-yellow-100',
+    'info': 'bg-blue-100 text-blue-800 dark:bg-blue-800 dark:text-blue-100'
+}.get(category, 'bg-blue-100 text-blue-800 dark:bg-blue-800 dark:text-blue-100') %}
+
+<div class="mb-4 p-4 rounded-md {{ bg_class }}">
+    {{ message }}
+    {% if back_url %}
+    <div class="mt-3">
+        <a href="{{ back_url }}" class="px-4 py-2 rounded-md bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600 inline-block">
+            {{ back_text|default('Return to Home') }}
+        </a>
+    </div>
+    {% endif %}
+</div>
