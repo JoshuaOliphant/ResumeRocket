@@ -1078,6 +1078,7 @@ def resume_updates(resume_id):
     """
     Stream updates for a resume being customized.
     Uses server-sent events to push updates to the client.
+    HTMX-compatible: Returns events that can be processed by hx-sse directive.
     """
     logger.info(f"Server-Sent Events stream requested for resume ID {resume_id}")
     resume = CustomizedResume.query.get_or_404(resume_id)
@@ -1092,22 +1093,49 @@ def resume_updates(resume_id):
     def generate():
         """
         Generator function for SSE - yields events with explicit flush directives
+        Compatible with HTMX's hx-sse attribute for direct DOM updates
         """
         # Always start with a heartbeat to confirm connection
         logger.debug(f"Starting SSE stream for resume {resume_id}, sending heartbeat")
         data = f": heartbeat\n\n"
         yield data
         
-        # Send initial status - make sure it has proper formatting for SSE
-        initial_status = {'message': resume.streaming_status or 'Starting...', 'progress': resume.streaming_progress or 0}
-        logger.debug(f"Sending initial status: {initial_status}")
-        data = f"event: status\ndata: {json.dumps(initial_status)}\n\n"
-        yield data
+        # Send initial status - in a format HTMX can handle with hx-sse="swap:status"
+        initial_progress = resume.streaming_progress or 0
+        initial_status = resume.streaming_status or 'Starting...'
+        
+        # HTMX-friendly progress bar HTML
+        progress_html = f"""
+        <div class="bg-accent-dark h-5 rounded-full text-xs text-center text-black font-bold flex items-center justify-center" 
+             style="width: {initial_progress}%">
+            {initial_progress}%
+        </div>
+        """
+        
+        # HTMX-friendly status message HTML
+        status_html = f"""
+        <span class="streaming-status text-blue-700 dark:text-blue-300 font-medium">{initial_status}</span>
+        <svg class="animate-spin ml-2 h-4 w-4 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+        """
+        
+        # Send initial status as separate events for HTMX
+        logger.debug(f"Sending initial status HTML for HTMX: progress={initial_progress}, status='{initial_status}'")
+        
+        # Send progress bar update
+        progress_data = f"event: progress\ndata: {initial_progress}%\n\n"
+        yield progress_data
+        
+        # Send status message update
+        status_data = f"event: message\ndata: {initial_status}\n\n"
+        yield status_data
         
         # Check for updates until process is complete
         placeholder_id = resume.id
-        last_progress = resume.streaming_progress or 0
-        last_status = resume.streaming_status or 'Starting...'
+        last_progress = initial_progress
+        last_status = initial_status
         last_content = resume.customized_content
         
         # Debug counter
@@ -1126,7 +1154,12 @@ def resume_updates(resume_id):
                 if not current_resume:
                     # Resume was deleted
                     logger.warning(f"Resume {placeholder_id} not found during streaming")
-                    data = f"event: error\ndata: {json.dumps({'message': 'Resume not found'})}\n\n"
+                    error_html = """
+                    <div class="bg-red-100 dark:bg-red-800 p-3 rounded-md">
+                      <p class="text-red-800 dark:text-red-100">Resume not found. The process may have been cancelled.</p>
+                    </div>
+                    """
+                    data = f"event: error\ndata: {error_html}\n\n"
                     yield data
                     break
                     
@@ -1138,52 +1171,313 @@ def resume_updates(resume_id):
                     
             except Exception as e:
                 logger.error(f"Error querying resume during streaming: {str(e)}")
-                data = f"event: error\ndata: {json.dumps({'message': f'Error: {str(e)}'})}\n\n"
+                error_html = f"""
+                <div class="bg-red-100 dark:bg-red-800 p-3 rounded-md">
+                  <p class="text-red-800 dark:text-red-100">Error: {str(e)}</p>
+                </div>
+                """
+                data = f"event: error\ndata: {error_html}\n\n"
                 yield data
                 break
                 
             # Check if status has changed
             if current_resume.streaming_status != last_status or current_resume.streaming_progress != last_progress:
-                logger.debug(f"Status changed for resume {placeholder_id}: '{current_resume.streaming_status}', progress: {current_resume.streaming_progress}")
-                data = f"event: status\ndata: {json.dumps({'message': current_resume.streaming_status or '', 'progress': current_resume.streaming_progress or 0})}\n\n"
-                yield data
-                last_status = current_resume.streaming_status
-                last_progress = current_resume.streaming_progress
+                progress = current_resume.streaming_progress or 0
+                status = current_resume.streaming_status or ''
+                logger.debug(f"Status changed for resume {placeholder_id}: '{status}', progress: {progress}")
+                
+                # Generate updated HTML for progress bar
+                progress_html = f"""
+                <div class="bg-accent-dark h-5 rounded-full text-xs text-center text-black font-bold flex items-center justify-center" 
+                     style="width: {progress}%">
+                    {progress}%
+                </div>
+                """
+                
+                # Generate updated HTML for status message
+                status_html = f"""
+                <span class="streaming-status text-blue-700 dark:text-blue-300 font-medium">{status}</span>
+                <svg class="animate-spin ml-2 h-4 w-4 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                """
+                
+                # Send status updates as separate events for HTMX
+                progress_data = f"event: progress\ndata: {progress}%\n\n"
+                yield progress_data
+                
+                status_data = f"event: message\ndata: {status}\n\n"
+                yield status_data
+                
+                last_status = status
+                last_progress = progress
             
             # Check if content has changed
             if current_resume.customized_content != last_content:
                 logger.debug(f"Content changed for resume {placeholder_id}, length: {len(current_resume.customized_content or '')}")
-                data = f"event: content\ndata: {json.dumps({'content': current_resume.customized_content})}\n\n"
+                
+                # Send the raw content to be displayed by the client
+                data = f"event: content\ndata: {current_resume.customized_content or ''}\n\n"
                 yield data
                 last_content = current_resume.customized_content
+                
+                # Check if this is an analysis stage completion - send formatted analytics HTML
+                if current_resume.streaming_stage == 'analysis' and current_resume.ats_score:
+                    try:
+                        # Get the ATS score and keywords
+                        score = current_resume.ats_score or 0
+                        matching_keywords = current_resume.matching_keywords or []
+                        missing_keywords = current_resume.missing_keywords or []
+                        
+                        # Create analytics HTML for direct swap
+                        analytics_html = f"""
+                        <div class="mb-6">
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="text-gray-900 dark:text-white font-medium">ATS Score</span>
+                                <span class="text-accent-dark dark:text-accent-light font-medium">{score:.1f}%</span>
+                            </div>
+                            <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5 mb-4">
+                                <div class="bg-accent-light h-2.5 rounded-full" style="width: {score}%"></div>
+                            </div>
+                        </div>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <h6 class="text-sm font-medium text-gray-900 dark:text-white mb-2">Matching Keywords</h6>
+                                <div class="flex flex-wrap gap-2">
+                                    {' '.join(f'<span class="px-2 py-0.5 text-xs font-medium rounded-full bg-accent-light/80 text-white">{kw}</span>' for kw in matching_keywords[:20])}
+                                    {f'<span class="px-2 py-0.5 text-xs font-medium rounded-full bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300">+{len(matching_keywords) - 20} more</span>' if len(matching_keywords) > 20 else ''}
+                                </div>
+                            </div>
+                            <div>
+                                <h6 class="text-sm font-medium text-gray-900 dark:text-white mb-2">Missing Keywords</h6>
+                                <div class="flex flex-wrap gap-2">
+                                    {' '.join(f'<span class="px-2 py-0.5 text-xs font-medium rounded-full bg-orange-200 dark:bg-orange-900/40 text-orange-800 dark:text-orange-200">{kw}</span>' for kw in missing_keywords[:20])}
+                                    {f'<span class="px-2 py-0.5 text-xs font-medium rounded-full bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300">+{len(missing_keywords) - 20} more</span>' if len(missing_keywords) > 20 else ''}
+                                </div>
+                            </div>
+                        </div>
+                        """
+                        
+                        # Send analytics HTML
+                        data = f"event: analytics\ndata: {analytics_html}\n\n"
+                        yield data
+                    except Exception as e:
+                        logger.error(f"Error sending analytics HTML: {str(e)}")
+                
+                # Check if this is a planning chunk - send formatted planning HTML
+                if current_resume.streaming_stage == 'planning' and not current_resume.optimization_plan:
+                    # Extract the latest planning chunk
+                    planning_chunk = current_resume.customized_content or ''
+                    data = f"event: planning\ndata: {planning_chunk[-200:]}\n\n"
+                    yield data
+                    
+                # Check if this is an implementation chunk - send formatted implementation HTML
+                if current_resume.streaming_stage == 'implementation' and current_resume.optimization_plan:
+                    # Extract the implementation chunk
+                    implementation_chunk = current_resume.customized_content or ''
+                    data = f"event: implementation\ndata: {implementation_chunk[-200:]}\n\n"
+                    yield data
             
             # Check if process is complete (no longer a placeholder)
             if not current_resume.is_placeholder:
                 logger.info(f"Resume {placeholder_id} is no longer a placeholder, streaming complete")
                 
-                # Send final data
+                # Send final data with HTMX-friendly HTML
                 try:
+                    # Get optimization data
                     optimization_data = {}
                     if current_resume.optimization_data:
                         if isinstance(current_resume.optimization_data, str):
-                            optimization_data = json.loads(current_resume.optimization_data)
+                            try:
+                                optimization_data = json.loads(current_resume.optimization_data)
+                            except:
+                                optimization_data = {}
                         else:
                             optimization_data = current_resume.optimization_data
                     
-                    complete_data = {
-                        'optimization_data': optimization_data,
-                        'scores': {
-                            'original_score': current_resume.original_ats_score,
-                            'new_score': current_resume.ats_score,
-                            'improvement': current_resume.improvement
-                        }
-                    }
-                    logger.debug(f"Sending completion event for resume {placeholder_id}")
-                    data = f"event: complete\ndata: {json.dumps(complete_data)}\n\n"
+                    # Get comparison data
+                    comparison_data = {}
+                    if current_resume.comparison_data:
+                        if isinstance(current_resume.comparison_data, str):
+                            try:
+                                comparison_data = json.loads(current_resume.comparison_data)
+                            except:
+                                comparison_data = {}
+                        else:
+                            comparison_data = current_resume.comparison_data
+                    
+                    # Create completion HTML
+                    completion_html = f"""
+                    <form id="save-resume-form" action="/api/save_customized_resume" method="POST" 
+                          hx-post="/api/save_customized_resume" 
+                          hx-swap="none"
+                          hx-on::after-request="window.location.href = JSON.parse(event.detail.xhr.response).comparison_url">
+                        <input type="hidden" name="csrf_token" value="{request.cookies.get('csrf_token', '')}">
+                        <input type="hidden" name="original_content" value="{current_resume.original_content}">
+                        <input type="hidden" name="customized_content" value="{current_resume.customized_content}">
+                        <input type="hidden" name="original_score" value="{current_resume.original_ats_score or 0}">
+                        <input type="hidden" name="new_score" value="{current_resume.ats_score or 0}">
+                        <input type="hidden" name="improvement" value="{current_resume.improvement or 0}">
+                        <input type="hidden" name="original_id" value="{current_resume.original_id or resume_id}">
+                        <input type="hidden" name="job_id" value="{current_resume.job_description_id}">
+                        <input type="hidden" name="customization_level" value="{current_resume.customization_level or 'balanced'}">
+                        <input type="hidden" name="industry" value="{current_resume.industry or ''}">
+                        <input type="hidden" name="optimization_plan" value='{json.dumps(optimization_data)}'>
+                        <input type="hidden" name="comparison_data" value='{json.dumps(comparison_data)}'>
+                        <input type="hidden" name="placeholder_id" value="{placeholder_id}">
+                        
+                        <div class="bg-green-50 dark:bg-green-900/40 border-l-4 border-green-500 p-4 rounded-md mt-4">
+                            <div class="flex">
+                                <div class="flex-shrink-0">
+                                    <svg class="h-5 w-5 text-green-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                                    </svg>
+                                </div>
+                                <div class="ml-3">
+                                    <h5 class="text-lg font-medium text-green-800 dark:text-green-200">Customization Complete!</h5>
+                                    <p class="text-green-700 dark:text-green-300 mt-1">
+                                        Your resume has been customized for this job.
+                                        {f"ATS score improved by {current_resume.improvement:.1f}%." if current_resume.improvement and current_resume.improvement > 0 else ""}
+                                    </p>
+                                    <button type="submit" 
+                                            class="mt-3 px-4 py-2 bg-accent-dark hover:bg-opacity-90 text-black rounded-md inline-flex items-center">
+                                        Save and View Results
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                    """
+                    
+                    # Send HTML as complete event
+                    logger.debug(f"Sending completion HTML for resume {placeholder_id}")
+                    data = f"event: complete\ndata: {completion_html}\n\n"
                     yield data
+                    
+                    # Send results data for HTMX SSE
+                    try:
+                        # Generate result summary HTML
+                        if current_resume.ats_score and current_resume.original_ats_score:
+                            original_score = current_resume.original_ats_score or 0
+                            new_score = current_resume.ats_score or 0
+                            improvement = current_resume.improvement or (new_score - original_score)
+                            
+                            # Create improvement message
+                            improvement_message = "The customization maintained the overall quality of the resume."
+                            if improvement >= 15:
+                                improvement_message = "Excellent improvement! The resume is now significantly better aligned with the job requirements."
+                            elif improvement >= 10:
+                                improvement_message = "Great improvement! The resume is now much better aligned with the job requirements."
+                            elif improvement >= 5:
+                                improvement_message = "Good improvement! The resume is now better aligned with the job requirements."
+                            elif improvement > 0:
+                                improvement_message = "Some improvement detected. The resume is now slightly better aligned with the job requirements."
+                            
+                            # Generate results HTML
+                            results_html = f"""
+                            <div class="mb-4">
+                                <h5 class="text-lg font-medium text-gray-900 dark:text-white mb-2">Improvement Summary</h5>
+                                <div class="flex justify-between items-center mb-2">
+                                    <span class="text-gray-700 dark:text-gray-300">Original ATS Score</span>
+                                    <span class="font-medium text-gray-900 dark:text-white">{original_score:.1f}%</span>
+                                </div>
+                                <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5 mb-3">
+                                    <div class="bg-gray-500 dark:bg-gray-500 h-2.5 rounded-full" style="width: {original_score}%"></div>
+                                </div>
+                                
+                                <div class="flex justify-between items-center mb-2">
+                                    <span class="text-gray-700 dark:text-gray-300">New ATS Score</span>
+                                    <span class="font-medium text-green-700 dark:text-green-300">{new_score:.1f}%</span>
+                                </div>
+                                <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5 mb-3">
+                                    <div class="bg-green-500 dark:bg-green-400 h-2.5 rounded-full" style="width: {new_score}%"></div>
+                                </div>
+                                
+                                <div class="bg-{('green' if improvement > 0 else 'yellow')}-50 dark:bg-{('green' if improvement > 0 else 'yellow')}-900/40 border-l-4 border-{('green' if improvement > 0 else 'yellow')}-500 p-3 rounded-md">
+                                    <p class="text-{('green' if improvement > 0 else 'yellow')}-800 dark:text-{('green' if improvement > 0 else 'yellow')}-200 font-medium">
+                                        {('Improvement' if improvement > 0 else 'Change')}: {improvement:+.1f}%
+                                    </p>
+                                    <p class="text-{('green' if improvement > 0 else 'yellow')}-700 dark:text-{('green' if improvement > 0 else 'yellow')}-300 text-sm mt-1">
+                                        {improvement_message}
+                                    </p>
+                                </div>
+                            </div>
+                            """
+                            
+                            # Send results HTML
+                            logger.debug(f"Sending results HTML for resume {placeholder_id}")
+                            data = f"event: results\ndata: {results_html}\n\n"
+                            yield data
+                            
+                        # Create sections-modified HTML if we have optimization data
+                        if optimization_data and 'recommendations' in optimization_data:
+                            # Get sections modified
+                            sections_modified = set()
+                            for rec in optimization_data['recommendations']:
+                                if 'section' in rec:
+                                    sections_modified.add(rec['section'])
+                            
+                            if sections_modified:
+                                # Generate sections modified HTML
+                                sections_html = f"""
+                                <h6 class="text-base font-medium text-gray-800 dark:text-gray-200 mb-2">Sections Modified</h6>
+                                <div class="flex flex-wrap gap-2 mb-3">
+                                    {' '.join(f'<span class="px-2 py-1 bg-blue-100 dark:bg-blue-800 text-blue-800 dark:text-blue-200 rounded text-sm">{section}</span>' for section in sorted(sections_modified))}
+                                </div>
+                                """
+                                
+                                # Send sections modified HTML
+                                logger.debug(f"Sending sections modified HTML for resume {placeholder_id}")
+                                data = f"event: sections-modified\ndata: {sections_html}\n\n"
+                                yield data
+                                
+                            # Create recommendations HTML
+                            if optimization_data['recommendations']:
+                                recommendations_html = ""
+                                for rec in optimization_data['recommendations']:
+                                    if 'what' in rec and 'section' in rec:
+                                        recommendations_html += f"""
+                                        <div class="recommendation-card">
+                                            <div class="recommendation-header">
+                                                {rec.get('section', 'General')}
+                                            </div>
+                                            <div class="recommendation-content">
+                                                <h6 class="font-medium text-gray-900 dark:text-white">{rec.get('what', '')}</h6>
+                                                <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">{rec.get('why', '')}</p>
+                                                
+                                                <div class="recommendation-comparison">
+                                                    <div class="recommendation-before">
+                                                        <div class="recommendation-label">Before</div>
+                                                        <div class="recommendation-text">{rec.get('before_text', '')}</div>
+                                                    </div>
+                                                    <div class="recommendation-after">
+                                                        <div class="recommendation-label">After</div>
+                                                        <div class="recommendation-text">{rec.get('after_text', '')}</div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        """
+                                
+                                # Send recommendations HTML
+                                logger.debug(f"Sending recommendations HTML for resume {placeholder_id}")
+                                data = f"event: recommendations\ndata: {recommendations_html}\n\n"
+                                yield data
+                    
+                    except Exception as e:
+                        logger.error(f"Error sending additional HTMX events: {str(e)}")
+                    
                 except Exception as e:
                     logger.error(f"Error sending completion event: {str(e)}")
-                    data = f"event: error\ndata: {json.dumps({'message': f'Error during completion: {str(e)}'})}\n\n"
+                    error_html = f"""
+                    <div class="bg-yellow-100 dark:bg-yellow-800 p-3 rounded-md mt-4">
+                      <p class="text-yellow-800 dark:text-yellow-100">Error during completion: {str(e)}</p>
+                      <a href="/compare/{placeholder_id}" class="underline">View results anyway</a>
+                    </div>
+                    """
+                    data = f"event: error\ndata: {error_html}\n\n"
                     yield data
                 
                 break
@@ -1624,6 +1918,36 @@ def save_resume(content, filename, file_format, job_id):
     return resume.id 
 
 # Add a redirect route for incorrect URL pattern
+@resume_bp.route('/api/compare_resume_content/<int:resume_id>')
+@login_required
+def compare_resume_content(resume_id):
+    """
+    Provide resume comparison content as HTML fragment for HTMX to swap.
+    This endpoint returns the content_diff component for the comparison.
+    """
+    # Load customized resume from database
+    resume = CustomizedResume.query.get_or_404(resume_id)
+    
+    # Check if resume belongs to current user
+    if resume.user_id != current_user.id and not current_user.is_admin:
+        return jsonify({'error': 'Permission denied'}), 403
+    
+    # Get original content
+    original_content = resume.original_content
+    customized_content = resume.customized_content
+    
+    # Calculate scores for display
+    original_score = resume.original_ats_score if resume.original_ats_score else 'N/A'
+    customized_score = resume.ats_score if resume.ats_score else 'N/A'
+    
+    # Render only the content_diff component
+    return render_template('components/resume/content_diff.html',
+                          original_content=original_content,
+                          customized_content=customized_content,
+                          original_score=original_score,
+                          customized_score=customized_score,
+                          view_type='side-by-side')
+
 @resume_bp.route('/resume/compare/<int:resume_id>')
 @login_required
 def compare_resume_redirect(resume_id):

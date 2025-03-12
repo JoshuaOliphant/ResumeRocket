@@ -1,15 +1,20 @@
 /**
  * ResumeRocket Streaming Support
- * Handles streaming responses from the Anthropic API
+ * 
+ * NOTICE: This file is kept for compatibility, but is now a stub.
+ * The streaming functionality has been moved to HTMX-based implementation
+ * with Alpine.js for client-side interactions.
+ * 
+ * See templates/customized_resume_streaming.html for the new implementation.
  */
 
 document.addEventListener('DOMContentLoaded', function() {
     // Check for streaming-enabled elements
     const streamElements = document.querySelectorAll('[data-stream]');
     
-    streamElements.forEach(element => {
-        setupStreamingElement(element);
-    });
+    if (streamElements.length > 0) {
+        console.info('ResumeRocket Streaming: Using HTMX-based implementation');
+    }
 });
 
 /**

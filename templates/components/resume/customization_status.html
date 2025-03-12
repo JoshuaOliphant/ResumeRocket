@@ -1,0 +1,80 @@
+{% if resume.is_placeholder %}
+<div class="bg-blue-50 dark:bg-blue-900/40 border-l-4 border-blue-500 p-4 rounded-md mb-6"
+     hx-sse="connect:/api/resume-updates/{{ resume.id }}">
+    <div class="flex">
+        <div class="flex-shrink-0">
+            <svg class="h-5 w-5 text-blue-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
+            </svg>
+        </div>
+        <div class="ml-3">
+            <h5 class="text-lg font-medium text-blue-800 dark:text-blue-200">Customizing your resume</h5>
+            <p class="text-blue-700 dark:text-blue-300 mt-1">We're tailoring your resume to match the job description. This process typically takes 30-60 seconds.</p>
+            <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-5 mt-2">
+                <!-- Progress bar with HTMX SSE swap target -->
+                <div id="progress-bar" class="bg-accent-dark h-5 rounded-full text-xs text-center text-black font-bold flex items-center justify-center" 
+                     style="width: {{ resume.streaming_progress or 0 }}%"
+                     hx-sse="swap:progress">
+                    {{ resume.streaming_progress or 0 }}%
+                </div>
+            </div>
+            <!-- Status message with HTMX SSE swap target -->
+            <div class="mt-2 flex items-center"
+                 hx-sse="swap:status-message">
+                <span class="streaming-status text-blue-700 dark:text-blue-300 font-medium">{{ resume.streaming_status or 'Starting customization process...' }}</span>
+                <svg class="animate-spin ml-2 h-4 w-4 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+            </div>
+        </div>
+    </div>
+    
+    <!-- HTMX SSE event trigger for error handling -->
+    <div hx-sse="swap:error"></div>
+    
+    <!-- HTMX SSE event trigger for completion -->
+    <div id="completion-trigger" hx-sse="swap:complete"></div>
+</div>
+{% elif resume.streaming_progress >= 100 %}
+<div class="bg-green-50 dark:bg-green-900/40 border-l-4 border-green-500 p-4 rounded-md mb-6">
+    <div class="flex">
+        <div class="flex-shrink-0">
+            <svg class="h-5 w-5 text-green-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+            </svg>
+        </div>
+        <div class="ml-3">
+            <h5 class="text-lg font-medium text-green-800 dark:text-green-200">Customization Complete!</h5>
+            <p class="text-green-700 dark:text-green-300 mt-1">
+                Your resume has been customized for this job. 
+                {% if resume.improvement and resume.improvement > 0 %}
+                    ATS score improved by {{ "%.1f"|format(resume.improvement) }}%.
+                {% endif %}
+            </p>
+        </div>
+    </div>
+</div>
+{% else %}
+<div class="bg-blue-50 dark:bg-blue-900/40 border-l-4 border-blue-500 p-4 rounded-md mb-6">
+    <div class="flex">
+        <div class="flex-shrink-0">
+            <svg class="h-5 w-5 text-blue-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
+            </svg>
+        </div>
+        <div class="ml-3">
+            <h5 class="text-lg font-medium text-blue-800 dark:text-blue-200">Customizing your resume</h5>
+            <p class="text-blue-700 dark:text-blue-300 mt-1">We're tailoring your resume to match the job description.</p>
+            <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-5 mt-2">
+                <div class="bg-accent-dark h-5 rounded-full text-xs text-center text-black font-bold flex items-center justify-center" style="width: {{ resume.streaming_progress }}%">
+                    {{ resume.streaming_progress }}%
+                </div>
+            </div>
+            <div class="mt-2 flex items-center">
+                <span class="streaming-status text-blue-700 dark:text-blue-300 font-medium">{{ resume.streaming_status }}</span>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}

@@ -9,7 +9,9 @@
                 <div>
                     {% if resume.streaming_progress > 0 and resume.streaming_progress < 100 %}
                     <div class="bg-gray-200 dark:bg-gray-700 rounded-full h-5 w-48">
-                        <div class="bg-accent-dark h-5 rounded-full text-xs text-center text-black font-bold flex items-center justify-center" style="width: {{ resume.streaming_progress }}%">
+                        <div id="progress-bar" class="bg-accent-dark h-5 rounded-full text-xs text-center text-black font-bold flex items-center justify-center" 
+                             style="width: {{ resume.streaming_progress }}%"
+                             hx-sse="swap:progress from:/api/resume-updates/{{ resume.id }}">
                             {{ resume.streaming_progress }}%
                         </div>
                     </div>
@@ -32,164 +34,92 @@
                 </div>
             </div>
             <div class="p-6">
-                <div id="customization-status" class="mb-6">
-                    {% if resume.is_placeholder %}
-                    <div class="bg-blue-50 dark:bg-blue-900/40 border-l-4 border-blue-500 p-4 rounded-md mb-6">
-                        <div class="flex">
-                            <div class="flex-shrink-0">
-                                <svg class="h-5 w-5 text-blue-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
-                                </svg>
-                            </div>
-                            <div class="ml-3">
-                                <h5 class="text-lg font-medium text-blue-800 dark:text-blue-200">Customizing your resume</h5>
-                                <p class="text-blue-700 dark:text-blue-300 mt-1">We're tailoring your resume to match the job description. This process typically takes 30-60 seconds.</p>
-                                <div id="status-message" class="mt-2 flex items-center">
-                                    <span class="streaming-status text-blue-700 dark:text-blue-300 font-medium">{{ resume.streaming_status or 'Starting customization process...' }}</span>
-                                    <svg class="animate-spin ml-2 h-4 w-4 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                    </svg>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    {% endif %}
-                </div>
-                
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                    <div class="bg-white dark:bg-gray-800 rounded-lg shadow border dark:border-gray-700 overflow-hidden">
-                        <div class="bg-gray-100 dark:bg-gray-900 px-4 py-3 border-b dark:border-gray-700">
-                            <h5 class="text-lg font-semibold text-gray-800 dark:text-white">Original Resume</h5>
-                        </div>
-                        <div class="p-4">
-                            <div class="markdown-content" id="original-content">
-                                {{ original.original_content | safe }}
-                            </div>
-                        </div>
-                    </div>
-                    <div class="bg-white dark:bg-gray-800 rounded-lg shadow border dark:border-gray-700 overflow-hidden">
-                        <div class="bg-gray-100 dark:bg-gray-900 px-4 py-3 border-b dark:border-gray-700">
-                            <h5 class="text-lg font-semibold text-gray-800 dark:text-white">Customized Resume</h5>
-                        </div>
-                        <div class="p-4">
-                            <div class="markdown-content" id="customized-content">
-                                {{ resume.customized_content | safe }}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <div id="optimization-details" class="mb-6" style="display: {% if resume.is_placeholder %}none{% else %}block{% endif %};">
-                    <h5 class="text-xl font-semibold text-gray-800 dark:text-white mb-3">Optimization Details</h5>
-                    <div class="bg-gray-800 dark:bg-gray-900 border border-gray-700 rounded-lg overflow-hidden">
-                        <div class="p-4">
-                            <div id="optimization-content">
-                                {% if resume.optimization_data %}
-                                <div class="mb-4">
-                                    <h6 class="text-lg font-medium text-gray-300 mb-2">Summary</h6>
-                                    <p class="text-gray-300">{{ resume.optimization_data.summary }}</p>
-                                </div>
-                                
-                                {% if resume.optimization_data.recommendations %}
-                                <div class="mb-4">
-                                    <h6 class="text-lg font-medium text-gray-300 mb-2">Key Improvements</h6>
-                                    <ul class="space-y-2">
-                                        {% for rec in resume.optimization_data.recommendations %}
-                                        <li class="px-3 py-2 bg-gray-700 rounded-md text-gray-300">
-                                            <strong class="text-accent-dark">{{ rec.section }}:</strong> {{ rec.what }}
-                                        </li>
-                                        {% endfor %}
-                                    </ul>
-                                </div>
-                                {% endif %}
-                                
-                                {% if resume.optimization_data.keywords_added %}
-                                <div class="mb-4">
-                                    <h6 class="text-lg font-medium text-gray-300 mb-2">Added Keywords</h6>
-                                    <div class="flex flex-wrap gap-2">
-                                        {% for keyword in resume.optimization_data.keywords_added %}
-                                        <span class="px-2 py-1 bg-green-600 text-green-100 rounded-full text-sm">{{ keyword }}</span>
-                                        {% endfor %}
-                                    </div>
-                                </div>
-                                {% endif %}
-                                {% endif %}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="flex justify-between items-center mt-6">
-                    <div>
-                        <a href="{{ url_for('dashboard.user_dashboard') }}" 
-                           class="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md inline-flex items-center">
-                            <svg class="w-4 h-4 mr-2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                                <path fill-rule="evenodd" d="M9.707 14.707a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 1.414L7.414 9H15a1 1 0 110 2H7.414l2.293 2.293a1 1 0 010 1.414z" clip-rule="evenodd" />
-                            </svg>
-                            Back to Dashboard
-                        </a>
+                <!-- Main streaming container with SSE connections -->
+                <div id="streaming-container"
+                     x-data="resumeCustomizationStreaming"
+                     @htmx:sse-error="handleSseError()"
+                     @htmx:sse-open="sseConnected = true"
+                     @htmx:sse-disconnected="handleSseDisconnect()"
+                     @htmx:sse-beforeRequest="handleSseBeforeRequest()">
+                    
+                    <!-- Customization Status -->
+                    <div id="customization-status" class="mb-6">
+                        {% include "components/resume/customization_status.html" with context %}
                     </div>
                     
-                    <div id="actions-container" style="display: {% if resume.is_placeholder %}none{% else %}flex{% endif %};" class="space-x-3">
-                        <button onclick="window.print()" 
-                                class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md inline-flex items-center">
-                            <svg class="w-4 h-4 mr-2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                                <path fill-rule="evenodd" d="M5 4v3H4a2 2 0 00-2 2v3a2 2 0 002 2h1v2a2 2 0 002 2h6a2 2 0 002-2v-2h1a2 2 0 002-2V9a2 2 0 00-2-2h-1V4a2 2 0 00-2-2H7a2 2 0 00-2 2zm8 0H7v3h6V4zm0 8H7v4h6v-4z" clip-rule="evenodd" />
-                            </svg>
-                            Print Resume
-                        </button>
+                    <!-- Resume Content -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                        <!-- Original Resume -->
+                        {% set title = "Original Resume" %}
+                        {% set content = original.original_content %}
+                        {% set content_id = "original-content" %}
+                        {% include "components/resume/content_display.html" with context %}
                         
-                        <div class="relative" x-data="{ open: false }">
-                            <button @click="open = !open" 
-                                    class="px-4 py-2 border border-blue-600 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-md inline-flex items-center">
+                        <!-- Customized Resume -->
+                        {% set title = "Customized Resume" %}
+                        {% set content = resume.customized_content %}
+                        {% set content_id = "customized-content" %}
+                        {% include "components/resume/content_display.html" with context %}
+                    </div>
+                    
+                    <!-- Streaming Components - only visible if resume is a placeholder -->
+                    {% if resume.is_placeholder %}
+                        <!-- Progress Indicator -->
+                        {% set resume_id = resume.id %}
+                        {% set current_stage = resume.streaming_stage|default('initialization') %}
+                        {% include "components/resume/progress_indicator.html" with context %}
+                        
+                        <!-- Streaming Analytics -->
+                        {% include "components/resume/streaming_analytics.html" with context %}
+                        
+                        <!-- Streaming Recommendations -->
+                        {% include "components/resume/streaming_recommendations.html" with context %}
+                        
+                        <!-- Streaming Implementation -->
+                        {% include "components/resume/streaming_implementation.html" with context %}
+                        
+                        <!-- Streaming Results -->
+                        {% include "components/resume/streaming_results.html" with context %}
+                    {% endif %}
+                    
+                    <!-- Optimization Details - hidden initially, shown on completion -->
+                    <div id="optimization-details" class="mb-6" style="display: {% if resume.is_placeholder %}none{% else %}block{% endif %};">
+                        {% include "components/resume/optimization_details.html" with context %}
+                    </div>
+                    
+                    <!-- Action Buttons -->
+                    <div class="flex justify-between items-center mt-6">
+                        <div>
+                            <a href="{{ url_for('dashboard.user_dashboard') }}" 
+                               class="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md inline-flex items-center">
                                 <svg class="w-4 h-4 mr-2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                                    <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd" />
+                                    <path fill-rule="evenodd" d="M9.707 14.707a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 1.414L7.414 9H15a1 1 0 110 2H7.414l2.293 2.293a1 1 0 010 1.414z" clip-rule="evenodd" />
                                 </svg>
-                                Export
-                                <svg class="w-4 h-4 ml-1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                                    <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
-                                </svg>
-                            </button>
-                            <div x-show="open" 
-                                 @click.away="open = false"
-                                 class="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-md shadow-lg z-10 border dark:border-gray-700"
-                                 x-transition:enter="transition ease-out duration-100"
-                                 x-transition:enter-start="transform opacity-0 scale-95"
-                                 x-transition:enter-end="transform opacity-100 scale-100"
-                                 x-transition:leave="transition ease-in duration-75"
-                                 x-transition:leave-start="transform opacity-100 scale-100"
-                                 x-transition:leave-end="transform opacity-0 scale-95">
-                                <div class="py-1">
-                                    <a href="{{ url_for('resume.download_resume', resume_id=resume.id, format='pdf') }}" class="block px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
-                                        <svg class="w-4 h-4 mr-2 inline" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                                            <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clip-rule="evenodd" />
-                                        </svg>
-                                        PDF
-                                    </a>
-                                    <a href="{{ url_for('resume.download_resume', resume_id=resume.id, format='docx') }}" class="block px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
-                                        <svg class="w-4 h-4 mr-2 inline" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                                            <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clip-rule="evenodd" />
-                                        </svg>
-                                        Word (DOCX)
-                                    </a>
-                                    <a href="{{ url_for('resume.download_resume', resume_id=resume.id, format='md') }}" class="block px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
-                                        <svg class="w-4 h-4 mr-2 inline" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                                            <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clip-rule="evenodd" />
-                                        </svg>
-                                        Markdown
-                                    </a>
-                                </div>
-                            </div>
+                                Back to Dashboard
+                            </a>
                         </div>
                         
-                        <a href="{{ url_for('resume.compare_resume', resume_id=resume.id) }}" 
-                           class="px-4 py-2 bg-accent-dark hover:bg-opacity-90 text-black rounded-md inline-flex items-center">
-                            <svg class="w-4 h-4 mr-2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                                <path d="M5 3a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2V5a2 2 0 00-2-2H5zM5 11a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2v-2a2 2 0 00-2-2H5zM11 5a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V5zM11 13a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
-                            </svg>
-                            Compare View
-                        </a>
+                        <div id="actions-container" style="display: {% if resume.is_placeholder %}none{% else %}flex{% endif %};" class="space-x-3">
+                            <button onclick="window.print()" 
+                                    class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md inline-flex items-center">
+                                <svg class="w-4 h-4 mr-2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M5 4v3H4a2 2 0 00-2 2v3a2 2 0 002 2h1v2a2 2 0 002 2h6a2 2 0 002-2v-2h1a2 2 0 002-2V9a2 2 0 00-2-2h-1V4a2 2 0 00-2-2H7a2 2 0 00-2 2zm8 0H7v3h6V4zm0 8H7v4h6v-4z" clip-rule="evenodd" />
+                                </svg>
+                                Print Resume
+                            </button>
+                            
+                            <!-- Export Options -->
+                            {% set resume_id = resume.id %}
+                            {% include "components/resume/export_options.html" with context %}
+                            
+                            <a href="{{ url_for('resume.compare_resume', resume_id=resume.id) }}" 
+                               class="px-4 py-2 bg-accent-dark hover:bg-opacity-90 text-black rounded-md inline-flex items-center">
+                                <svg class="w-4 h-4 mr-2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                    <path d="M5 3a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2V5a2 2 0 00-2-2H5zM5 11a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2v-2a2 2 0 00-2-2H5zM11 5a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V5zM11 13a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+                                </svg>
+                                Compare View
+                            </a>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -216,473 +146,320 @@
 }
 </style>
 
-<!-- Streaming JavaScript -->
+<!-- Alpine.js component for resume streaming -->
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Check if the resume is a placeholder and needs streaming updates
-    const resumeId = {{ resume.id }};
-    const isPlaceholder = {{ 'true' if resume.is_placeholder else 'false' }};
-    
-    console.log('Streaming page loaded. Resume ID:', resumeId, 'Is placeholder:', isPlaceholder);
-    
-    if (isPlaceholder) {
-        console.log('Starting EventSource connection for streaming updates');
-        // Start polling for updates after a short delay to ensure backend is ready
-        setTimeout(pollForUpdates, 500);
-    } else {
-        console.log('Resume is not a placeholder, no streaming needed');
-    }
-    
-    function pollForUpdates() {
-        // Create event source for streaming with error handling and auto-reconnect
-        console.log('Creating dual streaming approach');
-        
-        // Use direct streaming instead of SSE (like the job description analysis)
-        console.log('Setting up direct streaming (non-SSE)');
-        
-        // Set up form data
-        const directUrl = '/api/customize_resume_streaming';
-        const formData = new FormData();
-        formData.append('resume_id', resumeId);
-        formData.append('job_id', {{ job.id }});
-        formData.append('customization_level', '{{ resume.customization_level }}');
-        formData.append('industry', '{{ resume.industry }}');
-        formData.append('csrf_token', '{{ csrf_token() }}');
-        
-        // Show connecting status
-        document.getElementById('status-message').innerHTML = 
-            '<span class="streaming-status">Connecting to customization service...</span>' + 
-            '<div class="spinner-border spinner-border-sm text-primary ms-2" role="status"></div>';
-        
-        // Start the direct streaming request
-        fetch(directUrl, {
-            method: 'POST',
-            body: formData,
-            headers: {
-                'X-CSRFToken': '{{ csrf_token() }}'
-            }
-        })
-        .then(response => {
-            if (!response.ok) {
-                throw new Error(`HTTP error! Status: ${response.status}`);
-            }
+document.addEventListener('alpine:init', function() {
+    Alpine.data('resumeCustomizationStreaming', function() {
+        return {
+            // State
+            sseConnected: false,
+            timeoutWarningShown: false,
+            errorOccurred: false,
+            reconnectAttempts: 0,
+            maxReconnectAttempts: 3,
+            connectionTimeout: null,
             
-            console.log('Direct streaming connection established');
-            document.getElementById('status-message').innerHTML = 
-                '<span class="streaming-status">Customizing resume...</span>' + 
-                '<div class="spinner-border spinner-border-sm text-primary ms-2" role="status"></div>';
-            
-            // Get a reader from the response body
-            const reader = response.body.getReader();
-            const decoder = new TextDecoder();
-            let buffer = '';
-            
-            // Process the stream
-            function processStream({ done, value }) {
-                // If we're done, return
-                if (done) {
-                    console.log('Stream complete');
-                    return;
-                }
+            // Initialize on component load
+            init() {
+                // Set fallback timeout for stuck processes
+                this.connectionTimeout = setTimeout(() => {
+                    this.checkTimeoutStatus();
+                }, 60000); // 60 second timeout
                 
-                // Decode the current chunk and add it to our buffer
-                buffer += decoder.decode(value, { stream: true });
-                
-                // Process complete lines from the buffer
-                const lines = buffer.split('\n');
-                buffer = lines.pop(); // Keep the last potentially incomplete line
-                
-                // Keep track of critical errors
-                let hasProcessedError = false;
-                
-                lines.forEach(line => {
-                    if (line.trim() === '') return;
-                    
-                    try {
-                        console.log('Processing JSON chunk:', line);
-                        const data = JSON.parse(line);
-                        
-                        if (data.type === 'status') {
-                            updateStatus(data.message || data.stage, data.progress);
-                        } 
-                        else if (data.type === 'analysis_complete') {
-                            updateStatus('Analysis complete. Planning optimizations...', 30);
-                        }
-                        else if (data.type === 'planning_chunk') {
-                            // Just log planning chunks
-                            console.log('Planning chunk received');
-                        }
-                        else if (data.type === 'planning_complete') {
-                            updateStatus('Optimization plan created. Implementing changes...', 50);
-                        }
-                        else if (data.type === 'implementation_chunk') {
-                            // For implementation chunks, update the content
-                            if (data.content) {
-                                appendToContent(data.content);
-                            }
-                        }
-                        else if (data.type === 'implementation_complete') {
-                            updateStatus('Implementation complete. Analyzing results...', 80);
-                        }
-                        else if (data.type === 'final_analysis_complete' || data.type === 'comparison_complete') {
-                            updateStatus('Finalizing results...', 90);
-                        }
-                        else if (data.type === 'complete') {
-                            // Handle completion event from server
-                            console.log('Complete event received:', data);
-                            updateStatus('Customization complete! Saving results...', 95);
-                            finishStreaming(data.data || {});
-                        }
-                        else if (data.type === 'customization_complete') {
-                            // Handle final data
-                            updateContent(data.data.customized_content);
-                            finishStreaming(data.data);
-                            updateStatus('Customization complete!', 100);
-                        }
-                        else if (data.type === 'error') {
-                            // Track that we've processed an error
-                            hasProcessedError = true;
-                            
-                            // BUGFIX: Special handling for recommendation errors
-                            if (data.message && data.message.includes('recommendations')) {
-                                console.warn('Encountered recommendations error, but continuing with customization');
-                                
-                                // If we have content already, consider the process complete enough to move forward
-                                const contentEl = document.getElementById('customized-content');
-                                if (contentEl && contentEl.innerHTML && contentEl.innerHTML.length > 100) {
-                                    updateStatus('Customization mostly complete. Finishing...', 95);
-                                    
-                                    // Create a simplified data object without the problematic recommendations
-                                    const fallbackData = {
-                                        customized_content: contentEl.innerHTML,
-                                        optimization_data: {
-                                            summary: "Your resume has been customized for this job. Some optimization details couldn't be processed due to a technical issue."
-                                        }
-                                    };
-                                    
-                                    // Finish with what we have
-                                    setTimeout(() => {
-                                        finishStreaming(fallbackData);
-                                    }, 1000);
-                                    return;
-                                }
-                            }
-                            // BUGFIX: Special handling for customization_levels attribute error
-                            else if (data.message && (data.message.includes('customization_levels') || 
-                                     data.message.includes('ResumeCustomizer') || 
-                                     data.message.includes('no attribute'))) {
-                                console.warn('Encountered customization_levels or attribute error, attempting fallback strategy');
-                                
-                                // Show a meaningful message to the user
-                                document.getElementById('status-message').innerHTML = 
-                                    `<span class="text-warning">Using default customization settings due to a technical issue.</span>`;
-                                    
-                                // Use the original resume content as a starting point
-                                const originalContentElem = document.getElementById('original-content');
-                                const customizedContentElem = document.getElementById('customized-content');
-                                
-                                if (originalContentElem && customizedContentElem) {
-                                    // Start with the original resume content
-                                    let originalContent = originalContentElem.innerHTML || '';
-                                    
-                                    // Create a basic customized version with a generic opening message
-                                    let customizedContent = originalContent;
-                                    customizedContent = "<p><em>Your resume has been prepared with default settings. Some advanced customization options were unavailable due to a temporary system issue.</em></p>\n\n" + customizedContent;
-                                    
-                                    // Update the customized content
-                                    customizedContentElem.innerHTML = customizedContent;
-                                    
-                                    // Create a simplified data object
-                                    const fallbackData = {
-                                        customized_content: customizedContent,
-                                        optimization_data: {
-                                            summary: "Your resume has been prepared with default settings. The system encountered an issue with the customization level settings."
-                                        }
-                                    };
-                                    
-                                    // Allow user to continue after a short delay
-                                    updateStatus('Preparing resume with default settings...', 75);
-                                    
-                                    setTimeout(() => {
-                                        updateStatus('Resume ready with default settings', 100);
-                                        // Show actions
-                                        document.getElementById('optimization-details').style.display = 'block';
-                                        document.getElementById('actions-container').style.display = 'flex';
-                                        
-                                        // Update the status message with more details
-                                        document.getElementById('customization-status').innerHTML = 
-                                            `<div class="bg-yellow-50 dark:bg-yellow-900/40 border-l-4 border-yellow-500 p-4 rounded-md">
-                                                <div class="flex">
-                                                    <div class="flex-shrink-0">
-                                                        <svg class="h-5 w-5 text-yellow-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                                                            <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
-                                                        </svg>
-                                                    </div>
-                                                    <div class="ml-3">
-                                                        <h5 class="text-lg font-medium text-yellow-800 dark:text-yellow-200">Limited Customization Available</h5>
-                                                        <p class="text-yellow-700 dark:text-yellow-300 mt-1">
-                                                            The system encountered an issue with the advanced customization settings. 
-                                                            Your resume has been prepared with default settings instead. You can still download
-                                                            or compare the result, but some optimizations may be missing.
-                                                        </p>
-                                                        <p class="text-yellow-700 dark:text-yellow-300 mt-2">
-                                                            <a href="{{ url_for('dashboard.user_dashboard') }}" class="underline font-medium">Return to dashboard</a> or 
-                                                            <a href="{{ url_for('resume.customize_resume', job_id=job.id) }}" class="underline font-medium">Try again</a>.
-                                                        </p>
-                                                    </div>
-                                                </div>
-                                            </div>`;
-                                    }, 2000);
-                                    
-                                    // Also save content for comparison view - SERVER SIDE SAVE
-                                    try {
-                                        saveToServer(fallbackData);
-                                    } catch (e) {
-                                        console.error("Error saving fallback content to server:", e);
-                                    }
-                                    
-                                    return;
-                                }
-                            }
-                            
-                            // Show error
-                            document.getElementById('status-message').innerHTML = 
-                                `<span class="text-danger">Error: ${data.message}</span>`;
-                        }
-                    } catch (e) {
-                        console.error('Error parsing streaming data:', e, line);
+                // Initialize restore on browser visibility change
+                document.addEventListener('visibilitychange', () => {
+                    if (!document.hidden && !this.sseConnected && this.reconnectAttempts < this.maxReconnectAttempts) {
+                        this.handleReconnect();
                     }
                 });
                 
-                // Continue reading
-                return reader.read().then(processStream);
-            }
+                // Handle page beforeunload to clean up
+                window.addEventListener('beforeunload', () => {
+                    this.cleanup();
+                });
+            },
             
-            // Add this at the start of the stream processing to add a timeout safety net
-            window.streamTimeout = setTimeout(() => {
-                console.warn('Streaming timeout - activating emergency fallback');
-                
-                // Check if we already processed an error response
-                if (document.getElementById('status-message').innerText.includes('Error')) {
-                    const originalContentElem = document.getElementById('original-content');
-                    const customizedContentElem = document.getElementById('customized-content');
+            // Clean up when component is destroyed
+            cleanup() {
+                if (this.connectionTimeout) {
+                    clearTimeout(this.connectionTimeout);
+                }
+            },
+            
+            // Called before SSE request is sent
+            handleSseBeforeRequest() {
+                console.log('SSE connection starting...');
+                // Could add pre-connection setup here
+            },
+            
+            // Handle SSE connection error
+            handleSseError() {
+                console.error('SSE connection error');
+                if (!this.errorOccurred) {
+                    this.errorOccurred = true;
                     
-                    if (originalContentElem && customizedContentElem && originalContentElem.innerHTML) {
-                        // Use original content with a warning notice
-                        let fallbackContent = "<p><strong style='color:orange'>⚠️ Automatic customization encountered an issue.</strong> <em>Below is your original resume content:</em></p>\n\n" + 
-                                             originalContentElem.innerHTML;
+                    // Try to reconnect if under max attempts
+                    if (this.reconnectAttempts < this.maxReconnectAttempts) {
+                        this.reconnectAttempts++;
+                        this.showReconnectingMessage();
+                        setTimeout(() => {
+                            this.handleReconnect();
+                        }, 3000); // Wait 3 seconds before trying to reconnect
+                    } else {
+                        this.showErrorMessage('Connection error occurred and maximum reconnection attempts reached. Please refresh the page and try again.');
+                    }
+                }
+            },
+            
+            // Handle SSE disconnection
+            handleSseDisconnect() {
+                console.warn('SSE connection disconnected');
+                
+                // Only handle if we haven't shown an error already
+                if (!this.errorOccurred && this.sseConnected) {
+                    this.sseConnected = false;
+                    
+                    // Try to reconnect if under max attempts
+                    if (this.reconnectAttempts < this.maxReconnectAttempts) {
+                        this.reconnectAttempts++;
+                        this.showReconnectingMessage();
+                        setTimeout(() => {
+                            this.handleReconnect();
+                        }, 2000); // Wait 2 seconds before trying to reconnect
+                    } else {
+                        this.showErrorMessage('Connection to the server was lost. Please refresh the page and try again.');
+                    }
+                }
+            },
+            
+            // Handle reconnection attempt
+            handleReconnect() {
+                console.log(`Attempting reconnection (${this.reconnectAttempts}/${this.maxReconnectAttempts})...`);
+                
+                // Use HTMX to reconnect the SSE stream
+                const sseElement = document.querySelector('[hx-sse="connect:/api/resume-updates/{{ resume.id }}"]');
+                if (sseElement) {
+                    // Dispatch the event to get HTMX to reconnect
+                    htmx.trigger(sseElement, 'htmx:reconnect', {});
+                }
+            },
+            
+            // Check for timeout issues
+            checkTimeoutStatus() {
+                // Only apply fallback if still a placeholder
+                const isPlaceholder = {{ 'true' if resume.is_placeholder else 'false' }};
+                if (isPlaceholder && !this.timeoutWarningShown) {
+                    console.warn('SSE timeout safety - checking if still processing');
+                    
+                    // Check if status message indicates an error already
+                    const statusMessage = document.querySelector('.current-status');
+                    if (statusMessage && !statusMessage.innerText.includes('Error') && 
+                        !statusMessage.innerText.includes('Complete')) {
                         
-                        customizedContentElem.innerHTML = fallbackContent;
-                        
-                        // Show error recovery UI
-                        document.getElementById('customization-status').innerHTML = 
-                            `<div class="bg-red-50 dark:bg-red-900/40 border-l-4 border-red-500 p-4 rounded-md">
-                                <div class="flex">
-                                    <div class="ml-3">
-                                        <h5 class="text-lg font-medium text-red-800 dark:text-red-200">Customization Error Recovery</h5>
-                                        <p class="text-red-700 dark:text-red-300 mt-1">
-                                            We encountered an error during customization. Your original resume is available below.
-                                            You can try again later or continue with your original resume.
-                                        </p>
-                                        <div class="mt-3">
-                                            <a href="{{ url_for('dashboard.user_dashboard') }}" class="mr-4 px-3 py-1 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-md text-sm">
-                                                Return to Dashboard
-                                            </a>
-                                            <a href="{{ url_for('resume.customize_resume', job_id=job.id) }}" class="px-3 py-1 bg-accent-dark text-black rounded-md text-sm">
-                                                Try Again
-                                            </a>
-                                        </div>
+                        this.timeoutWarningShown = true;
+                        this.showTimeoutWarning();
+                    }
+                }
+            },
+            
+            // Display reconnecting message
+            showReconnectingMessage() {
+                const statusMessage = document.querySelector('.current-status');
+                if (statusMessage) {
+                    statusMessage.innerHTML = `
+                        <span class="streaming-status text-blue-700 dark:text-blue-300 font-medium">
+                            Reconnecting to server... (Attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts})
+                        </span>
+                        <svg class="animate-spin ml-2 h-4 w-4 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                    `;
+                }
+            },
+            
+            // Display timeout warning
+            showTimeoutWarning() {
+                // Copy original content as fallback
+                const originalContentElem = document.getElementById('original-content');
+                const customizedContentElem = document.getElementById('customized-content');
+                
+                if (originalContentElem && customizedContentElem && originalContentElem.innerHTML) {
+                    // Create fallback content
+                    let fallbackContent = "<p><strong style='color:orange'>⚠️ Customization process timed out.</strong> <em>Below is your original resume content:</em></p>\n\n" + 
+                                         originalContentElem.innerHTML;
+                    
+                    customizedContentElem.innerHTML = fallbackContent;
+                    
+                    // Show timeout warning
+                    document.getElementById('customization-status').innerHTML = `
+                        <div class="bg-red-50 dark:bg-red-900/40 border-l-4 border-red-500 p-4 rounded-md">
+                            <div class="flex">
+                                <div class="ml-3">
+                                    <h5 class="text-lg font-medium text-red-800 dark:text-red-200">Customization Timeout</h5>
+                                    <p class="text-red-700 dark:text-red-300 mt-1">
+                                        The customization process took too long. You can try again later or continue with your original resume.
+                                    </p>
+                                    <div class="mt-3 flex space-x-3">
+                                        <a href="{{ url_for('dashboard.user_dashboard') }}" class="px-3 py-1 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-md text-sm">
+                                            Return to Dashboard
+                                        </a>
+                                        <a href="{{ url_for('resume.customize_resume', job_id=job.id) }}" class="px-3 py-1 bg-accent-dark text-black rounded-md text-sm">
+                                            Try Again
+                                        </a>
                                     </div>
                                 </div>
-                            </div>`;
-                        
-                        // Show the actions
-                        document.getElementById('actions-container').style.display = 'flex';
-                        
-                        // Save the fallback content to the server
-                        const fallbackData = {
-                            customized_content: fallbackContent,
-                            optimization_data: {
-                                summary: "Your resume customization was interrupted. The system has provided your original resume as a fallback."
-                            }
-                        };
-                        
-                        try {
-                            saveToServer(fallbackData);
-                        } catch (e) {
-                            console.error("Error saving timeout fallback content to server:", e);
-                        }
-                    }
+                            </div>
+                        </div>`;
+                    
+                    // Show action buttons
+                    document.getElementById('actions-container').style.display = 'flex';
                 }
-            }, 30000); // 30 second timeout
+            },
             
-            // Start processing
-            return reader.read().then(processStream);
-        })
-        .catch(error => {
-            console.error('Streaming error:', error);
-            document.getElementById('status-message').innerHTML = 
-                `<span class="text-danger">Error: ${error.message}</span>`;
-        });
-    }
-    
-    function updateStatus(message, progress) {
-        // Update the status message
-        const statusEl = document.querySelector('.streaming-status');
-        if (statusEl) {
-            statusEl.textContent = message;
-        }
-        
-        // Update progress bar if provided
-        if (progress !== undefined && progress !== null) {
-            const progressBar = document.querySelector('.progress-bar');
-            if (progressBar) {
-                progressBar.style.width = progress + '%';
-                progressBar.textContent = progress + '%';
-            }
-        }
-    }
-    
-    function updateContent(content) {
-        // Update the customized content
-        const contentEl = document.getElementById('customized-content');
-        if (contentEl) {
-            contentEl.innerHTML = content;
-        }
-    }
-    
-    function appendToContent(content) {
-        // Append to existing content
-        const contentEl = document.getElementById('customized-content');
-        if (contentEl) {
-            contentEl.innerHTML += content;
-        }
-    }
-    
-    // IMPROVED APPROACH: Save directly to server instead of client-side storage
-    function saveToServer(data) {
-        console.log('Saving customized resume to server');
-        
-        // Clear any pending timeouts
-        if (window.streamTimeout) {
-            clearTimeout(window.streamTimeout);
-        }
-        
-        // Get content from elements
-        const contentEl = document.getElementById('customized-content');
-        const originalEl = document.getElementById('original-content');
-        
-        if (!contentEl || !contentEl.innerHTML) {
-            console.error("No content element found or empty content!");
-            return;
-        }
-        
-        // Prepare data for server save
-        const customizedContent = data.customized_content || contentEl.innerHTML;
-        const originalContent = originalEl ? originalEl.innerHTML : "";
-        
-        // Create form data for saving to database
-        const saveFormData = new FormData();
-        saveFormData.append('original_content', originalContent);
-        saveFormData.append('customized_content', customizedContent);
-        saveFormData.append('original_score', '{{ original.ats_score or 0 }}');
-        saveFormData.append('new_score', data.ats_score || 0);
-        saveFormData.append('improvement', data.improvement || 0);
-        saveFormData.append('original_id', '{{ resume.original_id or resume.id }}');
-        saveFormData.append('job_id', '{{ job.id }}');
-        saveFormData.append('customization_level', '{{ resume.customization_level }}');
-        saveFormData.append('industry', '{{ resume.industry }}');
-        saveFormData.append('optimization_plan', JSON.stringify(data.optimization_data || {}));
-        saveFormData.append('comparison_data', JSON.stringify(data.comparison_data || {}));
-        saveFormData.append('csrf_token', '{{ csrf_token() }}');
-        
-        // Add placeholderId to help backend clean up the placeholder
-        saveFormData.append('placeholder_id', '{{ resume.id }}');
-        
-        // Show saving message
-        updateStatus('Saving resume to database...', 95);
-        
-        // Send the data to the server endpoint
-        fetch('/api/save_customized_resume', {
-            method: 'POST',
-            body: saveFormData,
-            headers: {
-                'X-CSRFToken': '{{ csrf_token() }}'
-            }
-        })
-        .then(response => {
-            if (!response.ok) {
-                throw new Error(`HTTP error! Status: ${response.status}`);
-            }
-            return response.json();
-        })
-        .then(responseData => {
-            console.log('Resume saved successfully:', responseData);
-            updateStatus('Resume saved! Redirecting to comparison view...', 100);
-            
-            // Navigate to the comparison page using the ID returned from the server
-            setTimeout(() => {
-                window.location.href = responseData.comparison_url;
-            }, 1000);
-        })
-        .catch(error => {
-            console.error('Error saving resume:', error);
-            updateStatus(`Error saving resume: ${error.message}`, 100);
-            
-            // Show a button to retry saving
-            const statusEl = document.getElementById('status-message');
-            if (statusEl) {
-                statusEl.innerHTML += `
-                    <div class="mt-2">
-                        <button id="retry-save" class="px-3 py-1 bg-blue-600 text-white rounded-md text-sm">
-                            Retry Saving
-                        </button>
-                    </div>
-                `;
-                
-                // Add event listener to retry button
-                document.getElementById('retry-save')?.addEventListener('click', () => {
-                    saveToServer(data);
-                });
-            }
-        });
-    }
-    
-    // Update the finishStreaming function to use the server-side approach
-    function finishStreaming(data) {
-        console.log('Finishing streaming, saving to server');
-        saveToServer(data);
-        
-        // Show optimization details and actions
-        document.getElementById('optimization-details').style.display = 'block';
-        document.getElementById('actions-container').style.display = 'flex';
-        
-        // Update status message to show success
-        document.getElementById('customization-status').innerHTML = `
-            <div class="bg-green-50 dark:bg-green-900/40 border-l-4 border-green-500 p-4 rounded-md">
-                <div class="flex">
-                    <div class="flex-shrink-0">
-                        <svg class="h-5 w-5 text-green-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
-                        </svg>
-                    </div>
-                    <div class="ml-3">
-                        <h5 class="text-lg font-medium text-green-800 dark:text-green-200">Customization Complete!</h5>
-                        <p class="text-green-700 dark:text-green-300 mt-1">
-                            Your resume has been customized for this job and saved. You'll be redirected to the comparison view shortly.
-                        </p>
-                        <div class="mt-2 flex items-center">
-                            <div class="spinner-border spinner-border-sm text-success" role="status"></div>
-                            <span class="ml-2">Preparing comparison view...</span>
+            // Display error message
+            showErrorMessage(message) {
+                document.getElementById('customization-status').innerHTML = `
+                    <div class="bg-red-50 dark:bg-red-900/40 border-l-4 border-red-500 p-4 rounded-md">
+                        <div class="flex">
+                            <div class="ml-3">
+                                <h5 class="text-lg font-medium text-red-800 dark:text-red-200">Connection Error</h5>
+                                <p class="text-red-700 dark:text-red-300 mt-1">${message}</p>
+                                <div class="mt-3 flex space-x-3">
+                                    <a href="{{ url_for('dashboard.user_dashboard') }}" class="px-3 py-1 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-md text-sm">
+                                        Return to Dashboard
+                                    </a>
+                                    <button onclick="window.location.reload()" class="px-3 py-1 bg-accent-dark text-black rounded-md text-sm">
+                                        Refresh Page
+                                    </button>
+                                </div>
+                            </div>
                         </div>
-                    </div>
-                </div>
-            </div>
-        `;
-    }
+                    </div>`;
+                
+                // Copy original content as fallback
+                const originalContentElem = document.getElementById('original-content');
+                const customizedContentElem = document.getElementById('customized-content');
+                
+                if (originalContentElem && customizedContentElem && originalContentElem.innerHTML) {
+                    // Create fallback content with error indication
+                    let fallbackContent = "<p><strong style='color:red'>⚠️ Connection error occurred.</strong> <em>Below is your original resume content:</em></p>\n\n" + 
+                                         originalContentElem.innerHTML;
+                    
+                    customizedContentElem.innerHTML = fallbackContent;
+                }
+            }
+        };
+    });
 });
 </script>
 
-<!-- Add support for HTMX to enable partial page updates -->
-<script src="https://unpkg.com/htmx.org@1.9.0"></script>
+<!-- HTMX SSE Event Handlers -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Handle HTMX SSE events
+    htmx.on('htmx:sseMessage', function(evt) {
+        // Log all events for debugging
+        console.log('SSE event received:', evt.detail.name);
+        
+        // Handle status events that update progress steps
+        if (evt.detail.name === 'status-message') {
+            const statusText = evt.detail.data;
+            
+            // Extract stage from status message to update progress tracker
+            let stage = 'initialization';
+            if (statusText.includes('Analyzing')) stage = 'analysis';
+            else if (statusText.includes('Planning')) stage = 'planning';
+            else if (statusText.includes('Implementing')) stage = 'implementation';
+            else if (statusText.includes('Finalizing')) stage = 'final_analysis';
+            else if (statusText.includes('Comparing')) stage = 'comparison';
+            
+            // Update the current stage in Alpine component
+            const progressTracker = document.querySelector('.progress-tracker');
+            if (progressTracker && progressTracker.__x) {
+                progressTracker.__x.updateData('currentStage', stage);
+            }
+        }
+        
+        // Handle content events to update the resume content
+        else if (evt.detail.name === 'content') {
+            const customizedContentElement = document.getElementById('customized-content');
+            if (customizedContentElement) {
+                customizedContentElement.innerHTML = evt.detail.data;
+            }
+        }
+        
+        // Handle planning content - wrap in typed-text container if needed
+        else if (evt.detail.name === 'planning') {
+            const planningStream = document.getElementById('planning-stream');
+            if (planningStream) {
+                // If first chunk, create typed-text container
+                if (!planningStream.querySelector('.typed-text')) {
+                    planningStream.innerHTML = '<div class="typed-text"></div>';
+                }
+                
+                // Append content to typed-text
+                const typedText = planningStream.querySelector('.typed-text');
+                if (typedText) {
+                    typedText.innerHTML += evt.detail.data;
+                    typedText.scrollTop = typedText.scrollHeight;
+                }
+            }
+        }
+        
+        // Handle implementation content - wrap in typed-text container if needed
+        else if (evt.detail.name === 'implementation') {
+            const implementationStream = document.getElementById('implementation-stream');
+            if (implementationStream) {
+                // If first chunk, create typed-text container
+                if (!implementationStream.querySelector('.typed-text')) {
+                    implementationStream.innerHTML = '<div class="typed-text"></div>';
+                }
+                
+                // Append content to typed-text
+                const typedText = implementationStream.querySelector('.typed-text');
+                if (typedText) {
+                    typedText.innerHTML += evt.detail.data;
+                    typedText.scrollTop = typedText.scrollHeight;
+                }
+            }
+        }
+        
+        // Handle sections modified - show the list of modified sections
+        else if (evt.detail.name === 'sections-modified') {
+            const sectionsModified = document.getElementById('sections-modified');
+            if (sectionsModified) {
+                sectionsModified.style.display = 'block';
+                const typedText = document.querySelector('#implementation-stream .typed-text');
+                if (typedText) {
+                    typedText.classList.add('complete');
+                }
+            }
+        }
+        
+        // Handle completion events
+        else if (evt.detail.name === 'complete') {
+            document.getElementById('optimization-details').style.display = 'block';
+            document.getElementById('actions-container').style.display = 'flex';
+            
+            // Mark all progress steps as completed
+            const progressTracker = document.querySelector('.progress-tracker');
+            if (progressTracker && progressTracker.__x) {
+                progressTracker.__x.updateData('currentStage', 'comparison');
+                
+                // Mark all steps as completed
+                document.querySelectorAll('.progress-step').forEach(step => {
+                    step.classList.add('completed');
+                    step.classList.remove('active');
+                });
+            }
+        }
+    });
+    
+    // When SSE connection closes unexpectedly
+    htmx.on('htmx:sseStop', function(evt) {
+        console.log('SSE connection stopped:', evt);
+    });
+});
+</script>
 {% endblock %}

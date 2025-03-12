@@ -1,0 +1,92 @@
+<!-- progress_indicator.html - Component for showing customization progress steps -->
+<div class="mb-6">
+    <h5 class="text-lg font-medium text-gray-900 dark:text-white mb-4">Customization Progress</h5>
+    <div class="flex flex-wrap justify-between gap-y-3 progress-tracker" 
+         x-data="{ currentStage: '{{ current_stage|default('initialization') }}' }">
+        <div class="progress-step" 
+             :class="{'active': currentStage === 'initialization', 
+                      'completed': ['analysis', 'planning', 'implementation', 'final_analysis', 'comparison'].includes(currentStage)}"
+             data-stage="initialization">
+            1. Initialization
+        </div>
+        <div class="progress-step" 
+             :class="{'active': currentStage === 'analysis', 
+                      'completed': ['planning', 'implementation', 'final_analysis', 'comparison'].includes(currentStage)}"
+             data-stage="analysis">
+            2. Analysis
+        </div>
+        <div class="progress-step" 
+             :class="{'active': currentStage === 'planning', 
+                      'completed': ['implementation', 'final_analysis', 'comparison'].includes(currentStage)}"
+             data-stage="planning">
+            3. Planning
+        </div>
+        <div class="progress-step" 
+             :class="{'active': currentStage === 'implementation', 
+                      'completed': ['final_analysis', 'comparison'].includes(currentStage)}"
+             data-stage="implementation">
+            4. Implementation
+        </div>
+        <div class="progress-step" 
+             :class="{'active': currentStage === 'final_analysis', 
+                      'completed': ['comparison'].includes(currentStage)}"
+             data-stage="final_analysis">
+            5. Final Analysis
+        </div>
+        <div class="progress-step" 
+             :class="{'active': currentStage === 'comparison',
+                      'completed': false}"
+             data-stage="comparison">
+            6. Comparison
+        </div>
+    </div>
+    <div class="current-status mt-3 text-sm text-gray-700 dark:text-gray-300"
+         hx-sse="swap:status-message from:/api/resume-updates/{{ resume_id }}">
+        Starting customization process...
+    </div>
+</div>
+
+<style>
+.progress-tracker {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.progress-step {
+    position: relative;
+    padding: 0.5rem 1rem;
+    border-radius: 0.375rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    background-color: rgba(209, 213, 219, 0.5);
+    color: rgba(55, 65, 81, 1);
+}
+
+.dark .progress-step {
+    background-color: rgba(55, 65, 81, 0.5);
+    color: rgba(209, 213, 219, 1);
+}
+
+.progress-step.active {
+    background-color: rgba(245, 158, 11, 0.3);
+    color: rgba(146, 64, 14, 1);
+    font-weight: 600;
+}
+
+.dark .progress-step.active {
+    background-color: rgba(217, 119, 6, 0.3);
+    color: rgba(245, 158, 11, 1);
+}
+
+.progress-step.completed {
+    background-color: rgba(16, 185, 129, 0.3);
+    color: rgba(6, 95, 70, 1);
+}
+
+.dark .progress-step.completed {
+    background-color: rgba(4, 120, 87, 0.3);
+    color: rgba(16, 185, 129, 1);
+}
+</style>
