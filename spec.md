@@ -153,6 +153,38 @@ Implement a two-stage resume customization process using Claude for more effecti
 This approach will lead to more thoughtful, strategic resume customizations that better align with job requirements while maintaining authenticity.
 ```
 
+### Prompt 0.3: Enhancements to Two-Stage Resume Customization
+```
+The two-stage resume customization process (Evaluator-optimizer workflow) is already well-implemented in resume_customizer.py. Let's enhance it with additional features:
+
+1. Add user control enhancements to the existing two-stage system:
+   - Create UI controls to allow users to select specific recommendations to implement
+   - Add option for users to provide feedback on which improvements were most valuable
+   - Implement "conservative/balanced/extensive" mode selection in the UI
+
+2. Expand the reasoning output in the comparison data:
+   - Enhance the _generate_detailed_comparison method to include rationale for each change
+   - Create visual indicators for why specific changes improve ATS performance
+   - Add section-by-section improvement explanations
+
+3. Implement result visualization improvements:
+   - Create interactive before/after views that explain changes
+   - Add mouseover tooltips explaining the reasoning for each modification
+   - Develop a recommendations history to track which changes had the biggest impact
+
+4. Add industry-specific optimization options:
+   - Allow users to specify their target industry for more tailored customization
+   - Implement industry-specific terminology recommendations
+   - Create visualization for industry-specific keyword coverage
+
+5. Enhance the explanation of reasoning in the UI:
+   - Show clear explanations for why specific changes were recommended
+   - Provide learning resources based on the types of improvements made
+   - Help users understand the principles behind effective resume customization
+
+These enhancements will build upon the existing two-stage implementation to improve user control, transparency, and educational value of the resume customization feature.
+```
+
 ### Prompt 0.4: ATS Simulation and Industry-Specific Guidance
 ```
 Implement ATS simulation capabilities and industry-specific guidance. Your implementation should:

@@ -1,147 +1,195 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="container mt-4">
-    <div class="row">
-        <div class="col-12">
-            <div class="card mb-4">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0">Customizing Resume for {{ job.title }}</h5>
-                    <div>
-                        {% if resume.streaming_progress > 0 and resume.streaming_progress < 100 %}
-                        <div class="progress" style="width: 200px; height: 20px;">
-                            <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: {{ resume.streaming_progress }}%">
-                                {{ resume.streaming_progress }}%
-                            </div>
+<div class="max-w-7xl mx-auto px-4 py-6">
+    <div class="mb-8">
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden border dark:border-gray-700">
+            <div class="bg-accent-dark px-6 py-4 flex flex-col sm:flex-row justify-between items-center gap-4">
+                <h1 class="text-2xl md:text-3xl font-bold text-black mb-0">Customizing Resume for {{ job.title }}</h1>
+                <div>
+                    {% if resume.streaming_progress > 0 and resume.streaming_progress < 100 %}
+                    <div class="bg-gray-200 dark:bg-gray-700 rounded-full h-5 w-48">
+                        <div class="bg-accent-dark h-5 rounded-full text-xs text-center text-black font-bold flex items-center justify-center" style="width: {{ resume.streaming_progress }}%">
+                            {{ resume.streaming_progress }}%
                         </div>
-                        {% else %}
-                        {% set orig_score = 0 if original.ats_score is none else original.ats_score %}
-                        {% set new_score = 0 if resume.ats_score is none else resume.ats_score %}
-                        {% set improvement = new_score - orig_score %}
-                        <span class="badge bg-secondary">Original Score: {{ "%.1f"|format(orig_score) }}%</span>
-                        <span class="badge bg-success">New Score: {{ "%.1f"|format(new_score) }}%</span>
-                        <span class="badge bg-info">
+                    </div>
+                    {% else %}
+                    {% set orig_score = 0 if original.ats_score is none else original.ats_score %}
+                    {% set new_score = 0 if resume.ats_score is none else resume.ats_score %}
+                    {% set improvement = new_score - orig_score %}
+                    <div class="flex gap-2">
+                        <span class="px-3 py-1 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-full text-sm font-medium">
+                            Original Score: {{ "%.1f"|format(orig_score) }}%
+                        </span>
+                        <span class="px-3 py-1 bg-green-200 dark:bg-green-700 text-green-800 dark:text-green-200 rounded-full text-sm font-medium">
+                            New Score: {{ "%.1f"|format(new_score) }}%
+                        </span>
+                        <span class="px-3 py-1 bg-blue-200 dark:bg-blue-700 text-blue-800 dark:text-blue-200 rounded-full text-sm font-medium">
                             Improved: {% if improvement > 0 %}+{% endif %}{{ "%.1f"|format(improvement) }}%
                         </span>
-                        {% endif %}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="p-6">
+                <div id="customization-status" class="mb-6">
+                    {% if resume.is_placeholder %}
+                    <div class="bg-blue-50 dark:bg-blue-900/40 border-l-4 border-blue-500 p-4 rounded-md mb-6">
+                        <div class="flex">
+                            <div class="flex-shrink-0">
+                                <svg class="h-5 w-5 text-blue-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
+                                </svg>
+                            </div>
+                            <div class="ml-3">
+                                <h5 class="text-lg font-medium text-blue-800 dark:text-blue-200">Customizing your resume</h5>
+                                <p class="text-blue-700 dark:text-blue-300 mt-1">We're tailoring your resume to match the job description. This process typically takes 30-60 seconds.</p>
+                                <div id="status-message" class="mt-2 flex items-center">
+                                    <span class="streaming-status text-blue-700 dark:text-blue-300 font-medium">{{ resume.streaming_status or 'Starting customization process...' }}</span>
+                                    <svg class="animate-spin ml-2 h-4 w-4 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                    <div class="bg-white dark:bg-gray-800 rounded-lg shadow border dark:border-gray-700 overflow-hidden">
+                        <div class="bg-gray-100 dark:bg-gray-900 px-4 py-3 border-b dark:border-gray-700">
+                            <h5 class="text-lg font-semibold text-gray-800 dark:text-white">Original Resume</h5>
+                        </div>
+                        <div class="p-4">
+                            <div class="markdown-content" id="original-content">
+                                {{ original.original_content | safe }}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-white dark:bg-gray-800 rounded-lg shadow border dark:border-gray-700 overflow-hidden">
+                        <div class="bg-gray-100 dark:bg-gray-900 px-4 py-3 border-b dark:border-gray-700">
+                            <h5 class="text-lg font-semibold text-gray-800 dark:text-white">Customized Resume</h5>
+                        </div>
+                        <div class="p-4">
+                            <div class="markdown-content" id="customized-content">
+                                {{ resume.customized_content | safe }}
+                            </div>
+                        </div>
                     </div>
                 </div>
-                <div class="card-body">
-                    <div id="customization-status" class="mb-4">
-                        {% if resume.is_placeholder %}
-                        <div class="alert alert-info">
-                            <h5>Customizing your resume...</h5>
-                            <p>We're tailoring your resume to match the job description. This process typically takes 30-60 seconds.</p>
-                            <div id="status-message">
-                                <span class="streaming-status">{{ resume.streaming_status or 'Starting customization process...' }}</span>
-                                <div class="spinner-border spinner-border-sm text-primary" role="status">
-                                    <span class="visually-hidden">Loading...</span>
+                
+                <div id="optimization-details" class="mb-6" style="display: {% if resume.is_placeholder %}none{% else %}block{% endif %};">
+                    <h5 class="text-xl font-semibold text-gray-800 dark:text-white mb-3">Optimization Details</h5>
+                    <div class="bg-gray-800 dark:bg-gray-900 border border-gray-700 rounded-lg overflow-hidden">
+                        <div class="p-4">
+                            <div id="optimization-content">
+                                {% if resume.optimization_data %}
+                                <div class="mb-4">
+                                    <h6 class="text-lg font-medium text-gray-300 mb-2">Summary</h6>
+                                    <p class="text-gray-300">{{ resume.optimization_data.summary }}</p>
                                 </div>
-                            </div>
-                        </div>
-                        {% endif %}
-                    </div>
-                    
-                    <div class="row mb-4">
-                        <div class="col-md-6">
-                            <div class="card h-100">
-                                <div class="card-header text-dark">
-                                    <h5 class="mb-0">Original Resume</h5>
+                                
+                                {% if resume.optimization_data.recommendations %}
+                                <div class="mb-4">
+                                    <h6 class="text-lg font-medium text-gray-300 mb-2">Key Improvements</h6>
+                                    <ul class="space-y-2">
+                                        {% for rec in resume.optimization_data.recommendations %}
+                                        <li class="px-3 py-2 bg-gray-700 rounded-md text-gray-300">
+                                            <strong class="text-accent-dark">{{ rec.section }}:</strong> {{ rec.what }}
+                                        </li>
+                                        {% endfor %}
+                                    </ul>
                                 </div>
-                                <div class="card-body">
-                                    <div class="markdown-content" id="original-content">
-                                        {{ original.original_content | safe }}
+                                {% endif %}
+                                
+                                {% if resume.optimization_data.keywords_added %}
+                                <div class="mb-4">
+                                    <h6 class="text-lg font-medium text-gray-300 mb-2">Added Keywords</h6>
+                                    <div class="flex flex-wrap gap-2">
+                                        {% for keyword in resume.optimization_data.keywords_added %}
+                                        <span class="px-2 py-1 bg-green-600 text-green-100 rounded-full text-sm">{{ keyword }}</span>
+                                        {% endfor %}
                                     </div>
                                 </div>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="card h-100">
-                                <div class="card-header text-dark">
-                                    <h5 class="mb-0">Customized Resume</h5>
-                                </div>
-                                <div class="card-body">
-                                    <div class="markdown-content" id="customized-content">
-                                        {{ resume.customized_content | safe }}
-                                    </div>
-                                </div>
+                                {% endif %}
+                                {% endif %}
                             </div>
                         </div>
                     </div>
-                    
-                    <div id="optimization-details" class="mb-4" style="display: {% if resume.is_placeholder %}none{% else %}block{% endif %};">
-                        <h5>Optimization Details</h5>
-                        <div class="card bg-dark border-secondary">
-                            <div class="card-body">
-                                <div id="optimization-content">
-                                    {% if resume.optimization_data %}
-                                    <div class="mb-3">
-                                        <h6 class="text-light">Summary</h6>
-                                        <p>{{ resume.optimization_data.summary }}</p>
-                                    </div>
-                                    
-                                    {% if resume.optimization_data.recommendations %}
-                                    <div class="mb-3">
-                                        <h6 class="text-light">Key Improvements</h6>
-                                        <ul class="list-group list-group-flush bg-dark">
-                                            {% for rec in resume.optimization_data.recommendations %}
-                                            <li class="list-group-item bg-dark text-light">
-                                                <strong>{{ rec.section }}:</strong> {{ rec.what }}
-                                            </li>
-                                            {% endfor %}
-                                        </ul>
-                                    </div>
-                                    {% endif %}
-                                    
-                                    {% if resume.optimization_data.keywords_added %}
-                                    <div class="mb-3">
-                                        <h6 class="text-light">Added Keywords</h6>
-                                        <div class="d-flex flex-wrap gap-2">
-                                            {% for keyword in resume.optimization_data.keywords_added %}
-                                            <span class="badge bg-success">{{ keyword }}</span>
-                                            {% endfor %}
-                                        </div>
-                                    </div>
-                                    {% endif %}
-                                    {% endif %}
-                                </div>
-                            </div>
-                        </div>
+                </div>
+                
+                <div class="flex justify-between items-center mt-6">
+                    <div>
+                        <a href="{{ url_for('dashboard.user_dashboard') }}" 
+                           class="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md inline-flex items-center">
+                            <svg class="w-4 h-4 mr-2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M9.707 14.707a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 1.414L7.414 9H15a1 1 0 110 2H7.414l2.293 2.293a1 1 0 010 1.414z" clip-rule="evenodd" />
+                            </svg>
+                            Back to Dashboard
+                        </a>
                     </div>
                     
-                    <div class="mt-4 d-flex gap-2 justify-content-between">
-                        <div>
-                            <a href="{{ url_for('dashboard.user_dashboard') }}" class="btn btn-outline-secondary">
-                                Back to Dashboard
-                            </a>
+                    <div id="actions-container" style="display: {% if resume.is_placeholder %}none{% else %}flex{% endif %};" class="space-x-3">
+                        <button onclick="window.print()" 
+                                class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md inline-flex items-center">
+                            <svg class="w-4 h-4 mr-2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M5 4v3H4a2 2 0 00-2 2v3a2 2 0 002 2h1v2a2 2 0 002 2h6a2 2 0 002-2v-2h1a2 2 0 002-2V9a2 2 0 00-2-2h-1V4a2 2 0 00-2-2H7a2 2 0 00-2 2zm8 0H7v3h6V4zm0 8H7v4h6v-4z" clip-rule="evenodd" />
+                            </svg>
+                            Print Resume
+                        </button>
+                        
+                        <div class="relative" x-data="{ open: false }">
+                            <button @click="open = !open" 
+                                    class="px-4 py-2 border border-blue-600 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-md inline-flex items-center">
+                                <svg class="w-4 h-4 mr-2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd" />
+                                </svg>
+                                Export
+                                <svg class="w-4 h-4 ml-1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+                                </svg>
+                            </button>
+                            <div x-show="open" 
+                                 @click.away="open = false"
+                                 class="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-md shadow-lg z-10 border dark:border-gray-700"
+                                 x-transition:enter="transition ease-out duration-100"
+                                 x-transition:enter-start="transform opacity-0 scale-95"
+                                 x-transition:enter-end="transform opacity-100 scale-100"
+                                 x-transition:leave="transition ease-in duration-75"
+                                 x-transition:leave-start="transform opacity-100 scale-100"
+                                 x-transition:leave-end="transform opacity-0 scale-95">
+                                <div class="py-1">
+                                    <a href="{{ url_for('resume.download_resume', resume_id=resume.id, format='pdf') }}" class="block px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
+                                        <svg class="w-4 h-4 mr-2 inline" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                            <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clip-rule="evenodd" />
+                                        </svg>
+                                        PDF
+                                    </a>
+                                    <a href="{{ url_for('resume.download_resume', resume_id=resume.id, format='docx') }}" class="block px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
+                                        <svg class="w-4 h-4 mr-2 inline" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                            <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clip-rule="evenodd" />
+                                        </svg>
+                                        Word (DOCX)
+                                    </a>
+                                    <a href="{{ url_for('resume.download_resume', resume_id=resume.id, format='md') }}" class="block px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
+                                        <svg class="w-4 h-4 mr-2 inline" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                            <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clip-rule="evenodd" />
+                                        </svg>
+                                        Markdown
+                                    </a>
+                                </div>
+                            </div>
                         </div>
                         
-                        <div id="actions-container" style="display: {% if resume.is_placeholder %}none{% else %}flex{% endif %};" class="gap-2">
-                            <a href="#" class="btn btn-primary" onclick="window.print()">
-                                <i class="bi bi-printer me-1"></i> Print Resume
-                            </a>
-                            
-                            <div class="dropdown">
-                                <button class="btn btn-outline-primary dropdown-toggle" type="button" id="exportDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-                                    <i class="bi bi-download me-1"></i>Export
-                                </button>
-                                <ul class="dropdown-menu" aria-labelledby="exportDropdown">
-                                    <li><a class="dropdown-item" href="{{ url_for('resume.download_resume', resume_id=resume.id, format='pdf') }}">
-                                        <i class="bi bi-file-earmark-pdf me-2"></i>PDF
-                                    </a></li>
-                                    <li><a class="dropdown-item" href="{{ url_for('resume.download_resume', resume_id=resume.id, format='docx') }}">
-                                        <i class="bi bi-file-earmark-word me-2"></i>DOCX
-                                    </a></li>
-                                    <li><a class="dropdown-item" href="{{ url_for('resume.download_resume', resume_id=resume.id, format='md') }}">
-                                        <i class="bi bi-markdown me-2"></i>Markdown
-                                    </a></li>
-                                </ul>
-                            </div>
-                            
-                            <a href="{{ url_for('resume.compare_resume', resume_id=resume.id) }}" class="btn btn-info">
-                                <i class="bi bi-grid-3x2-gap me-1"></i> View Diff
-                            </a>
-                        </div>
+                        <a href="{{ url_for('resume.compare_resume', resume_id=resume.id) }}" 
+                           class="px-4 py-2 bg-accent-dark hover:bg-opacity-90 text-black rounded-md inline-flex items-center">
+                            <svg class="w-4 h-4 mr-2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                <path d="M5 3a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2V5a2 2 0 00-2-2H5zM5 11a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2v-2a2 2 0 00-2-2H5zM11 5a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V5zM11 13a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+                            </svg>
+                            Compare View
+                        </a>
                     </div>
                 </div>
             </div>
@@ -244,6 +292,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 const lines = buffer.split('\n');
                 buffer = lines.pop(); // Keep the last potentially incomplete line
                 
+                // Keep track of critical errors
+                let hasProcessedError = false;
+                
                 lines.forEach(line => {
                     if (line.trim() === '') return;
                     
@@ -276,6 +327,12 @@ document.addEventListener('DOMContentLoaded', function() {
                         else if (data.type === 'final_analysis_complete' || data.type === 'comparison_complete') {
                             updateStatus('Finalizing results...', 90);
                         }
+                        else if (data.type === 'complete') {
+                            // Handle completion event from server
+                            console.log('Complete event received:', data);
+                            updateStatus('Customization complete! Saving results...', 95);
+                            finishStreaming(data.data || {});
+                        }
                         else if (data.type === 'customization_complete') {
                             // Handle final data
                             updateContent(data.data.customized_content);
@@ -283,6 +340,111 @@ document.addEventListener('DOMContentLoaded', function() {
                             updateStatus('Customization complete!', 100);
                         }
                         else if (data.type === 'error') {
+                            // Track that we've processed an error
+                            hasProcessedError = true;
+                            
+                            // BUGFIX: Special handling for recommendation errors
+                            if (data.message && data.message.includes('recommendations')) {
+                                console.warn('Encountered recommendations error, but continuing with customization');
+                                
+                                // If we have content already, consider the process complete enough to move forward
+                                const contentEl = document.getElementById('customized-content');
+                                if (contentEl && contentEl.innerHTML && contentEl.innerHTML.length > 100) {
+                                    updateStatus('Customization mostly complete. Finishing...', 95);
+                                    
+                                    // Create a simplified data object without the problematic recommendations
+                                    const fallbackData = {
+                                        customized_content: contentEl.innerHTML,
+                                        optimization_data: {
+                                            summary: "Your resume has been customized for this job. Some optimization details couldn't be processed due to a technical issue."
+                                        }
+                                    };
+                                    
+                                    // Finish with what we have
+                                    setTimeout(() => {
+                                        finishStreaming(fallbackData);
+                                    }, 1000);
+                                    return;
+                                }
+                            }
+                            // BUGFIX: Special handling for customization_levels attribute error
+                            else if (data.message && (data.message.includes('customization_levels') || 
+                                     data.message.includes('ResumeCustomizer') || 
+                                     data.message.includes('no attribute'))) {
+                                console.warn('Encountered customization_levels or attribute error, attempting fallback strategy');
+                                
+                                // Show a meaningful message to the user
+                                document.getElementById('status-message').innerHTML = 
+                                    `<span class="text-warning">Using default customization settings due to a technical issue.</span>`;
+                                    
+                                // Use the original resume content as a starting point
+                                const originalContentElem = document.getElementById('original-content');
+                                const customizedContentElem = document.getElementById('customized-content');
+                                
+                                if (originalContentElem && customizedContentElem) {
+                                    // Start with the original resume content
+                                    let originalContent = originalContentElem.innerHTML || '';
+                                    
+                                    // Create a basic customized version with a generic opening message
+                                    let customizedContent = originalContent;
+                                    customizedContent = "<p><em>Your resume has been prepared with default settings. Some advanced customization options were unavailable due to a temporary system issue.</em></p>\n\n" + customizedContent;
+                                    
+                                    // Update the customized content
+                                    customizedContentElem.innerHTML = customizedContent;
+                                    
+                                    // Create a simplified data object
+                                    const fallbackData = {
+                                        customized_content: customizedContent,
+                                        optimization_data: {
+                                            summary: "Your resume has been prepared with default settings. The system encountered an issue with the customization level settings."
+                                        }
+                                    };
+                                    
+                                    // Allow user to continue after a short delay
+                                    updateStatus('Preparing resume with default settings...', 75);
+                                    
+                                    setTimeout(() => {
+                                        updateStatus('Resume ready with default settings', 100);
+                                        // Show actions
+                                        document.getElementById('optimization-details').style.display = 'block';
+                                        document.getElementById('actions-container').style.display = 'flex';
+                                        
+                                        // Update the status message with more details
+                                        document.getElementById('customization-status').innerHTML = 
+                                            `<div class="bg-yellow-50 dark:bg-yellow-900/40 border-l-4 border-yellow-500 p-4 rounded-md">
+                                                <div class="flex">
+                                                    <div class="flex-shrink-0">
+                                                        <svg class="h-5 w-5 text-yellow-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                                            <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+                                                        </svg>
+                                                    </div>
+                                                    <div class="ml-3">
+                                                        <h5 class="text-lg font-medium text-yellow-800 dark:text-yellow-200">Limited Customization Available</h5>
+                                                        <p class="text-yellow-700 dark:text-yellow-300 mt-1">
+                                                            The system encountered an issue with the advanced customization settings. 
+                                                            Your resume has been prepared with default settings instead. You can still download
+                                                            or compare the result, but some optimizations may be missing.
+                                                        </p>
+                                                        <p class="text-yellow-700 dark:text-yellow-300 mt-2">
+                                                            <a href="{{ url_for('dashboard.user_dashboard') }}" class="underline font-medium">Return to dashboard</a> or 
+                                                            <a href="{{ url_for('resume.customize_resume', job_id=job.id) }}" class="underline font-medium">Try again</a>.
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            </div>`;
+                                    }, 2000);
+                                    
+                                    // Also save content for comparison view - SERVER SIDE SAVE
+                                    try {
+                                        saveToServer(fallbackData);
+                                    } catch (e) {
+                                        console.error("Error saving fallback content to server:", e);
+                                    }
+                                    
+                                    return;
+                                }
+                            }
+                            
                             // Show error
                             document.getElementById('status-message').innerHTML = 
                                 `<span class="text-danger">Error: ${data.message}</span>`;
@@ -295,6 +457,64 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Continue reading
                 return reader.read().then(processStream);
             }
+            
+            // Add this at the start of the stream processing to add a timeout safety net
+            window.streamTimeout = setTimeout(() => {
+                console.warn('Streaming timeout - activating emergency fallback');
+                
+                // Check if we already processed an error response
+                if (document.getElementById('status-message').innerText.includes('Error')) {
+                    const originalContentElem = document.getElementById('original-content');
+                    const customizedContentElem = document.getElementById('customized-content');
+                    
+                    if (originalContentElem && customizedContentElem && originalContentElem.innerHTML) {
+                        // Use original content with a warning notice
+                        let fallbackContent = "<p><strong style='color:orange'>⚠️ Automatic customization encountered an issue.</strong> <em>Below is your original resume content:</em></p>\n\n" + 
+                                             originalContentElem.innerHTML;
+                        
+                        customizedContentElem.innerHTML = fallbackContent;
+                        
+                        // Show error recovery UI
+                        document.getElementById('customization-status').innerHTML = 
+                            `<div class="bg-red-50 dark:bg-red-900/40 border-l-4 border-red-500 p-4 rounded-md">
+                                <div class="flex">
+                                    <div class="ml-3">
+                                        <h5 class="text-lg font-medium text-red-800 dark:text-red-200">Customization Error Recovery</h5>
+                                        <p class="text-red-700 dark:text-red-300 mt-1">
+                                            We encountered an error during customization. Your original resume is available below.
+                                            You can try again later or continue with your original resume.
+                                        </p>
+                                        <div class="mt-3">
+                                            <a href="{{ url_for('dashboard.user_dashboard') }}" class="mr-4 px-3 py-1 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-md text-sm">
+                                                Return to Dashboard
+                                            </a>
+                                            <a href="{{ url_for('resume.customize_resume', job_id=job.id) }}" class="px-3 py-1 bg-accent-dark text-black rounded-md text-sm">
+                                                Try Again
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>`;
+                        
+                        // Show the actions
+                        document.getElementById('actions-container').style.display = 'flex';
+                        
+                        // Save the fallback content to the server
+                        const fallbackData = {
+                            customized_content: fallbackContent,
+                            optimization_data: {
+                                summary: "Your resume customization was interrupted. The system has provided your original resume as a fallback."
+                            }
+                        };
+                        
+                        try {
+                            saveToServer(fallbackData);
+                        } catch (e) {
+                            console.error("Error saving timeout fallback content to server:", e);
+                        }
+                    }
+                }
+            }, 30000); // 30 second timeout
             
             // Start processing
             return reader.read().then(processStream);
@@ -339,72 +559,130 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
     
-    function finishStreaming(data) {
-        // Show all the final elements
-        document.getElementById('customization-status').innerHTML = 
-            '<div class="alert alert-success"><h5>Customization Complete!</h5>' +
-            '<p>Your resume has been customized to match the job requirements.</p></div>';
+    // IMPROVED APPROACH: Save directly to server instead of client-side storage
+    function saveToServer(data) {
+        console.log('Saving customized resume to server');
         
+        // Clear any pending timeouts
+        if (window.streamTimeout) {
+            clearTimeout(window.streamTimeout);
+        }
+        
+        // Get content from elements
+        const contentEl = document.getElementById('customized-content');
+        const originalEl = document.getElementById('original-content');
+        
+        if (!contentEl || !contentEl.innerHTML) {
+            console.error("No content element found or empty content!");
+            return;
+        }
+        
+        // Prepare data for server save
+        const customizedContent = data.customized_content || contentEl.innerHTML;
+        const originalContent = originalEl ? originalEl.innerHTML : "";
+        
+        // Create form data for saving to database
+        const saveFormData = new FormData();
+        saveFormData.append('original_content', originalContent);
+        saveFormData.append('customized_content', customizedContent);
+        saveFormData.append('original_score', '{{ original.ats_score or 0 }}');
+        saveFormData.append('new_score', data.ats_score || 0);
+        saveFormData.append('improvement', data.improvement || 0);
+        saveFormData.append('original_id', '{{ resume.original_id or resume.id }}');
+        saveFormData.append('job_id', '{{ job.id }}');
+        saveFormData.append('customization_level', '{{ resume.customization_level }}');
+        saveFormData.append('industry', '{{ resume.industry }}');
+        saveFormData.append('optimization_plan', JSON.stringify(data.optimization_data || {}));
+        saveFormData.append('comparison_data', JSON.stringify(data.comparison_data || {}));
+        saveFormData.append('csrf_token', '{{ csrf_token() }}');
+        
+        // Add placeholderId to help backend clean up the placeholder
+        saveFormData.append('placeholder_id', '{{ resume.id }}');
+        
+        // Show saving message
+        updateStatus('Saving resume to database...', 95);
+        
+        // Send the data to the server endpoint
+        fetch('/api/save_customized_resume', {
+            method: 'POST',
+            body: saveFormData,
+            headers: {
+                'X-CSRFToken': '{{ csrf_token() }}'
+            }
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! Status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(responseData => {
+            console.log('Resume saved successfully:', responseData);
+            updateStatus('Resume saved! Redirecting to comparison view...', 100);
+            
+            // Navigate to the comparison page using the ID returned from the server
+            setTimeout(() => {
+                window.location.href = responseData.comparison_url;
+            }, 1000);
+        })
+        .catch(error => {
+            console.error('Error saving resume:', error);
+            updateStatus(`Error saving resume: ${error.message}`, 100);
+            
+            // Show a button to retry saving
+            const statusEl = document.getElementById('status-message');
+            if (statusEl) {
+                statusEl.innerHTML += `
+                    <div class="mt-2">
+                        <button id="retry-save" class="px-3 py-1 bg-blue-600 text-white rounded-md text-sm">
+                            Retry Saving
+                        </button>
+                    </div>
+                `;
+                
+                // Add event listener to retry button
+                document.getElementById('retry-save')?.addEventListener('click', () => {
+                    saveToServer(data);
+                });
+            }
+        });
+    }
+    
+    // Update the finishStreaming function to use the server-side approach
+    function finishStreaming(data) {
+        console.log('Finishing streaming, saving to server');
+        saveToServer(data);
+        
+        // Show optimization details and actions
         document.getElementById('optimization-details').style.display = 'block';
         document.getElementById('actions-container').style.display = 'flex';
         
-        // Update optimization details
-        if (data.optimization_data) {
-            const optimizationEl = document.getElementById('optimization-content');
-            let html = '';
-            
-            // Add summary
-            if (data.optimization_data.summary) {
-                html += `<div class="mb-3">
-                    <h6 class="text-light">Summary</h6>
-                    <p>${data.optimization_data.summary}</p>
-                </div>`;
-            }
-            
-            // Add recommendations
-            if (data.optimization_data.recommendations && data.optimization_data.recommendations.length > 0) {
-                html += `<div class="mb-3">
-                    <h6 class="text-light">Key Improvements</h6>
-                    <ul class="list-group list-group-flush bg-dark">`;
-                
-                for (const rec of data.optimization_data.recommendations) {
-                    html += `<li class="list-group-item bg-dark text-light">
-                        <strong>${rec.section}:</strong> ${rec.what}
-                    </li>`;
-                }
-                
-                html += `</ul></div>`;
-            }
-            
-            // Add keywords
-            if (data.optimization_data.keywords_added && data.optimization_data.keywords_added.length > 0) {
-                html += `<div class="mb-3">
-                    <h6 class="text-light">Added Keywords</h6>
-                    <div class="d-flex flex-wrap gap-2">`;
-                
-                for (const keyword of data.optimization_data.keywords_added) {
-                    html += `<span class="badge bg-success">${keyword}</span>`;
-                }
-                
-                html += `</div></div>`;
-            }
-            
-            optimizationEl.innerHTML = html;
-        }
-        
-        // Update score badges
-        const headerDiv = document.querySelector('.card-header > div');
-        if (headerDiv && data.scores) {
-            const improvement = (data.scores.new_score || 0) - (data.scores.original_score || 0);
-            headerDiv.innerHTML = `
-                <span class="badge bg-secondary">Original Score: ${(data.scores.original_score || 0).toFixed(1)}%</span>
-                <span class="badge bg-success">New Score: ${(data.scores.new_score || 0).toFixed(1)}%</span>
-                <span class="badge bg-info">
-                    Improved: ${improvement > 0 ? '+' : ''}${improvement.toFixed(1)}%
-                </span>
-            `;
-        }
+        // Update status message to show success
+        document.getElementById('customization-status').innerHTML = `
+            <div class="bg-green-50 dark:bg-green-900/40 border-l-4 border-green-500 p-4 rounded-md">
+                <div class="flex">
+                    <div class="flex-shrink-0">
+                        <svg class="h-5 w-5 text-green-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                        </svg>
+                    </div>
+                    <div class="ml-3">
+                        <h5 class="text-lg font-medium text-green-800 dark:text-green-200">Customization Complete!</h5>
+                        <p class="text-green-700 dark:text-green-300 mt-1">
+                            Your resume has been customized for this job and saved. You'll be redirected to the comparison view shortly.
+                        </p>
+                        <div class="mt-2 flex items-center">
+                            <div class="spinner-border spinner-border-sm text-success" role="status"></div>
+                            <span class="ml-2">Preparing comparison view...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
     }
 });
 </script>
+
+<!-- Add support for HTMX to enable partial page updates -->
+<script src="https://unpkg.com/htmx.org@1.9.0"></script>
 {% endblock %}

@@ -1,6 +1,7 @@
 import os
 import json
 import logging
+import hashlib
 from datetime import datetime, timedelta
 from anthropic import Anthropic
 from sqlalchemy import func
@@ -23,6 +24,67 @@ class FeedbackLoop:
         
         self.client = Anthropic(api_key=self.anthropic_key)
         self.model = "claude-3-7-sonnet-20250219"
+        
+        # Cache configuration
+        self.use_cache = os.environ.get('USE_PROMPT_CACHE', 'true').lower() == 'true'
+        self.cache_dir = os.environ.get('PROMPT_CACHE_DIR', 'cache/prompts')
+        
+        # Create cache directory if it doesn't exist
+        if self.use_cache and not os.path.exists(self.cache_dir):
+            os.makedirs(self.cache_dir, exist_ok=True)
+    
+    def _generate_cache_key(self, model, messages=None, system=None, **kwargs):
+        """Generate a deterministic cache key from request parameters"""
+        # Create a dictionary with all relevant parameters
+        cache_dict = {
+            "model": model
+        }
+        
+        if messages:
+            cache_dict["messages"] = messages
+        
+        if system:
+            cache_dict["system"] = system
+            
+        # Add any additional kwargs
+        cache_dict.update(kwargs)
+        
+        # Convert to a stable JSON string
+        cache_str = json.dumps(cache_dict, sort_keys=True)
+        
+        # Create hash
+        return hashlib.md5(cache_str.encode()).hexdigest()
+    
+    def _get_from_cache(self, cache_key):
+        """Attempt to retrieve a response from cache"""
+        if not self.use_cache:
+            return None
+            
+        cache_path = os.path.join(self.cache_dir, f"{cache_key}.json")
+        
+        if os.path.exists(cache_path):
+            try:
+                with open(cache_path, 'r') as f:
+                    logger.info(f"Cache hit for {cache_key}")
+                    return json.load(f)
+            except Exception as e:
+                logger.error(f"Error reading cache: {str(e)}")
+                return None
+        return None
+        
+    def _save_to_cache(self, cache_key, response_data):
+        """Save a response to the cache"""
+        if not self.use_cache:
+            return
+            
+        cache_path = os.path.join(self.cache_dir, f"{cache_key}.json")
+        
+        try:
+            with open(cache_path, 'w') as f:
+                json.dump(response_data, f)
+                logger.info(f"Saved to cache: {cache_key}")
+        except Exception as e:
+            logger.error(f"Error writing to cache: {str(e)}")
     
     def evaluate_customization(self, resume_id):
         """
@@ -89,12 +151,36 @@ class FeedbackLoop:
             Focus on both what worked well and what could be improved.
             """
             
-            response = self.client.messages.create(
+            # Generate cache key for this request
+            messages = [{"role": "user", "content": user_message}]
+            cache_key = self._generate_cache_key(
                 model=self.model,
-                max_tokens=1000,
+                messages=messages,
                 system=system_prompt,
-                messages=[{"role": "user", "content": user_message}]
+                max_tokens=8192
             )
+            
+            # Try to get from cache
+            cached_response = self._get_from_cache(cache_key)
+            if cached_response:
+                response = type('obj', (object,), {
+                    'content': cached_response['content']
+                })
+            else:
+                # Call Claude
+                response = self.client.messages.create(
+                    model=self.model,
+                    max_tokens=8192,
+                    system=system_prompt,
+                    messages=messages,
+                    cache_seed=cache_key  # Use cache_seed for Claude's server-side caching
+                )
+                
+                # Save to cache
+                response_data = {
+                    "content": [{"text": response.content[0].text}]
+                }
+                self._save_to_cache(cache_key, response_data)
             
             evaluation_text = response.content[0].text
             
@@ -198,12 +284,36 @@ class FeedbackLoop:
             4. Balancing authenticity with keyword optimization
             """
             
-            response = self.client.messages.create(
+            # Generate cache key for this request
+            messages = [{"role": "user", "content": user_message}]
+            cache_key = self._generate_cache_key(
                 model=self.model,
-                max_tokens=2000,
+                messages=messages,
                 system=system_prompt,
-                messages=[{"role": "user", "content": user_message}]
+                max_tokens=8192
             )
+            
+            # Try to get from cache
+            cached_response = self._get_from_cache(cache_key)
+            if cached_response:
+                response = type('obj', (object,), {
+                    'content': cached_response['content']
+                })
+            else:
+                # Call Claude
+                response = self.client.messages.create(
+                    model=self.model,
+                    max_tokens=8192,
+                    system=system_prompt,
+                    messages=messages,
+                    cache_seed=cache_key  # Use cache_seed for Claude's server-side caching
+                )
+                
+                # Save to cache
+                response_data = {
+                    "content": [{"text": response.content[0].text}]
+                }
+                self._save_to_cache(cache_key, response_data)
             
             # Store the optimization suggestions
             optimization = OptimizationSuggestion(

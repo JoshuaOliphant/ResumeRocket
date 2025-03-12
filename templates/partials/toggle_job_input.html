@@ -1,12 +1,22 @@
 {% if type == 'text' %}
-<div id="jobTextSection" class="mb-3">
-    <label for="jobDescription" class="form-label">Job Description</label>
-    <textarea id="jobDescription" name="job_description" class="form-control" rows="5"></textarea>
+<div id="jobTextSection">
+    <label for="jobDescription" class="block text-gray-700 dark:text-gray-300 font-semibold mb-2">Job Description</label>
+    <textarea id="jobDescription" name="job_description" 
+              class="w-full px-3 py-2 text-gray-700 bg-white dark:bg-gray-700 
+                     border border-gray-300 dark:border-gray-600 rounded-md 
+                     dark:text-white focus:outline-none focus:ring-2 
+                     focus:ring-accent-light" 
+              rows="5"></textarea>
 </div>
 {% else %}
-<div id="jobUrlSection" class="mb-3">
-    <label for="jobUrl" class="form-label">Job Posting URL</label>
-    <input class="form-control" id="jobUrl" name="job_url" placeholder="https://...">
-    <small class="text-muted">Enter the full URL of the job posting (including https://)</small>
+<div id="jobUrlSection">
+    <label for="jobUrl" class="block text-gray-700 dark:text-gray-300 font-semibold mb-2">Job Posting URL</label>
+    <input class="w-full px-3 py-2 border rounded-md 
+                  text-gray-700 bg-white dark:bg-gray-700 
+                  border-gray-300 dark:border-gray-600
+                  dark:text-white focus:outline-none 
+                  focus:ring-2 focus:ring-accent-light" 
+           id="jobUrl" name="job_url" placeholder="https://...">
+    <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Enter the full URL of the job posting (including https://)</p>
 </div>
-{% endif %} 
+{% endif %}

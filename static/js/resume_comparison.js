@@ -4,6 +4,24 @@
  * with diff highlighting using the jsdiff library.
  */
 
+// Debug flag - set to true to enable debug logging
+const DEBUG_MODE = false;
+
+/**
+ * Log debug messages to console when debug mode is enabled
+ * @param {string} message - The message to log
+ * @param {any} data - Optional data to log
+ */
+function logDebug(message, data) {
+    if (DEBUG_MODE) {
+        if (data !== undefined) {
+            console.log(`[DEBUG] ${message}`, data);
+        } else {
+            console.log(`[DEBUG] ${message}`);
+        }
+    }
+}
+
 // Initialize variables to store resume content
 let originalContent = '';
 let customizedContent = '';
@@ -1341,12 +1359,12 @@ function animateCount(element, start, end) {
 function highlightDifferences() {
     if (!diffResults) return;
 
-    const originalElement = document.getElementById('original-resume');
-    const customizedElement = document.getElementById('customized-resume');
+    const originalElement = document.getElementById('original-content');
+    const customizedElement = document.getElementById('customized-content');
     
     if (!originalElement || !customizedElement) return;
     
-    // Make a copy of the original content
+    // Clean content by removing HTML tags
     const originalClean = cleanHtmlContent(originalContent);
     const customizedClean = cleanHtmlContent(customizedContent);
     
@@ -1358,16 +1376,24 @@ function highlightDifferences() {
     let customizedHtml = '';
     
     wordDiff.forEach(part => {
+        // Escape HTML to prevent tags from being interpreted as markup
+        const escapedValue = part.value
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+            
         if (part.added) {
             // Added parts only show in customized
-            customizedHtml += `<span class="diff-added">${part.value}</span>`;
+            customizedHtml += `<span class="diff-added">${escapedValue}</span>`;
         } else if (part.removed) {
             // Removed parts only show in original
-            originalHtml += `<span class="diff-removed">${part.value}</span>`;
+            originalHtml += `<span class="diff-removed">${escapedValue}</span>`;
         } else {
             // Unchanged parts show in both
-            originalHtml += part.value;
-            customizedHtml += part.value;
+            originalHtml += escapedValue;
+            customizedHtml += escapedValue;
         }
     });
     
