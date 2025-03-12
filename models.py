@@ -56,13 +56,25 @@ class CustomizedResume(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     original_ats_score = db.Column(db.Float)  # Original ATS score before customization
     ats_score = db.Column(db.Float)  # New ATS score after customization
+    improvement = db.Column(db.Float, nullable=True)  # Difference between new and original scores
+    confidence = db.Column(db.Float, nullable=True)  # Confidence of the ATS score
     matching_keywords = db.Column(db.JSON)
     missing_keywords = db.Column(db.JSON)
     file_format = db.Column(db.String(10), default='md')  # 'md', 'docx', 'pdf'
     original_bytes = db.Column(db.LargeBinary, nullable=True)  # Store original file bytes for non-markdown files
     comparison_data = db.Column(db.JSON, nullable=True)  # Detailed comparison between original and customized
+    optimization_data = db.Column(db.JSON, nullable=True)  # Optimization plan data
     added_keywords_count = db.Column(db.Integer, default=0)  # Count of keywords added
     changes_count = db.Column(db.Integer, default=0)  # Total number of changes made
+    customization_level = db.Column(db.String(20), default='balanced')  # conservative, balanced, or extensive
+    industry = db.Column(db.String(50), nullable=True)  # Target industry for customization
+    title = db.Column(db.String(200), nullable=True)  # Title for the resume
+    selected_recommendations = db.Column(db.JSON, nullable=True)  # IDs of selected recommendations
+    recommendation_feedback = db.Column(db.JSON, nullable=True)  # User feedback on individual recommendations
+    is_placeholder = db.Column(db.Boolean, default=False)  # Flag for streaming placeholders
+    streaming_progress = db.Column(db.Integer, default=0)  # Progress percentage for streaming
+    streaming_status = db.Column(db.String(50), nullable=True)  # Current status message for streaming
+    customization_notes = db.Column(db.Text, nullable=True)  # Detailed notes explaining the customization changes
     
     # Feedback and outcome tracking fields
     user_rating = db.Column(db.Integer, nullable=True)  # 1-5 star rating
@@ -82,12 +94,20 @@ class CustomizedResume(db.Model):
             'created_at': self.created_at.isoformat(),
             'original_ats_score': self.original_ats_score,
             'ats_score': self.ats_score,
+            'improvement': self.improvement,
+            'confidence': self.confidence,
             'matching_keywords': self.matching_keywords,
             'missing_keywords': self.missing_keywords,
             'file_format': self.file_format,
             'comparison_data': self.comparison_data,
+            'optimization_data': self.optimization_data,
             'added_keywords_count': self.added_keywords_count,
             'changes_count': self.changes_count,
+            'customization_level': self.customization_level,
+            'industry': self.industry,
+            'title': self.title,
+            'selected_recommendations': self.selected_recommendations,
+            'recommendation_feedback': self.recommendation_feedback,
             'user_rating': self.user_rating,
             'user_feedback': self.user_feedback,
             'was_effective': self.was_effective,

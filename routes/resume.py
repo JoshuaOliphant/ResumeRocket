@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, session, send_file, Response, stream_with_context, current_app
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, session, send_file, Response, stream_with_context, current_app, make_response
 from flask_login import login_required, current_user
 from datetime import datetime
 from io import BytesIO
@@ -12,6 +12,13 @@ from services.ai_suggestions import AISuggestions
 from services.resume_customizer import ResumeCustomizer
 import logging
 from routes.jobs import handle_job_url_submission, jobs_bp
+import os
+import time
+import base64
+import re
+import threading
+from werkzeug.utils import secure_filename
+from markupsafe import Markup
 
 # Initialize logger
 logger = logging.getLogger(__name__)
@@ -25,10 +32,69 @@ resume_customizer = ResumeCustomizer()
 # Create resume blueprint
 resume_bp = Blueprint('resume', __name__)
 
+def generate_simple_customization_notes(optimization_plan, comparison_data, level, industry=None):
+    """
+    Generate basic HTML notes explaining customization changes when the
+    full customization_notes are not available from the customization_result.
+    """
+    try:
+        notes = []
+        
+        # Ensure optimization_plan and comparison_data are dictionaries
+        if isinstance(optimization_plan, str):
+            try:
+                optimization_plan = json.loads(optimization_plan)
+            except:
+                optimization_plan = {}
+                
+        if isinstance(comparison_data, str):
+            try:
+                comparison_data = json.loads(comparison_data)
+            except:
+                comparison_data = {}
+        
+        # Overall summary
+        if optimization_plan and 'summary' in optimization_plan:
+            notes.append(f"<h5 class='text-lg font-semibold mt-2 mb-1'>Summary</h5>")
+            notes.append(f"<p class='mb-2'>{optimization_plan.get('summary', 'Resume customized to better match the job requirements.')}</p>")
+        
+        # Add job analysis
+        if optimization_plan and 'job_analysis' in optimization_plan:
+            notes.append(f"<h5 class='text-lg font-semibold mt-4 mb-1'>Job Analysis</h5>")
+            notes.append(f"<p class='mb-2'>{optimization_plan.get('job_analysis', 'Analysis of key job requirements and their alignment with your resume.')}</p>")
+        
+        # Customization approach
+        notes.append(f"<h5 class='text-lg font-semibold mt-4 mb-1'>Customization Approach</h5>")
+        notes.append(f"<p class='mb-2'>Level: <span class='font-medium'>{level.capitalize()}</span>")
+        if industry:
+            notes.append(f" | Industry: <span class='font-medium'>{industry}</span>")
+        notes.append("</p>")
+        
+        # Add keyword information
+        if comparison_data and 'added_keywords' in comparison_data:
+            added_keywords = comparison_data.get('added_keywords', [])
+            if added_keywords:
+                notes.append(f"<h5 class='text-lg font-semibold mt-4 mb-1'>Added Keywords</h5>")
+                notes.append("<div class='flex flex-wrap gap-1 mb-3'>")
+                for keyword in added_keywords:
+                    notes.append(f"<span class='px-2 py-0.5 text-xs font-medium rounded-full bg-accent-light/80 text-white'>{keyword}</span>")
+                notes.append("</div>")
+        
+        # Add simple explanation if detailed data not available
+        if not (optimization_plan and comparison_data):
+            notes.append("<p>Your resume was customized to better match the job requirements using a " + 
+                        f"{level.lower()} approach. Keywords were adjusted and content was optimized " +
+                        "to enhance your resume's compatibility with ATS systems.</p>")
+        
+        return "\n".join(notes)
+    except Exception as e:
+        logger.error(f"Error generating customization notes: {str(e)}")
+        return "<p>Your resume was customized to better match the job requirements. Specific details cannot be displayed.</p>"
+
 @resume_bp.route('/customize-resume', methods=['POST'])
 @login_required
 def customize_resume():
-    """Handle customization of resume based on job description."""
+    """Handle customization of resume based on job description by directly redirecting to streaming view."""
     logger.debug("Handling customize-resume request")
     
     # Get form data
@@ -36,13 +102,9 @@ def customize_resume():
     job_id = request.form.get('job_id')
     customization_level = request.form.get('customization_level', 'balanced')
     industry = request.form.get('industry')
-    use_streaming_val = request.form.get('use_streaming', 'false')
-    use_streaming = use_streaming_val.lower() == 'true' if isinstance(use_streaming_val, str) else False
-    logger.debug(f"use_streaming_val raw: '{use_streaming_val}'") 
     
     logger.debug(f"Form data received: {request.form}")
     logger.debug(f"Raw values - resume_id: {resume_id}, job_id: {job_id}, level: {customization_level}, industry: {industry}")
-    logger.debug(f"use_streaming: {use_streaming}, value type: {type(use_streaming).__name__}")
     
     # Convert to integers
     try:
@@ -74,103 +136,15 @@ def customize_resume():
         flash('Job description not found.', 'danger')
         return redirect(url_for('resume.analyze_resume'))
     
-    # Check if streaming is enabled in the config
-    streaming_enabled = current_app.config.get('ENABLE_STREAMING_CUSTOMIZATION', True)
-    logger.debug(f"Streaming enabled in config: {streaming_enabled}")
-    
-    # Use streaming view if requested and enabled
-    if use_streaming and streaming_enabled:
-        logger.info(f"Redirecting to streaming view - resume_id={resume_id}, job_id={job_id}, streaming={use_streaming}")
-        streaming_url = url_for('resume.customize_resume_view', 
-                               resume_id=resume_id, 
-                               job_id=job_id, 
-                               customization_level=customization_level, 
-                               industry=industry)
-        logger.debug(f"Redirecting to streaming URL: {streaming_url}")
-        return redirect(streaming_url)
-    else:
-        if use_streaming and not streaming_enabled:
-            logger.info(f"Streaming requested but disabled in config - falling back to standard view")
-        else:
-            logger.info(f"Using standard view - resume_id={resume_id}, job_id={job_id}, streaming={use_streaming}")
-    
-    # Get original resume content and format
-    original_content = original_resume.original_content
-    file_format = original_resume.file_format
-    
-    try:
-        # Process resume customization
-        logger.info(f"Starting resume customization: resume_id={resume_id}, job_id={job_id}, level={customization_level}, industry={industry}")
-        
-        customization_result = resume_customizer.customize_resume(
-            original_content, 
-            job.content,
-            customization_level=customization_level,
-            industry=industry
-        )
-        
-        # Ensure numeric values are properly handled
-        improvement = customization_result.get('improvement')
-        if not isinstance(improvement, (int, float)):
-            if isinstance(improvement, str):
-                if improvement.lower() in ['low', 'medium', 'high']:
-                    # Convert text confidence to numeric values
-                    improvement_map = {'low': 1.0, 'medium': 5.0, 'high': 10.0}
-                    improvement = improvement_map.get(improvement.lower(), 0.0)
-                else:
-                    try:
-                        improvement = float(improvement)
-                    except (ValueError, TypeError):
-                        improvement = 0.0
-            else:
-                improvement = 0.0
-        
-        confidence = customization_result.get('confidence')
-        if not isinstance(confidence, (int, float)):
-            if isinstance(confidence, str):
-                if confidence.lower() in ['low', 'medium', 'high']:
-                    # Convert text confidence to numeric values
-                    confidence_map = {'low': 0.3, 'medium': 0.6, 'high': 0.9}
-                    confidence = confidence_map.get(confidence.lower(), 0.5)
-                else:
-                    try:
-                        confidence = float(confidence)
-                    except (ValueError, TypeError):
-                        confidence = 0.5
-            else:
-                confidence = 0.5
-        
-        # Create a new customized resume entry
-        new_customized_resume = CustomizedResume(
-            original_id=resume_id,
-            job_description_id=job_id,
-            user_id=current_user.id,
-            title=f"{original_resume.title} (Customized for {job.title})",
-            original_content=original_content,
-            customized_content=customization_result['customized_content'],
-            file_format=file_format,
-            ats_score=float(customization_result['new_score']),
-            original_ats_score=float(customization_result['original_score']),
-            improvement=improvement,
-            confidence=confidence,
-            customization_level=customization_level,
-            industry=industry,
-            optimization_data=json.dumps(customization_result['optimization_plan']),
-            comparison_data=json.dumps(customization_result['comparison_data'])
-        )
-        
-        db.session.add(new_customized_resume)
-        db.session.commit()
-        
-        logger.info(f"Resume customization successful: new_id={new_customized_resume.id}, improvement={customization_result['improvement']:.2f}")
-        
-        # Redirect to the single view instead of comparison
-        return redirect(url_for('resume.view_customized_resume', resume_id=new_customized_resume.id))
-        
-    except Exception as e:
-        logger.error(f"Error in resume customization: {str(e)}")
-        flash(f"Error customizing resume: {str(e)}", 'danger')
-        return redirect(url_for('resume.analyze_resume'))
+    # Always redirect to the streaming view - we've removed the old basic view completely
+    logger.info(f"Redirecting to streaming view - resume_id={resume_id}, job_id={job_id}")
+    streaming_url = url_for('resume.customize_resume_view', 
+                           resume_id=resume_id, 
+                           job_id=job_id, 
+                           customization_level=customization_level, 
+                           industry=industry)
+    logger.debug(f"Redirecting to streaming URL: {streaming_url}")
+    return redirect(streaming_url)
 
 @resume_bp.route('/api/process_resume', methods=['POST'])
 @login_required
@@ -480,7 +454,8 @@ def save_customized_resume():
         customization_level=customization_level,
         industry=industry,
         optimization_data=json.dumps(optimization_plan),
-        comparison_data=json.dumps(comparison_data)
+        comparison_data=json.dumps(comparison_data),
+        customization_notes=generate_simple_customization_notes(optimization_plan, comparison_data, customization_level, industry)
     )
     
     # Save to database
@@ -591,24 +566,16 @@ def analyze_resume():
 @resume_bp.route('/customized-resume/<int:resume_id>')
 @login_required
 def view_customized_resume(resume_id):
-    """View a customized resume."""
-    # Load customized resume from database
-    resume = CustomizedResume.query.get_or_404(resume_id)
+    """Redirect to the comparison view for a more detailed experience."""
+    # Create a response that redirects to the comparison view
+    response = redirect(url_for('resume.compare_resume', resume_id=resume_id))
     
-    # Check if resume belongs to current user
-    if resume.user_id != current_user.id and not current_user.is_admin:
-        flash('You do not have permission to view this resume.', 'danger')
-        return redirect(url_for('dashboard.user_dashboard'))
+    # Add cache-busting headers to ensure browsers don't use cached versions
+    response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers['Expires'] = '0'
     
-    # Get job description
-    job = JobDescription.query.get(resume.job_description_id)
-    
-    # Render template with data
-    return render_template(
-        'customized_resume.html',
-        resume=resume,
-        job=job
-    )
+    return response
 
 def resume_to_dict(resume):
     """Convert a CustomizedResume object to a serializable dictionary"""
@@ -703,24 +670,37 @@ def compare_resume(resume_id):
             resume.comparison_data = json.loads(resume.comparison_data)
         except json.JSONDecodeError:
             logger.error(f"Error parsing comparison_data JSON for resume ID {resume_id}")
+            resume.comparison_data = {}
     
     if resume.optimization_data and isinstance(resume.optimization_data, str):
         try:
             resume.optimization_data = json.loads(resume.optimization_data)
         except json.JSONDecodeError:
             logger.error(f"Error parsing optimization_data JSON for resume ID {resume_id}")
+            resume.optimization_data = {}
     
     if resume.selected_recommendations and isinstance(resume.selected_recommendations, str):
         try:
             resume.selected_recommendations = json.loads(resume.selected_recommendations)
         except json.JSONDecodeError:
             logger.error(f"Error parsing selected_recommendations JSON for resume ID {resume_id}")
+            resume.selected_recommendations = []
     
     if resume.recommendation_feedback and isinstance(resume.recommendation_feedback, str):
         try:
             resume.recommendation_feedback = json.loads(resume.recommendation_feedback)
         except json.JSONDecodeError:
             logger.error(f"Error parsing recommendation_feedback JSON for resume ID {resume_id}")
+            resume.recommendation_feedback = {}
+    
+    # Enhanced server-side content preparation
+    # Ensure the content is proper HTML and won't require client-side processing
+    if resume.customized_content:
+        # Simple markdown processing if needed
+        resume.customized_content = resume.customized_content.replace('\n', '<br>')
+    
+    if original and original.original_content:
+        original.original_content = original.original_content.replace('\n', '<br>')
     
     # Convert resume and original to dictionaries for JSON serialization
     resume_dict = resume_to_dict(resume)
@@ -733,8 +713,13 @@ def compare_resume(resume_id):
         'content': job.content
     } if job else None
     
-    # Render template with data
-    return render_template(
+    # Log detailed information for debugging
+    logger.info(f"Rendering comparison view for resume ID {resume_id}")
+    logger.debug(f"Resume content length: {len(resume.customized_content or '')}")
+    logger.debug(f"Original content length: {len(original.original_content or '') if original else 0}")
+    
+    # Add cache-busting headers to the response
+    response = make_response(render_template(
         'customized_resume_comparison.html',
         resume=resume,
         resume_json=resume_dict,
@@ -743,7 +728,12 @@ def compare_resume(resume_id):
         job=job,
         job_json=job_dict,
         enumerate=enumerate
-    )
+    ))
+    response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers['Expires'] = '0'
+    
+    return response
 
 @resume_bp.route('/download/<int:resume_id>/<format>')
 @login_required
@@ -944,7 +934,8 @@ def review_recommendations(resume_id, job_id):
                 industry=industry,
                 optimization_data=json.dumps(customization_result['optimization_plan']),
                 comparison_data=json.dumps(customization_result['comparison_data']),
-                selected_recommendations=json.dumps(selected_recommendations)
+                selected_recommendations=json.dumps(selected_recommendations),
+                customization_notes=customization_result.get('customization_notes')
             )
             
             db.session.add(new_customized_resume)
@@ -1512,6 +1503,104 @@ def recommendation_feedback():
         logger.error(f"Error saving recommendation feedback: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
+@resume_bp.route('/api/save_customized_resume', methods=['POST'])
+@login_required
+def api_save_customized_resume():
+    """API endpoint to save a customized resume after streaming completion"""
+    try:
+        # Get data from form
+        original_content = request.form.get('original_content')
+        customized_content = request.form.get('customized_content')
+        original_score = float(request.form.get('original_score', 0))
+        new_score = float(request.form.get('new_score', 0))
+        improvement = float(request.form.get('improvement', 0))
+        resume_id = request.form.get('original_id')
+        job_id = request.form.get('job_id')
+        customization_level = request.form.get('customization_level', 'balanced')
+        industry = request.form.get('industry')
+        placeholder_id = request.form.get('placeholder_id')
+        
+        # Parse JSON data
+        try:
+            optimization_plan = json.loads(request.form.get('optimization_plan', '{}'))
+            comparison_data = json.loads(request.form.get('comparison_data', '{}'))
+        except json.JSONDecodeError:
+            return jsonify({'error': 'Invalid JSON data'}), 400
+        
+        # Validate inputs
+        try:
+            resume_id = int(resume_id) if resume_id else None
+            job_id = int(job_id) if job_id else None
+            placeholder_id = int(placeholder_id) if placeholder_id else None
+        except ValueError:
+            return jsonify({'error': 'Invalid resume or job ID'}), 400
+        
+        if not resume_id or not job_id:
+            return jsonify({'error': 'Missing resume or job information'}), 400
+        
+        # Load original resume
+        original_resume = CustomizedResume.query.get(resume_id)
+        if not original_resume:
+            return jsonify({'error': 'Original resume not found'}), 404
+        
+        # Check permissions
+        if original_resume.user_id != current_user.id and not current_user.is_admin:
+            return jsonify({'error': 'You do not have permission to save this resume'}), 403
+        
+        # Load job
+        job = JobDescription.query.get(job_id)
+        if not job:
+            return jsonify({'error': 'Job description not found'}), 404
+        
+        # Create new customized resume
+        new_customized_resume = CustomizedResume(
+            original_id=resume_id,
+            job_description_id=job_id,
+            user_id=current_user.id,
+            title=f"{original_resume.title} (Customized for {job.title})",
+            original_content=original_content,
+            customized_content=customized_content,
+            file_format=original_resume.file_format,
+            ats_score=new_score,
+            original_ats_score=original_score,
+            improvement=improvement,
+            confidence=0.8,  # Default confidence value
+            customization_level=customization_level,
+            industry=industry,
+            optimization_data=optimization_plan if isinstance(optimization_plan, dict) else json.dumps(optimization_plan),
+            comparison_data=comparison_data if isinstance(comparison_data, dict) else json.dumps(comparison_data),
+            is_placeholder=False,
+            streaming_progress=100,
+            streaming_status="Completed",
+            customization_notes=generate_simple_customization_notes(optimization_plan, comparison_data, customization_level, industry)
+        )
+        
+        # Save to database
+        db.session.add(new_customized_resume)
+        
+        # If a placeholder ID was provided, delete the placeholder
+        if placeholder_id:
+            placeholder = CustomizedResume.query.get(placeholder_id)
+            if placeholder and placeholder.is_placeholder and (placeholder.user_id == current_user.id or current_user.is_admin):
+                db.session.delete(placeholder)
+                logger.info(f"Deleted placeholder resume with ID {placeholder_id}")
+        
+        db.session.commit()
+        
+        logger.info(f"Saved customized resume with ID {new_customized_resume.id}")
+        
+        # Return success with the new resume ID
+        return jsonify({
+            'success': True,
+            'resume_id': new_customized_resume.id,
+            'comparison_url': url_for('resume.compare_resume', resume_id=new_customized_resume.id)
+        })
+        
+    except Exception as e:
+        logger.error(f"Error in API save_customized_resume: {str(e)}")
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
 # Helper function to save a resume to the database
 def save_resume(content, filename, file_format, job_id):
     """Save a resume to the database."""
@@ -1533,3 +1622,11 @@ def save_resume(content, filename, file_format, job_id):
     db.session.commit()
     
     return resume.id 
+
+# Add a redirect route for incorrect URL pattern
+@resume_bp.route('/resume/compare/<int:resume_id>')
+@login_required
+def compare_resume_redirect(resume_id):
+    """Redirect from incorrect URL pattern to correct one."""
+    logger.info(f"Redirecting from incorrect URL /resume/compare/{resume_id} to correct URL /compare/{resume_id}")
+    return redirect(url_for('resume.compare_resume', resume_id=resume_id)) 
