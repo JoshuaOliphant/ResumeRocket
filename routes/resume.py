@@ -1954,3 +1954,19 @@ def compare_resume_redirect(resume_id):
     """Redirect from incorrect URL pattern to correct one."""
     logger.info(f"Redirecting from incorrect URL /resume/compare/{resume_id} to correct URL /compare/{resume_id}")
     return redirect(url_for('resume.compare_resume', resume_id=resume_id)) 
+@resume_bp.route('/api/resume_optimization/<int:resume_id>')
+@login_required
+def resume_optimization_details(resume_id):
+    """API endpoint for loading resume optimization details dynamically."""
+    resume = Resume.query.get_or_404(resume_id)
+    
+    # Ensure the user owns this resume
+    if resume.user_id \!= current_user.id and not current_user.is_admin:
+        return jsonify({'error': 'You do not have permission to view this resume.'}), 403
+    
+    # Check if we need to return an empty state
+    if not resume.optimization_data:
+        return render_template('components/resume/optimization_empty_state.html')
+    
+    # Return the optimization details component with the resume data
+    return render_template('components/resume/optimization_details.html', resume=resume, hidden=False)
