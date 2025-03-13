@@ -38,9 +38,14 @@
                 <div id="streaming-container"
                      x-data="resumeCustomizationStreaming"
                      @htmx:sse-error="handleSseError()"
-                     @htmx:sse-open="sseConnected = true"
+                     @htmx:sse-open="sseConnected = true; resetErrorState()"
                      @htmx:sse-disconnected="handleSseDisconnect()"
-                     @htmx:sse-beforeRequest="handleSseBeforeRequest()">
+                     @htmx:sse-beforeRequest="handleSseBeforeRequest()"
+                     @htmx:responseError="handleResponseError($event)"
+                     @htmx:sendError="handleSendError($event)"
+                     @htmx:networkError="handleNetworkError()"
+                     @htmx:timeout="handleTimeout($event)"
+                     @htmx:afterRequest="afterRequest($event)">
                     
                     <!-- Customization Status -->
                     <div id="customization-status" class="mb-6">
@@ -172,9 +177,12 @@ document.addEventListener('alpine:init', function() {
             sseConnected: false,
             timeoutWarningShown: false,
             errorOccurred: false,
+            errorType: null,
             reconnectAttempts: 0,
             maxReconnectAttempts: 3,
             connectionTimeout: null,
+            reconnectDelay: 3000,
+            lastRequestTime: null,
             
             // Initialize on component load
             init() {
@@ -183,11 +191,26 @@ document.addEventListener('alpine:init', function() {
                     this.checkTimeoutStatus();
                 }, 60000); // 60 second timeout
                 
+                // Track time of last successful connection
+                this.lastRequestTime = Date.now();
+                
                 // Initialize restore on browser visibility change
                 document.addEventListener('visibilitychange', () => {
                     if (!document.hidden && !this.sseConnected && this.reconnectAttempts < this.maxReconnectAttempts) {
                         this.handleReconnect();
                     }
+                });
+                
+                // Handle online/offline changes
+                window.addEventListener('online', () => {
+                    if (!this.sseConnected && this.errorType === 'network') {
+                        this.showInfoMessage('Network connection restored. Attempting to reconnect...');
+                        this.handleReconnect();
+                    }
+                });
+                
+                window.addEventListener('offline', () => {
+                    this.handleNetworkError();
                 });
                 
                 // Handle page beforeunload to clean up
@@ -203,15 +226,28 @@ document.addEventListener('alpine:init', function() {
                 }
             },
             
+            // Reset error state when connection is restored
+            resetErrorState() {
+                if (this.errorOccurred) {
+                    this.errorOccurred = false;
+                    this.errorType = null;
+                    this.reconnectAttempts = 0;
+                    this.lastRequestTime = Date.now();
+                    console.log('Connection restored, error state reset');
+                }
+            },
+            
             // Called before SSE request is sent
             handleSseBeforeRequest() {
                 console.log('SSE connection starting...');
-                // Could add pre-connection setup here
+                this.lastRequestTime = Date.now();
             },
             
             // Handle SSE connection error
             handleSseError() {
                 console.error('SSE connection error');
+                this.errorType = 'sse';
+                
                 if (!this.errorOccurred) {
                     this.errorOccurred = true;
                     
@@ -221,9 +257,14 @@ document.addEventListener('alpine:init', function() {
                         this.showReconnectingMessage();
                         setTimeout(() => {
                             this.handleReconnect();
-                        }, 3000); // Wait 3 seconds before trying to reconnect
+                        }, this.reconnectDelay);
                     } else {
-                        this.showErrorMessage('Connection error occurred and maximum reconnection attempts reached. Please refresh the page and try again.');
+                        this.showErrorComponent({
+                            errorType: 'connection',
+                            errorTitle: 'Connection Error',
+                            errorMessage: 'Connection error occurred and maximum reconnection attempts reached. Please refresh the page and try again.',
+                            retryFunction: () => window.location.reload()
+                        });
                     }
                 }
             },
@@ -235,6 +276,7 @@ document.addEventListener('alpine:init', function() {
                 // Only handle if we haven't shown an error already
                 if (!this.errorOccurred && this.sseConnected) {
                     this.sseConnected = false;
+                    this.errorType = 'disconnect';
                     
                     // Try to reconnect if under max attempts
                     if (this.reconnectAttempts < this.maxReconnectAttempts) {
@@ -244,8 +286,103 @@ document.addEventListener('alpine:init', function() {
                             this.handleReconnect();
                         }, 2000); // Wait 2 seconds before trying to reconnect
                     } else {
-                        this.showErrorMessage('Connection to the server was lost. Please refresh the page and try again.');
+                        this.showErrorComponent({
+                            errorType: 'connection',
+                            errorTitle: 'Connection Lost',
+                            errorMessage: 'Connection to the server was lost. Please refresh the page and try again.',
+                            retryFunction: () => window.location.reload()
+                        });
                     }
+                }
+            },
+            
+            // Handle general HTMX response errors
+            handleResponseError(event) {
+                console.error('HTMX response error:', event.detail);
+                this.errorType = 'response';
+                
+                // Get error message from response if available
+                let errorMessage = 'The server encountered an error processing your request.';
+                try {
+                    if (event.detail.xhr && event.detail.xhr.responseText) {
+                        const response = JSON.parse(event.detail.xhr.responseText);
+                        if (response.error) errorMessage = response.error;
+                    }
+                } catch (e) {
+                    // If parsing fails, use the status text
+                    if (event.detail.xhr && event.detail.xhr.statusText) {
+                        errorMessage = `${event.detail.xhr.status}: ${event.detail.xhr.statusText}`;
+                    }
+                }
+                
+                // Show appropriate error based on status code
+                if (event.detail.xhr && event.detail.xhr.status) {
+                    // Server error (5xx)
+                    if (event.detail.xhr.status >= 500) {
+                        this.showErrorComponent({
+                            errorType: 'server',
+                            errorTitle: 'Server Error',
+                            errorMessage: errorMessage,
+                            retryFunction: () => this.handleReconnect()
+                        });
+                    }
+                    // Not found or forbidden (4xx)
+                    else if (event.detail.xhr.status >= 400) {
+                        this.showErrorComponent({
+                            errorType: 'client',
+                            errorTitle: 'Request Error',
+                            errorMessage: errorMessage
+                        });
+                    }
+                }
+            },
+            
+            // Handle HTMX send errors (network issues)
+            handleSendError(event) {
+                console.error('HTMX send error:', event.detail);
+                this.errorType = 'send';
+                
+                this.showErrorComponent({
+                    errorType: 'connection',
+                    errorTitle: 'Connection Error',
+                    errorMessage: 'Unable to send request to the server. Please check your internet connection.',
+                    retryFunction: () => this.handleReconnect()
+                });
+            },
+            
+            // Handle network errors specifically
+            handleNetworkError() {
+                console.error('Network error detected');
+                this.errorType = 'network';
+                
+                if (!navigator.onLine) {
+                    this.showOfflineFallback();
+                } else {
+                    this.showErrorComponent({
+                        errorType: 'connection',
+                        errorTitle: 'Network Error',
+                        errorMessage: 'There seems to be a problem with your internet connection.',
+                        retryFunction: () => this.handleReconnect()
+                    });
+                }
+            },
+            
+            // Handle HTMX timeout errors
+            handleTimeout(event) {
+                console.error('HTMX timeout error:', event.detail);
+                this.errorType = 'timeout';
+                this.timeoutWarningShown = true;
+                
+                this.showTimeoutWarning();
+            },
+            
+            // Handle after request completion
+            afterRequest(event) {
+                this.lastRequestTime = Date.now();
+                
+                // If successful response after error, restore UI
+                if (event.detail.successful && this.errorOccurred) {
+                    this.resetErrorState();
                 }
             },
             
@@ -295,7 +432,19 @@ document.addEventListener('alpine:init', function() {
                 }
             },
             
-            // Display timeout warning
+            // Display info message
+            showInfoMessage(message) {
+                const statusMessage = document.querySelector('.current-status');
+                if (statusMessage) {
+                    statusMessage.innerHTML = `
+                        <span class="streaming-status text-blue-700 dark:text-blue-300 font-medium">
+                            ${message}
+                        </span>
+                    `;
+                }
+            },
+            
+            // Display timeout warning using the new component
             showTimeoutWarning() {
                 // Copy original content as fallback
                 const originalContentElem = document.getElementById('original-content');
@@ -308,39 +457,166 @@ document.addEventListener('alpine:init', function() {
                     
                     customizedContentElem.innerHTML = fallbackContent;
                     
-                    // Show timeout warning
-                    document.getElementById('customization-status').innerHTML = `
-                        <div class="bg-red-50 dark:bg-red-900/40 border-l-4 border-red-500 p-4 rounded-md">
-                            <div class="flex">
-                                <div class="ml-3">
-                                    <h5 class="text-lg font-medium text-red-800 dark:text-red-200">Customization Timeout</h5>
-                                    <p class="text-red-700 dark:text-red-300 mt-1">
-                                        The customization process took too long. You can try again later or continue with your original resume.
-                                    </p>
-                                    <div class="mt-3 flex space-x-3">
-                                        <a href="{{ url_for('dashboard.user_dashboard') }}" class="px-3 py-1 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-md text-sm">
-                                            Return to Dashboard
-                                        </a>
-                                        <a href="{{ url_for('resume.customize_resume', job_id=job.id) }}" class="px-3 py-1 bg-accent-dark text-black rounded-md text-sm">
-                                            Try Again
-                                        </a>
+                    // Replace status with our timeout component
+                    fetch('/templates/components/shared/timeout_error.html')
+                        .then(response => response.text())
+                        .then(template => {
+                            // Replace placeholders
+                            template = template
+                                .replace(/{{ error_title }}/g, 'Customization Timeout')
+                                .replace(/{{ error_message }}/g, 'The customization process is taking longer than expected. You can continue to wait or try again later.')
+                                .replace(/{{ retry_url }}/g, `{{ url_for('resume.customize_resume', job_id=job.id) }}`)
+                                .replace(/{{ return_url }}/g, '{{ url_for('dashboard.user_dashboard') }}');
+                                
+                            document.getElementById('customization-status').innerHTML = template;
+                        })
+                        .catch(error => {
+                            // Fallback if template fetch fails
+                            document.getElementById('customization-status').innerHTML = `
+                                <div class="bg-yellow-50 dark:bg-yellow-900/40 border-l-4 border-yellow-500 p-4 rounded-md">
+                                    <div class="flex">
+                                        <div class="ml-3">
+                                            <h5 class="text-lg font-medium text-yellow-800 dark:text-yellow-200">Customization Timeout</h5>
+                                            <p class="text-yellow-700 dark:text-yellow-300 mt-1">
+                                                The customization process is taking longer than expected. You can continue to wait or try again later.
+                                            </p>
+                                            <div class="mt-3 flex space-x-3">
+                                                <a href="{{ url_for('dashboard.user_dashboard') }}" class="px-3 py-1 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-md text-sm">
+                                                    Return to Dashboard
+                                                </a>
+                                                <a href="{{ url_for('resume.customize_resume', job_id=job.id) }}" class="px-3 py-1 bg-accent-dark text-black rounded-md text-sm">
+                                                    Try Again
+                                                </a>
+                                            </div>
+                                        </div>
                                     </div>
-                                </div>
-                            </div>
-                        </div>`;
+                                </div>`;
+                        });
                     
                     // Show action buttons
                     document.getElementById('actions-container').style.display = 'flex';
                 }
             },
             
-            // Display error message
+            // Show the offline fallback component
+            showOfflineFallback() {
+                // Get original content for fallback
+                const originalContentElem = document.getElementById('original-content');
+                let fallbackContent = '';
+                
+                if (originalContentElem && originalContentElem.innerHTML) {
+                    fallbackContent = originalContentElem.innerHTML;
+                }
+                
+                // Replace status with offline component
+                fetch('/templates/components/shared/offline_fallback.html')
+                    .then(response => response.text())
+                    .then(template => {
+                        // Replace placeholders
+                        template = template
+                            .replace(/{{ fallback_content }}/g, fallbackContent)
+                            .replace(/{{ retry_url }}/g, window.location.href);
+                            
+                        document.getElementById('customization-status').innerHTML = template;
+                    })
+                    .catch(error => {
+                        // Fallback if template fetch fails
+                        document.getElementById('customization-status').innerHTML = `
+                            <div class="bg-gray-50 dark:bg-gray-900/40 border-l-4 border-gray-500 p-4 rounded-md">
+                                <div class="flex">
+                                    <div class="ml-3">
+                                        <h5 class="text-lg font-medium text-gray-800 dark:text-gray-200">You're Offline</h5>
+                                        <p class="text-gray-700 dark:text-gray-300 mt-1">
+                                            It looks like you're currently offline. Please check your connection and try again.
+                                        </p>
+                                        <div class="mt-3 flex space-x-3">
+                                            <button onclick="window.location.reload()" class="px-3 py-1 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-md text-sm">
+                                                Retry Connection
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>`;
+                    });
+            },
+            
+            // Display error component using our new shared component
+            showErrorComponent(options) {
+                // Ensure options is an object
+                options = options || {};
+                
+                // Get original content for fallback
+                const originalContentElem = document.getElementById('original-content');
+                const customizedContentElem = document.getElementById('customized-content');
+                
+                if (originalContentElem && customizedContentElem && originalContentElem.innerHTML) {
+                    // Create fallback content with error indication
+                    let fallbackContent = "<p><strong style='color:red'>⚠️ " + 
+                                         (options.errorTitle || 'Error') + 
+                                         ".</strong> <em>Below is your original resume content:</em></p>\n\n" + 
+                                         originalContentElem.innerHTML;
+                    
+                    customizedContentElem.innerHTML = fallbackContent;
+                }
+                
+                // For connection errors, use the connection error component
+                if (options.errorType === 'connection') {
+                    fetch('/templates/components/shared/connection_error.html')
+                        .then(response => response.text())
+                        .then(template => {
+                            // Replace placeholders
+                            template = template
+                                .replace(/{{ error_title }}/g, options.errorTitle || 'Connection Error')
+                                .replace(/{{ error_message }}/g, options.errorMessage || 'We\'re having trouble connecting to the server.')
+                                .replace(/{{ retry_count }}/g, this.reconnectAttempts)
+                                .replace(/{{ max_retries }}/g, this.maxReconnectAttempts)
+                                .replace(/{{ reconnect_trigger }}/g, '')
+                                .replace(/{{ reconnect_target }}/g, '')
+                                .replace(/{{ return_url }}/g, '{{ url_for('dashboard.user_dashboard') }}');
+                                
+                            document.getElementById('customization-status').innerHTML = template;
+                            
+                            // Add event listener for reconnect button
+                            const reconnectBtn = document.getElementById('conn-error-reconnect-btn');
+                            if (reconnectBtn && options.retryFunction) {
+                                reconnectBtn.addEventListener('click', options.retryFunction);
+                            }
+                        })
+                        .catch(error => {
+                            // Fallback if template fetch fails
+                            this.showErrorMessage(options.errorMessage || 'Connection error occurred.');
+                        });
+                } else {
+                    // For other errors, use the general error component
+                    fetch('/templates/components/shared/error.html')
+                        .then(response => response.text())
+                        .then(template => {
+                            // Replace placeholders
+                            template = template
+                                .replace(/{{ error_type }}/g, options.errorType || 'general')
+                                .replace(/{{ error_title }}/g, options.errorTitle || 'Error')
+                                .replace(/{{ error_message }}/g, options.errorMessage || 'An error occurred. Please try again.')
+                                .replace(/{{ return_url }}/g, '{{ url_for('dashboard.user_dashboard') }}');
+                                
+                            document.getElementById('customization-status').innerHTML = template;
+                        })
+                        .catch(error => {
+                            // Fallback if template fetch fails
+                            this.showErrorMessage(options.errorMessage || 'An error occurred.');
+                        });
+                }
+                
+                // Show action buttons
+                document.getElementById('actions-container').style.display = 'flex';
+            },
+            
+            // Legacy error message display (fallback)
             showErrorMessage(message) {
                 document.getElementById('customization-status').innerHTML = `
                     <div class="bg-red-50 dark:bg-red-900/40 border-l-4 border-red-500 p-4 rounded-md">
                         <div class="flex">
                             <div class="ml-3">
-                                <h5 class="text-lg font-medium text-red-800 dark:text-red-200">Connection Error</h5>
+                                <h5 class="text-lg font-medium text-red-800 dark:text-red-200">Error</h5>
                                 <p class="text-red-700 dark:text-red-300 mt-1">${message}</p>
                                 <div class="mt-3 flex space-x-3">
                                     <a href="{{ url_for('dashboard.user_dashboard') }}" class="px-3 py-1 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-md text-sm">
@@ -354,17 +630,8 @@ document.addEventListener('alpine:init', function() {
                         </div>
                     </div>`;
                 
-                // Copy original content as fallback
-                const originalContentElem = document.getElementById('original-content');
-                const customizedContentElem = document.getElementById('customized-content');
-                
-                if (originalContentElem && customizedContentElem && originalContentElem.innerHTML) {
-                    // Create fallback content with error indication
-                    let fallbackContent = "<p><strong style='color:red'>⚠️ Connection error occurred.</strong> <em>Below is your original resume content:</em></p>\n\n" + 
-                                         originalContentElem.innerHTML;
-                    
-                    customizedContentElem.innerHTML = fallbackContent;
-                }
+                // Show action buttons
+                document.getElementById('actions-container').style.display = 'flex';
             }
         };
     });

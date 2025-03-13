@@ -1993,6 +1993,42 @@ def compare_resume_content(resume_id):
     
     # Check if resume belongs to current user
     if resume.user_id != current_user.id and not current_user.is_admin:
+        flash('You do not have permission to view this resume.', 'danger')
+        return redirect(url_for('dashboard.user_dashboard'))
+    
+    # Render the component template
+    return render_template('components/resume/content_diff.html', resume=resume)
+
+@resume_bp.route('/api/client-error', methods=['POST'])
+@login_required
+def log_client_error():
+    """
+    Endpoint for logging client-side errors from HTMX interactions.
+    This allows for better error monitoring and debugging.
+    """
+    try:
+        data = request.get_json()
+        error_type = data.get('type', 'unknown')
+        timestamp = data.get('timestamp')
+        url = data.get('url')
+        target = data.get('target')
+        status = data.get('status')
+        details = str(data)
+        
+        # Log the error
+        logger.error(f"Client Error: {error_type} at {url}, target: {target}, status: {status}")
+        logger.debug(f"Client Error Details: {details}")
+        
+        # Return success response
+        return jsonify({"success": True, "message": "Error logged successfully"}), 200
+    except Exception as e:
+        logger.error(f"Error in client error logging: {str(e)}")
+        return jsonify({"success": False, "error": "Failed to log error"}), 500
+    # Load customized resume from database
+    resume = CustomizedResume.query.get_or_404(resume_id)
+    
+    # Check if resume belongs to current user
+    if resume.user_id != current_user.id and not current_user.is_admin:
         return jsonify({'error': 'Permission denied'}), 403
     
     # Get original content
