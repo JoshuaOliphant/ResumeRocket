@@ -52,6 +52,11 @@
                         {% include "components/resume/customization_status.html" with context %}
                     </div>
                     
+                    <!-- Search Component - only visible once customization is complete -->
+                    <div class="mb-6" x-show="!sseConnected && !errorOccurred" style="display: none;">
+                        {% include "components/resume/search_form.html" with context %}
+                    </div>
+                    
                     <!-- Resume Content -->
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                         <!-- Original Resume -->

@@ -735,6 +735,232 @@ def compare_resume(resume_id):
     
     return response
 
+@resume_bp.route('/api/search/<int:resume_id>', methods=['POST'])
+@login_required
+def search_resume(resume_id):
+    """Search within a resume for matching content."""
+    # Get the customized resume
+    resume = CustomizedResume.query.get_or_404(resume_id)
+    
+    # Check permissions
+    if resume.user_id != current_user.id and not current_user.is_admin:
+        logger.warning(f"Permission denied for resume search: User {current_user.id} attempted to search resume {resume_id}")
+        return jsonify({'error': 'Permission denied'}), 403
+    
+    # Get original resume
+    original = None
+    if resume.original_id:
+        original = CustomizedResume.query.get(resume.original_id)
+    
+    # Get search parameters from form data
+    query = request.form.get('query', '').strip()
+    scope = request.form.get('scope', 'both')  # 'both', 'original', or 'customized'
+    
+    # Validate search query
+    if not query or len(query) < 2:
+        return render_template(
+            'components/resume/search_results.html',
+            results={
+                'error': 'Search query must be at least 2 characters',
+                'total': 0,
+                'query': query,
+                'matches': {'original': [], 'customized': []}
+            },
+            resume_id=resume_id
+        )
+    
+    # Initialize results
+    results = {
+        'query': query,
+        'matches': {'original': [], 'customized': []},
+        'total': 0
+    }
+    
+    # Clean HTML content to get plain text for searching
+    def clean_html(html_content):
+        if not html_content:
+            return ""
+        # Simple regex to strip HTML tags
+        return re.sub(r'<[^>]*>', ' ', html_content)
+    
+    # Search in original content if scope is 'both' or 'original'
+    if scope in ['both', 'original'] and original and original.original_content:
+        original_content = clean_html(original.original_content)
+        original_matches = find_matches(original_content, query)
+        results['matches']['original'] = original_matches
+    
+    # Search in customized content if scope is 'both' or 'customized'
+    if scope in ['both', 'customized'] and resume.customized_content:
+        customized_content = clean_html(resume.customized_content)
+        customized_matches = find_matches(customized_content, query)
+        results['matches']['customized'] = customized_matches
+    
+    # Calculate total matches
+    results['total'] = len(results['matches']['original']) + len(results['matches']['customized'])
+    
+    # Get the highlighted HTML content
+    highlighted = {}
+    
+    if scope in ['both', 'original'] and original and original.original_content:
+        highlighted['original'] = highlight_matches(original.original_content, results['matches']['original'], query)
+    
+    if scope in ['both', 'customized'] and resume.customized_content:
+        highlighted['customized'] = highlight_matches(resume.customized_content, results['matches']['customized'], query)
+    
+    # Log search activity
+    logger.info(f"Resume search: User {current_user.id} searched for '{query}' in resume {resume_id}, found {results['total']} matches")
+    
+    # Return the search results component
+    return render_template(
+        'components/resume/search_results.html',
+        results=results,
+        highlighted=highlighted,
+        resume_id=resume_id
+    )
+
+def find_matches(content, query):
+    """Find all occurrences of query in content and return match information."""
+    matches = []
+    query_lower = query.lower()
+    content_lower = content.lower()
+    
+    pos = 0
+    while True:
+        pos = content_lower.find(query_lower, pos)
+        if pos == -1:
+            break
+        
+        # Get some context around the match
+        context_start = max(0, pos - 30)
+        context_end = min(len(content), pos + len(query) + 30)
+        context = content[context_start:context_end]
+        
+        # Add ellipsis if context is truncated
+        if context_start > 0:
+            context = '...' + context
+        if context_end < len(content):
+            context += '...'
+        
+        # Add match to results
+        matches.append({
+            'position': pos,
+            'text': content[pos:pos + len(query)],
+            'context': context
+        })
+        
+        # Move past this match
+        pos += len(query)
+    
+    return matches
+
+def highlight_matches(html_content, matches, query):
+    """
+    Highlight matches in HTML content by wrapping them with special spans.
+    Preserves HTML structure.
+    """
+    if not matches or not html_content:
+        return html_content
+    
+    # We need to work with a copy to avoid modifying the original content
+    content = html_content
+    
+    # Create a tokenizer to handle HTML properly
+    import html
+    import xml.etree.ElementTree as ET
+    from html.parser import HTMLParser
+    
+    class HTMLHighlighter(HTMLParser):
+        def __init__(self, matches, query):
+            super().__init__()
+            self.matches = sorted(matches, key=lambda m: m['position'], reverse=True)
+            self.query = query
+            self.result = []
+            self.text_pos = 0
+            self.in_tag = False
+            
+        def handle_starttag(self, tag, attrs):
+            self.in_tag = True
+            self.result.append(f"<{tag}")
+            for name, value in attrs:
+                self.result.append(f' {name}="{html.escape(value)}"')
+            self.result.append(">")
+            self.in_tag = False
+            
+        def handle_endtag(self, tag):
+            self.in_tag = True
+            self.result.append(f"</{tag}>")
+            self.in_tag = False
+            
+        def handle_data(self, data):
+            if self.in_tag:
+                self.result.append(data)
+                return
+                
+            # Process text content for matches
+            text_to_add = data
+            for match in list(self.matches):  # Work with a copy because we might remove items
+                match_pos = match['position']
+                
+                # Check if this text node contains the match
+                if self.text_pos <= match_pos < self.text_pos + len(data):
+                    # Calculate position within this text node
+                    local_pos = match_pos - self.text_pos
+                    match_len = len(match['text'])
+                    
+                    # Split the text and add highlight
+                    before = text_to_add[:local_pos]
+                    matched = text_to_add[local_pos:local_pos + match_len]
+                    after = text_to_add[local_pos + match_len:]
+                    
+                    # Replace text with highlighted version
+                    text_to_add = before + f'<span class="search-highlight" data-match-index="{len(self.matches)}">{matched}</span>' + after
+                    
+                    # Remove this match from the list as it's been processed
+                    self.matches.remove(match)
+            
+            self.result.append(text_to_add)
+            self.text_pos += len(data)
+            
+        def handle_comment(self, data):
+            self.result.append(f"<!--{data}-->")
+            
+        def handle_entityref(self, name):
+            self.result.append(f"&{name};")
+            
+        def handle_charref(self, name):
+            self.result.append(f"&#{name};")
+            
+        def get_result(self):
+            return ''.join(self.result)
+    
+    # Use our custom parser to highlight matches
+    highlighter = HTMLHighlighter(matches, query)
+    highlighter.feed(html_content)
+    return highlighter.get_result()
+
+@resume_bp.route('/api/client-error', methods=['POST'])
+@login_required
+def log_client_error():
+    """Log client-side errors for monitoring and debugging."""
+    try:
+        error_data = request.json
+        
+        # Add user info
+        error_data['user_id'] = current_user.id
+        error_data['user_email'] = current_user.email
+        
+        # Add request info
+        error_data['user_agent'] = request.user_agent.string
+        error_data['remote_addr'] = request.remote_addr
+        
+        # Log the error
+        logger.error(f"Client error: {json.dumps(error_data)}")
+        
+        return jsonify({"status": "success"}), 200
+    except Exception as e:
+        logger.exception(f"Error logging client error: {str(e)}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
 @resume_bp.route('/download/<int:resume_id>/<format>')
 @login_required
 def download_resume(resume_id, format):

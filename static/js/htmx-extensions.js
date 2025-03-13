@@ -367,3 +367,57 @@ htmx.defineExtension('fallback', {
         }
     }
 });
+
+/* ------------------------------ Debounce Extension ------------------------------ */
+/**
+ * Adds debouncing capability for form inputs to prevent too many requests
+ * while users are typing.
+ * 
+ * Example: 
+ * <input type="text" name="search"
+ *        hx-post="/search" 
+ *        hx-trigger="keyup[target.value.length > 2] delay:500ms"
+ *        hx-ext="debounce">
+ */
+htmx.defineExtension('debounce', {
+    onEvent: function(name, evt) {
+        // Only process trigger events
+        if (name !== 'htmx:trigger') {
+            return true;
+        }
+        
+        // Get the trigger specification
+        const triggerSpec = evt.detail.triggerSpec;
+        
+        // Check if this trigger includes a delay
+        if (triggerSpec && triggerSpec.trigger === 'keyup' && triggerSpec.delay) {
+            const elt = evt.detail.elt;
+            
+            // Get a unique identifier for this element
+            const eltId = elt.id || elt.name || Math.random().toString(36).substring(2, 9);
+            
+            // Store the timer in the element's data attributes
+            const timerAttr = 'data-debounce-timer-' + eltId;
+            
+            // Clear any existing timer
+            if (elt[timerAttr]) {
+                clearTimeout(elt[timerAttr]);
+            }
+            
+            // Set a new timer
+            elt[timerAttr] = setTimeout(function() {
+                // Remove the timer reference
+                delete elt[timerAttr];
+                
+                // Trigger the event with the same details
+                htmx.trigger(elt, triggerSpec.trigger, evt.detail);
+            }, triggerSpec.delay);
+            
+            // Prevent the original event from being processed now
+            return false;
+        }
+        
+        // Allow other events to be processed normally
+        return true;
+    }
+});

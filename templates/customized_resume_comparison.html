@@ -141,7 +141,9 @@
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
                         <div class="md:col-span-2">
                             <!-- Search input -->
-                            <div x-show="initialLoadComplete" x-html="searchTemplate"></div>
+                            <div x-show="initialLoadComplete">
+                                {% include "components/resume/search_form.html" with context %}
+                            </div>
                         </div>
                         
                         <div class="md:col-span-1">

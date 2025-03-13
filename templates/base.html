@@ -338,7 +338,7 @@
         // Initialize our custom HTMX extensions
         document.addEventListener('DOMContentLoaded', function() {
             // Register HTMX extensions on body to apply to all HTMX interactions
-            document.body.setAttribute('hx-ext', 'response-targets, retry, error-logger');
+            document.body.setAttribute('hx-ext', 'response-targets, retry, error-logger, debounce');
             
             // Configure global error logging
             htmx.config.errorLoggerUrl = "{{ url_for('resume.log_client_error') if 'resume.log_client_error' in url_for_map else '' }}";
