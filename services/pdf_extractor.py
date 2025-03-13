@@ -5,6 +5,9 @@ import time
 from typing import Optional, Tuple
 import fitz  # PyMuPDF
 from models import PDFCache
+from docx import Document
+from docx.shared import Pt
+from io import BytesIO
 
 logger = logging.getLogger(__name__)
 
@@ -119,3 +122,105 @@ class PDFExtractor:
                 logger.warning(f"Cache cleanup failed: {str(e)}")
                 # Don't retry too soon
                 self._last_cache_cleanup = current_time - 3000 
+
+
+# Standalone PDF generation function
+def generate_pdf(content, format_type='markdown'):
+    """
+    Generate a PDF from resume content
+    
+    Args:
+        content: The resume content (markdown or html)
+        format_type: The format of the content ('markdown' or 'html')
+        
+    Returns:
+        PDF file as bytes
+    """
+    try:
+        logger.info(f"Generating PDF from {format_type} content")
+        
+        # Create a new PDF document
+        doc = fitz.open()
+        
+        # Add a page
+        page = doc.new_page()
+        
+        # Insert the content
+        rect = fitz.Rect(50, 50, page.rect.width - 50, page.rect.height - 50)
+        page.insert_text(
+            rect.tl,  # top-left point of rectangle
+            content,
+            fontname="helv",
+            fontsize=11,
+            rotate=0
+        )
+        
+        # Save to bytes
+        pdf_bytes = doc.tobytes()
+        doc.close()
+        
+        logger.info("PDF generation successful")
+        return pdf_bytes
+        
+    except Exception as e:
+        logger.error(f"Error generating PDF: {str(e)}")
+        raise Exception(f"Error generating PDF: {str(e)}")
+
+
+# Standalone DOCX generation function
+def generate_docx(content):
+    """
+    Generate a DOCX file from resume content
+    
+    Args:
+        content: The resume content (text/markdown)
+        
+    Returns:
+        DOCX file as bytes
+    """
+    try:
+        logger.info("Generating DOCX from content")
+        
+        # Create a new Document
+        doc = Document()
+        
+        # Set font
+        style = doc.styles['Normal']
+        style.font.name = 'Calibri'
+        style.font.size = Pt(11)
+        
+        # Split content into paragraphs and add to document
+        paragraphs = content.split('\n\n')
+        for paragraph_text in paragraphs:
+            if paragraph_text.strip():
+                # Handle lists - split into individual items
+                if '\n- ' in paragraph_text or paragraph_text.startswith('- '):
+                    list_items = paragraph_text.split('\n- ')
+                    
+                    # Add the first part (if not a list item itself)
+                    if not list_items[0].startswith('- '):
+                        doc.add_paragraph(list_items[0])
+                    else:
+                        # It's a list item that starts with "- "
+                        item_text = list_items[0][2:].strip()  # Remove "- " prefix
+                        if item_text:
+                            doc.add_paragraph(item_text, style='List Bullet')
+                    
+                    # Add remaining items as bulleted list
+                    for item in list_items[1:]:
+                        if item.strip():
+                            doc.add_paragraph(item.strip(), style='List Bullet')
+                else:
+                    doc.add_paragraph(paragraph_text)
+        
+        # Save to bytes
+        docx_bytes = BytesIO()
+        doc.save(docx_bytes)
+        docx_bytes.seek(0)
+        
+        logger.info("DOCX generation successful")
+        return docx_bytes.getvalue()
+        
+    except Exception as e:
+        logger.error(f"Error generating DOCX: {str(e)}")
+        raise Exception(f"Error generating DOCX: {str(e)}")

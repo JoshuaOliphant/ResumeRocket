@@ -256,12 +256,9 @@
                                     @click="changeViewType('diff')"
                                     id="diff-view-btn">Diff View</button>
                         </div>
-                        <a :href="exportUrl" class="flex items-center px-3 py-1.5 text-xs font-medium rounded bg-accent-light text-white hover:bg-accent-light/90 transition-colors">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                            </svg>
-                            Download
-                        </a>
+                        <!-- Export component -->
+                        {% set resume_id = resume.id %}
+                        {% include "components/resume/export_options.html" with context %}
                     </div>
                 </div>
                 <div class="p-6">

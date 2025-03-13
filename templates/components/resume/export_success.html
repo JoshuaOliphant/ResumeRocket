@@ -1,0 +1,47 @@
+<div class="export-notification bg-green-50 dark:bg-green-900/20 p-4 rounded-md shadow-sm border border-green-200 dark:border-green-800">
+    <div class="flex items-center mb-2">
+        <svg class="w-5 h-5 text-green-500 mr-2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+        </svg>
+        <span class="font-medium text-green-700 dark:text-green-300">{{ format|upper }} file is ready!</span>
+    </div>
+    <p class="text-sm text-green-600 dark:text-green-400 mb-3">Your file has been generated and should download automatically.</p>
+    <div class="text-center">
+        <a href="{{ download_url }}" class="inline-flex items-center px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-md transition-colors" download>
+            <svg class="w-4 h-4 mr-1.5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd" />
+            </svg>
+            Download again
+        </a>
+    </div>
+</div>
+
+<!-- Script for automatic download -->
+<script>
+    // Trigger download automatically
+    (function() {
+        // Create hidden download link
+        const link = document.createElement('a');
+        link.href = '{{ download_url }}';
+        link.download = true;
+        document.body.appendChild(link);
+        
+        // Trigger click
+        setTimeout(() => {
+            link.click();
+            document.body.removeChild(link);
+            
+            // Auto-hide the notification after 8 seconds
+            setTimeout(() => {
+                const notification = document.querySelector('.export-notification');
+                if (notification) {
+                    notification.style.opacity = '0';
+                    notification.style.transition = 'opacity 0.5s ease-out';
+                    setTimeout(() => {
+                        notification.remove();
+                    }, 500);
+                }
+            }, 8000);
+        }, 200);
+    })();
+</script>

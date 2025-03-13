@@ -766,6 +766,41 @@ def download_resume(resume_id, format):
             download_name=filename,
             mimetype='application/pdf'
         )
+    elif format == 'docx':
+        # Convert to DOCX
+        from services.pdf_extractor import generate_docx
+        docx_bytes = generate_docx(resume.customized_content)
+        
+        # Create file-like object
+        file_obj = BytesIO(docx_bytes)
+        
+        # Generate filename
+        filename = f"resume_{resume_id}.docx"
+        
+        # Send file
+        return send_file(
+            file_obj,
+            as_attachment=True,
+            download_name=filename,
+            mimetype='application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+        )
+    elif format == 'md':
+        # Just return the markdown content
+        from io import StringIO
+        
+        # Create file-like object with the text content
+        file_obj = StringIO(resume.customized_content)
+        
+        # Generate filename
+        filename = f"resume_{resume_id}.md"
+        
+        # Send file
+        return send_file(
+            BytesIO(file_obj.getvalue().encode('utf-8')),
+            as_attachment=True,
+            download_name=filename,
+            mimetype='text/markdown'
+        )
     else:
         # Handle other formats
         flash('Format not supported yet.', 'warning')
@@ -793,12 +828,40 @@ def export_resume(resume_id, version=None):
         return redirect(url_for('resume.download_resume', resume_id=resume_id, format='pdf'))
     elif format_type == 'docx':
         # Generate DOCX
-        flash('DOCX export not implemented yet.', 'warning')
-        return redirect(url_for('resume.view_customized_resume', resume_id=resume_id))
+        return redirect(url_for('resume.download_resume', resume_id=resume_id, format='docx'))
+    elif format_type == 'md':
+        # Generate Markdown
+        return redirect(url_for('resume.download_resume', resume_id=resume_id, format='md'))
     else:
         # Handle unsupported format
         flash(f'Unsupported format: {format_type}', 'danger')
         return redirect(url_for('resume.view_customized_resume', resume_id=resume_id))
+
+@resume_bp.route('/api/resume_export/<int:resume_id>/<format>', methods=['GET'])
+@login_required
+def api_resume_export(resume_id, format):
+    """HTMX-compatible API endpoint for resume export.
+    Returns HTML fragment for success/error messages."""
+    try:
+        # Load resume from database
+        resume = CustomizedResume.query.get_or_404(resume_id)
+        
+        # Check if resume belongs to current user
+        if resume.user_id != current_user.id and not current_user.is_admin:
+            return render_template('components/resume/export_error.html', 
+                                  message="You don't have permission to export this resume"), 403
+        
+        # Get export URL for format
+        export_url = url_for('resume.download_resume', resume_id=resume_id, format=format)
+        
+        # Return success HTML with download script
+        return render_template('components/resume/export_success.html',
+                              download_url=export_url,
+                              format=format)
+    except Exception as e:
+        # Return error HTML
+        return render_template('components/resume/export_error.html',
+                              message=f"Error generating {format.upper()} file: {str(e)}"), 500
 
 @resume_bp.route('/api/feedback/<int:resume_id>', methods=['POST'])
 @login_required
