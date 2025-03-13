@@ -36,7 +36,82 @@
             <div class="p-6">
                 <!-- Main streaming container with SSE connections -->
                 <div id="streaming-container"
-                     x-data="resumeCustomizationStreaming"
+                     x-data="{
+                        sseConnected: false,
+                        timeoutWarningShown: false,
+                        errorOccurred: false,
+                        errorType: null,
+                        reconnectAttempts: 0,
+                        maxReconnectAttempts: 3,
+                        connectionTimeout: null,
+                        reconnectDelay: 3000,
+                        lastRequestTime: null,
+                        
+                        handleSseError() {
+                            console.error('SSE connection error');
+                            this.errorType = 'sse';
+                            
+                            if (!this.errorOccurred) {
+                                this.errorOccurred = true;
+                                
+                                if (this.reconnectAttempts < this.maxReconnectAttempts) {
+                                    this.reconnectAttempts++;
+                                    console.log('Reconnecting...');
+                                } else {
+                                    console.error('Max reconnect attempts reached');
+                                }
+                            }
+                        },
+                        
+                        resetErrorState() {
+                            if (this.errorOccurred) {
+                                this.errorOccurred = false;
+                                this.errorType = null;
+                                this.reconnectAttempts = 0;
+                                this.lastRequestTime = Date.now();
+                                console.log('Connection restored, error state reset');
+                            }
+                        },
+                        
+                        handleSseDisconnect() {
+                            console.warn('SSE connection disconnected');
+                            this.sseConnected = false;
+                        },
+                        
+                        handleSseBeforeRequest() {
+                            console.log('SSE connection starting...');
+                            this.lastRequestTime = Date.now();
+                        },
+                        
+                        handleResponseError(event) {
+                            console.error('HTMX response error:', event.detail);
+                            this.errorType = 'response';
+                        },
+                        
+                        handleSendError(event) {
+                            console.error('HTMX send error:', event.detail);
+                            this.errorType = 'send';
+                        },
+                        
+                        handleNetworkError() {
+                            console.error('Network error detected');
+                            this.errorType = 'network';
+                        },
+                        
+                        handleTimeout(event) {
+                            console.error('HTMX timeout error:', event.detail);
+                            this.errorType = 'timeout';
+                            this.timeoutWarningShown = true;
+                        },
+                        
+                        afterRequest(event) {
+                            this.lastRequestTime = Date.now();
+                            
+                            if (event.detail.successful && this.errorOccurred) {
+                                this.resetErrorState();
+                            }
+                        }
+                     }"
                      @htmx:sse-error="handleSseError()"
                      @htmx:sse-open="sseConnected = true; resetErrorState()"
                      @htmx:sse-disconnected="handleSseDisconnect()"
@@ -54,6 +129,7 @@
                     
                     <!-- Search Component - only visible once customization is complete -->
                     <div class="mb-6" x-show="!sseConnected && !errorOccurred" style="display: none;">
+                        {% set resume_id = resume.id %}
                         {% include "components/resume/search_form.html" with context %}
                     </div>
                     
@@ -666,7 +742,7 @@ document.addEventListener('DOMContentLoaded', function() {
             // Update the current stage in Alpine component
             const progressTracker = document.querySelector('.progress-tracker');
             if (progressTracker && progressTracker.__x) {
-                progressTracker.__x.updateData('currentStage', stage);
+                progressTracker.__x.$data.currentStage = stage;
             }
         }
         
@@ -734,7 +810,7 @@ document.addEventListener('DOMContentLoaded', function() {
             // Mark all progress steps as completed
             const progressTracker = document.querySelector('.progress-tracker');
             if (progressTracker && progressTracker.__x) {
-                progressTracker.__x.updateData('currentStage', 'comparison');
+                progressTracker.__x.$data.currentStage = 'comparison';
                 
                 // Mark all steps as completed
                 document.querySelectorAll('.progress-step').forEach(step => {

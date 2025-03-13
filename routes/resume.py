@@ -1351,6 +1351,121 @@ def customize_resume_view():
     
     logger.info(f"Created placeholder for streaming customization: id={placeholder.id}")
     
+    # Start the customization process in a background thread
+    from threading import Thread
+    from services.resume_customizer import ResumeCustomizer
+    from flask import current_app as app
+    
+    def start_customization():
+        try:
+            # Need to create application context for the thread
+            with app.app_context():
+                # Create a customizer instance
+                customizer = ResumeCustomizer()
+                
+                # Get the original resume content and job description
+                # Need to query the database in this thread to ensure we have the data
+                resume_obj = CustomizedResume.query.get(resume_id)
+                job_obj = JobDescription.query.get(job_id)
+                
+                if not resume_obj or not job_obj:
+                    logger.error(f"Failed to retrieve resume or job in customization thread")
+                    return
+                
+                original_content = resume_obj.original_content
+                job_description_text = job_obj.content  # The field is 'content', not 'description'
+                
+                # Also need to get the placeholder here
+                placeholder_obj = CustomizedResume.query.get(placeholder.id)
+                if not placeholder_obj:
+                    logger.error(f"Failed to retrieve placeholder in customization thread")
+                    return
+                
+                # Start the streaming customization process
+                for event in customizer.customize_resume_streaming(
+                    original_content, 
+                    job_description_text,
+                    customization_level=customization_level,
+                    industry=industry
+                ):
+                    # Parse the event
+                    try:
+                        if isinstance(event, str):
+                            # This is a text chunk for analysis or implementation
+                            if event.startswith('{'):
+                                # This is likely a JSON event
+                                try:
+                                    event_data = json.loads(event)
+                                    event_type = event_data.get('type')
+                                    
+                                    # Handle different event types
+                                    if event_type == 'status':
+                                        # Update status and progress
+                                        status_message = event_data.get('message', '')
+                                        placeholder_obj.streaming_status = status_message
+                                        # Update stage if provided
+                                        if 'stage' in event_data:
+                                            placeholder_obj.streaming_stage = event_data.get('stage')
+                                        db.session.commit()
+                                        
+                                    elif event_type == 'customization_complete':
+                                        # The customization is complete, update the placeholder with final content
+                                        data = event_data.get('data', {})
+                                        placeholder_obj.customized_content = data.get('customized_content', '')
+                                        placeholder_obj.original_score = data.get('original_score', 0)
+                                        placeholder_obj.ats_score = data.get('new_score', 0)
+                                        placeholder_obj.improvement = data.get('improvement', 0)
+                                        placeholder_obj.optimization_data = json.dumps(data.get('optimization_plan', {}))
+                                        placeholder_obj.comparison_data = json.dumps(data.get('comparison_data', {}))
+                                        placeholder_obj.is_placeholder = False  # No longer a placeholder
+                                        placeholder_obj.streaming_progress = 100
+                                        placeholder_obj.streaming_status = "Customization complete!"
+                                        db.session.commit()
+                                        logger.info(f"Completed customization for resume {placeholder_obj.id}")
+                                        
+                                    elif event_type == 'error':
+                                        # Handle error
+                                        error_message = event_data.get('message', 'Unknown error occurred')
+                                        placeholder_obj.streaming_status = f"Error: {error_message}"
+                                        db.session.commit()
+                                        logger.error(f"Error customizing resume {placeholder_obj.id}: {error_message}")
+                                    
+                                    elif event_type in ['analysis_complete', 'planning_complete', 'implementation_complete', 'final_analysis_complete']:
+                                        # Increment progress based on stage
+                                        if event_type == 'analysis_complete':
+                                            placeholder_obj.streaming_progress = 20
+                                        elif event_type == 'planning_complete':
+                                            placeholder_obj.streaming_progress = 40  
+                                        elif event_type == 'implementation_complete':
+                                            placeholder_obj.streaming_progress = 80
+                                        elif event_type == 'final_analysis_complete':
+                                            placeholder_obj.streaming_progress = 90
+                                        db.session.commit()
+                                except json.JSONDecodeError:
+                                    # Not valid JSON, just a text chunk
+                                    pass
+                    except Exception as inner_e:
+                        logger.error(f"Error processing customization event: {str(inner_e)}")
+                        placeholder_obj.streaming_status = f"Error: {str(inner_e)}"
+                        db.session.commit()
+        except Exception as e:
+            logger.error(f"Error in customization thread: {str(e)}")
+            # Create app context for error handling outside the previous context block
+            with app.app_context():
+                try:
+                    # Re-fetch the placeholder
+                    placeholder_obj = CustomizedResume.query.get(placeholder.id)
+                    if placeholder_obj:
+                        placeholder_obj.streaming_status = f"Customization error: {str(e)}"
+                        db.session.commit()
+                except Exception as db_error:
+                    logger.error(f"Failed to update database with error: {str(db_error)}")
+    
+    # Start the customization in a background thread
+    customization_thread = Thread(target=start_customization)
+    customization_thread.daemon = True
+    customization_thread.start()
+    
     # Render the streaming customization page - we let the frontend handle the streaming now
     return render_template(
         'customized_resume_streaming.html',
@@ -2225,9 +2340,9 @@ def compare_resume_content(resume_id):
     # Render the component template
     return render_template('components/resume/content_diff.html', resume=resume)
 
-@resume_bp.route('/api/client-error', methods=['POST'])
+@resume_bp.route('/api/client-error-htmx', methods=['POST'])
 @login_required
-def log_client_error():
+def log_client_error_htmx():
     """
     Endpoint for logging client-side errors from HTMX interactions.
     This allows for better error monitoring and debugging.
@@ -2283,10 +2398,10 @@ def compare_resume_redirect(resume_id):
 @login_required
 def resume_optimization_details(resume_id):
     """API endpoint for loading resume optimization details dynamically."""
-    resume = Resume.query.get_or_404(resume_id)
+    resume = CustomizedResume.query.get_or_404(resume_id)
     
     # Ensure the user owns this resume
-    if resume.user_id \!= current_user.id and not current_user.is_admin:
+    if resume.user_id != current_user.id and not current_user.is_admin:
         return jsonify({'error': 'You do not have permission to view this resume.'}), 403
     
     # Check if we need to return an empty state

@@ -1,6 +1,7 @@
 {% if resume.is_placeholder %}
 <div class="bg-blue-50 dark:bg-blue-900/40 border-l-4 border-blue-500 p-4 rounded-md mb-6"
-     hx-sse="connect:/api/resume-updates/{{ resume.id }}">
+     hx-sse="connect:/api/resume-updates/{{ resume.id }}"
+     hx-swap-oob="true">
     <div class="flex">
         <div class="flex-shrink-0">
             <svg class="h-5 w-5 text-blue-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
@@ -14,13 +15,15 @@
                 <!-- Progress bar with HTMX SSE swap target -->
                 <div id="progress-bar" class="bg-accent-dark h-5 rounded-full text-xs text-center text-black font-bold flex items-center justify-center" 
                      style="width: {{ resume.streaming_progress or 0 }}%"
-                     hx-sse="swap:progress">
+                     hx-sse="swap:progress"
+                     hx-swap="innerHTML">
                     {{ resume.streaming_progress or 0 }}%
                 </div>
             </div>
             <!-- Status message with HTMX SSE swap target -->
             <div class="mt-2 flex items-center"
-                 hx-sse="swap:status-message">
+                 hx-sse="swap:status-message"
+                 hx-swap="innerHTML">
                 <span class="streaming-status text-blue-700 dark:text-blue-300 font-medium">{{ resume.streaming_status or 'Starting customization process...' }}</span>
                 <svg class="animate-spin ml-2 h-4 w-4 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                     <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
@@ -31,10 +34,10 @@
     </div>
     
     <!-- HTMX SSE event trigger for error handling -->
-    <div hx-sse="swap:error"></div>
+    <div hx-sse="swap:error" hx-swap="innerHTML"></div>
     
     <!-- HTMX SSE event trigger for completion -->
-    <div id="completion-trigger" hx-sse="swap:complete"></div>
+    <div id="completion-trigger" hx-sse="swap:complete" hx-swap="innerHTML"></div>
 </div>
 {% elif resume.streaming_progress >= 100 %}
 <div class="bg-green-50 dark:bg-green-900/40 border-l-4 border-green-500 p-4 rounded-md mb-6">

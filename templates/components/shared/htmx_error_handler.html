@@ -14,7 +14,7 @@
         retryCount: 0,
         maxRetries: {{ max_retries }},
         retryDelay: {{ retry_delay }},
-        retryBackoff: {{ retry_backoff }},
+        retryBackoff: {{ 'true' if retry_backoff else 'false' }},
         element: null,
         trigger: null,
         
@@ -59,7 +59,7 @@
             }
             
             // Show error unless we are auto-retrying and under max retries
-            if (!{{ auto_retry }} || this.retryCount >= this.maxRetries) {
+            if (!{{ 'true' if auto_retry else 'false' }} || this.retryCount >= this.maxRetries) {
                 this.showError = true;
             } else {
                 this.retryRequest();

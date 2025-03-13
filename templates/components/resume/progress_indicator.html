@@ -41,7 +41,8 @@
         </div>
     </div>
     <div class="current-status mt-3 text-sm text-gray-700 dark:text-gray-300"
-         hx-sse="swap:status-message from:/api/resume-updates/{{ resume_id }}">
+         hx-sse="swap:status-message from:/api/resume-updates/{{ resume_id }}"
+         hx-swap="innerHTML">
         Starting customization process...
     </div>
 </div>
