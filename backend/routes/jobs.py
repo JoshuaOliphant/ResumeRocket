@@ -1,12 +1,12 @@
 from flask import Blueprint, request, jsonify
 from flask_login import login_required, current_user
-from extensions import db
-from models import JobDescription, CustomizedResume
-from services.job_description_processor import JobDescriptionProcessor
-from services.ats_analyzer import EnhancedATSAnalyzer
-from services.ai_suggestions import AISuggestions
-from services.resume_customizer import ResumeCustomizer
-from services.file_parser import FileParser
+from backend.extensions import db
+from backend.models import JobDescription, CustomizedResume
+from backend.services.job_description_processor import JobDescriptionProcessor
+from backend.services.ats_analyzer import EnhancedATSAnalyzer
+from backend.services.ai_suggestions import AISuggestions
+from backend.services.resume_customizer import ResumeCustomizer
+from backend.services.file_parser import FileParser
 import logging
 
 logger = logging.getLogger(__name__)

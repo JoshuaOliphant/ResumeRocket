@@ -1,9 +1,9 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
 from flask_login import login_required, current_user
-from extensions import db
-from models import User, ABTest, OptimizationSuggestion, CustomizedResume, JobDescription
+from backend.extensions import db
+from backend.models import User, ABTest, OptimizationSuggestion, CustomizedResume, JobDescription
 from functools import wraps
-from services.feedback_loop import FeedbackLoop
+from backend.services.feedback_loop import FeedbackLoop
 from sqlalchemy import func
 
 # Create admin blueprint

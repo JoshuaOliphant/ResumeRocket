@@ -5,7 +5,7 @@ import docx
 import logging
 from werkzeug.utils import secure_filename
 from docx.opc.exceptions import PackageNotFoundError
-from services.pdf_extractor import PDFExtractor  # Import the new PDFExtractor class
+from backend.services.pdf_extractor import PDFExtractor  # Import the new PDFExtractor class
 
 logger = logging.getLogger(__name__)
 

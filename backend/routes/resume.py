@@ -1,17 +1,18 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, session, send_file, Response, stream_with_context, current_app, make_response
 from flask_login import login_required, current_user
+from flask_jwt_extended import jwt_required, get_jwt_identity
 from datetime import datetime
 from io import BytesIO
 import json
 import uuid
-from extensions import db
-from models import JobDescription, CustomizedResume, User, OptimizationSuggestion
-from services.file_parser import FileParser
-from services.ats_analyzer import EnhancedATSAnalyzer
-from services.ai_suggestions import AISuggestions
-from services.resume_customizer import ResumeCustomizer
+from backend.extensions import db, api_response, is_api_request, api_route
+from backend.models import JobDescription, CustomizedResume, User, OptimizationSuggestion
+from backend.services.file_parser import FileParser
+from backend.services.ats_analyzer import EnhancedATSAnalyzer
+from backend.services.ai_suggestions import AISuggestions
+from backend.services.resume_customizer import ResumeCustomizer
 import logging
-from routes.jobs import handle_job_url_submission, jobs_bp
+from backend.routes.jobs import handle_job_url_submission, jobs_bp
 import os
 import time
 import base64
@@ -92,8 +93,48 @@ def generate_simple_customization_notes(optimization_plan, comparison_data, leve
         logger.error(f"Error generating customization notes: {str(e)}")
         return "<p>Your resume was customized to better match the job requirements. Specific details cannot be displayed.</p>"
 
+@resume_bp.route('/api/resumes', methods=['GET'])
+@jwt_required()
+def api_get_resumes():
+    """API endpoint to get all resumes for the current user"""
+    user_id = get_jwt_identity()
+    
+    # Query for the user's resumes
+    resumes = CustomizedResume.query.filter_by(user_id=user_id).order_by(
+        CustomizedResume.created_at.desc()
+    ).all()
+    
+    # Convert to dictionary format
+    resume_data = [resume.to_dict() for resume in resumes]
+    
+    # Return API response
+    return api_response(data={'resumes': resume_data})
+    
+@resume_bp.route('/api/resumes/<int:resume_id>', methods=['GET'])
+@jwt_required()
+def api_get_resume(resume_id):
+    """API endpoint to get a specific resume"""
+    user_id = get_jwt_identity()
+    
+    # Query for the specific resume
+    resume = CustomizedResume.query.get_or_404(resume_id)
+    
+    # Check if the resume belongs to the user
+    if resume.user_id != user_id:
+        return api_response(error="Permission denied", status_code=403)
+    
+    # Get the associated job description
+    job = JobDescription.query.get(resume.job_description_id)
+    
+    # Return API response with resume and job data
+    return api_response(data={
+        'resume': resume.to_dict(), 
+        'job': job.to_dict() if job else None
+    })
+
 @resume_bp.route('/customize-resume', methods=['POST'])
 @login_required
+@api_route
 def customize_resume():
     """Handle customization of resume based on job description."""
     logger.debug("Handling customize-resume request")

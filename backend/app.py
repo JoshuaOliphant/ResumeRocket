@@ -11,25 +11,26 @@ from flask_wtf.csrf import CSRFProtect
 from flask_wtf import FlaskForm
 from wtforms import HiddenField
 from flask_cors import CORS
-from services.ats_analyzer import EnhancedATSAnalyzer
-from services.ai_suggestions import AISuggestions
-from services.file_parser import FileParser
-from services.resume_customizer import ResumeCustomizer
-from extensions import db
-from models import JobDescription, CustomizedResume, User, ABTest, OptimizationSuggestion
+from backend.services.ats_analyzer import EnhancedATSAnalyzer
+from backend.services.ai_suggestions import AISuggestions
+from backend.services.file_parser import FileParser
+from backend.services.resume_customizer import ResumeCustomizer
+from backend.extensions import db
+from backend.models import JobDescription, CustomizedResume, User, ABTest, OptimizationSuggestion
 from io import BytesIO
 from sqlalchemy import func
 from functools import wraps
 
 # Import blueprints
-from routes.auth import auth_bp
-from routes.jobs import jobs_bp
-from routes.dashboard import dashboard_bp
-from routes.admin import admin_bp
-from routes.resume import resume_bp
+from backend.routes.auth import auth_bp
+from backend.routes.jobs import jobs_bp
+from backend.routes.dashboard import dashboard_bp
+from backend.routes.admin import admin_bp
+from backend.routes.resume import resume_bp
+from backend.routes.api import api_bp
 
 # Import the feedback loop service
-from services.feedback_loop import FeedbackLoop
+from backend.services.feedback_loop import FeedbackLoop
 
 logging.basicConfig(level=logging.DEBUG, 
                     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -50,6 +51,11 @@ app.config.from_mapping(
     MAX_CONTENT_LENGTH=16 * 1024 * 1024,  # 16MB max file size
     JWT_ACCESS_TOKEN_EXPIRES=86400,  # 1 day
     JWT_TOKEN_LOCATION=["headers", "cookies"],
+    JWT_COOKIE_SECURE=False,  # Set to True in production with HTTPS
+    JWT_COOKIE_CSRF_PROTECT=False,  # Simplify for now, enable in production
+    JWT_COOKIE_SAMESITE="Lax",  # Allows cookies in cross-site requests
+    # For development only - disable CSRF for API endpoints
+    WTF_CSRF_CHECK_DEFAULT=False,  # Disable default CSRF check
 )
 
 # Initialize Flask extensions
@@ -57,11 +63,17 @@ db.init_app(app)
 csrf = CSRFProtect(app)
 jwt = JWTManager(app)
 
+# Exempt the auth endpoints from CSRF protection
+@csrf.exempt
+def csrf_exempt_auth():
+    return request.path.startswith('/auth/')
+
 # Enable CORS for frontend development
-CORS(app, resources={
-    r"/api/*": {"origins": os.environ.get('FRONTEND_URL', 'http://localhost:3000')},
-    r"/auth/*": {"origins": os.environ.get('FRONTEND_URL', 'http://localhost:3000')}
-}, supports_credentials=True)
+CORS(app, 
+     origins=[os.environ.get('FRONTEND_URL', 'http://localhost:3000')], 
+     supports_credentials=True,
+     allow_headers=["Content-Type", "Authorization", "X-CSRF-TOKEN", "Access-Control-Allow-Credentials"],
+     methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"])
 
 # Initialize login manager
 login_manager = LoginManager()
@@ -86,6 +98,7 @@ app.register_blueprint(jobs_bp, url_prefix='/api')
 app.register_blueprint(dashboard_bp)
 app.register_blueprint(admin_bp)
 app.register_blueprint(resume_bp)
+app.register_blueprint(api_bp)  # API routes for Next.js frontend
 
 # Admin required decorator
 def admin_required(f):
@@ -105,21 +118,37 @@ def admin_required(f):
 
 @app.route('/')
 def index():
-    """Render the homepage."""
-    return render_template('index.html')
+    """Return API info instead of redirecting."""
+    return jsonify({
+        "name": "ResumeRocket API",
+        "status": "online",
+        "version": "1.0.0", 
+        "frontend_url": os.environ.get('FRONTEND_URL', 'http://localhost:3000'),
+        "timestamp": datetime.now().isoformat()
+    })
 
-@app.route('/partials/toggle-input')
-def toggle_input_partial():
-    """Render the toggle input partial template."""
-    input_type = request.args.get('type', 'file')
-    upload_type = request.args.get('uploadType')
-    return render_template('components/resume/resume_input.html', type=input_type, upload_type=upload_type)
+@app.route('/api/health')
+def health_check():
+    """API health check endpoint."""
+    return jsonify({
+        "status": "ok",
+        "version": "1.0.0",
+        "timestamp": datetime.now().isoformat()
+    })
 
-@app.route('/partials/toggle-job-input')
-def toggle_job_input_partial():
-    """Render the toggle job input partial template."""
-    input_type = request.args.get('type', 'url')
-    return render_template('components/resume/job_input.html', type=input_type)
+# These partial routes are no longer needed with Next.js frontend
+# @app.route('/partials/toggle-input')
+# def toggle_input_partial():
+#     """Render the toggle input partial template."""
+#     input_type = request.args.get('type', 'file')
+#     upload_type = request.args.get('uploadType')
+#     return render_template('components/resume/resume_input.html', type=input_type, upload_type=upload_type)
+# 
+# @app.route('/partials/toggle-job-input')
+# def toggle_job_input_partial():
+#     """Render the toggle job input partial template."""
+#     input_type = request.args.get('type', 'url')
+#     return render_template('components/resume/job_input.html', type=input_type)
 
 # Create uploads directory if it doesn't exist
 with app.app_context():

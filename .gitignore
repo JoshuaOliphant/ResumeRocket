@@ -68,6 +68,28 @@ tmp/
 # Documentation
 /site
 
+# Next.js specific
+.next/
+frontend/.next/
+frontend/node_modules/
+frontend/out/
+frontend/.vercel/
+frontend/.swc/
+frontend/npm-debug.log*
+frontend/yarn-debug.log*
+frontend/yarn-error.log*
+frontend/.pnpm-debug.log*
+frontend/.turbo
+frontend/.DS_Store
+
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+.turbo
+
 # Project specific
 CLAUDE.md
 attached_assets/

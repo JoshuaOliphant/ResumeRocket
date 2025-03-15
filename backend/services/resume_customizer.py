@@ -3,31 +3,18 @@ import logging
 import json
 import re
 import uuid
-import hashlib
-from anthropic import Anthropic
 from .ats_analyzer import EnhancedATSAnalyzer
+from .claude_client import ClaudeClient
 
 logger = logging.getLogger(__name__)
 
 class ResumeCustomizer:
     def __init__(self):
-        self.anthropic_key = os.environ.get('ANTHROPIC_API_KEY')
-        if not self.anthropic_key:
-            raise ValueError('ANTHROPIC_API_KEY environment variable must be set')
-        
-        self.client = Anthropic(api_key=self.anthropic_key)
-        # the newest Anthropic model is "claude-3-7-sonnet-20250219" which was released February 19, 2025
-        self.model = "claude-3-7-sonnet-20250219"
+        # Initialize the Claude client
+        self.claude = ClaudeClient()
+        self.model = self.claude.model
         self.ats_analyzer = EnhancedATSAnalyzer()
         
-        # Cache configuration
-        self.use_cache = os.environ.get('USE_PROMPT_CACHE', 'true').lower() == 'true'
-        self.cache_dir = os.environ.get('PROMPT_CACHE_DIR', 'cache/prompts')
-        
-        # Create cache directory if it doesn't exist
-        if self.use_cache and not os.path.exists(self.cache_dir):
-            os.makedirs(self.cache_dir, exist_ok=True)
-            
         # Customization parameters
         self.customization_levels = {
             "conservative": 0.7,  # Minimal changes, focus on essential alignment
@@ -35,59 +22,9 @@ class ResumeCustomizer:
             "extensive": 1.3      # More aggressive optimization
         }
         self.default_level = "balanced"
-    
-    def _generate_cache_key(self, model, messages=None, system=None, **kwargs):
-        """Generate a deterministic cache key from request parameters"""
-        # Create a dictionary with all relevant parameters
-        cache_dict = {
-            "model": model
-        }
         
-        if messages:
-            cache_dict["messages"] = messages
-        
-        if system:
-            cache_dict["system"] = system
-            
-        # Add any additional kwargs
-        cache_dict.update(kwargs)
-        
-        # Convert to a stable JSON string
-        cache_str = json.dumps(cache_dict, sort_keys=True)
-        
-        # Create hash
-        return hashlib.md5(cache_str.encode()).hexdigest()
-    
-    def _get_from_cache(self, cache_key):
-        """Attempt to retrieve a response from cache"""
-        if not self.use_cache:
-            return None
-            
-        cache_path = os.path.join(self.cache_dir, f"{cache_key}.json")
-        
-        if os.path.exists(cache_path):
-            try:
-                with open(cache_path, 'r') as f:
-                    logger.info(f"Cache hit for {cache_key}")
-                    return json.load(f)
-            except Exception as e:
-                logger.error(f"Error reading cache: {str(e)}")
-                return None
-        return None
-        
-    def _save_to_cache(self, cache_key, response_data):
-        """Save a response to the cache"""
-        if not self.use_cache:
-            return
-            
-        cache_path = os.path.join(self.cache_dir, f"{cache_key}.json")
-        
-        try:
-            with open(cache_path, 'w') as f:
-                json.dump(response_data, f)
-                logger.info(f"Saved to cache: {cache_key}")
-        except Exception as e:
-            logger.error(f"Error writing to cache: {str(e)}")
+        # Industry-specific guidance for different sectors
+        self.industry_guidance = {}
         
     def _generate_customization_notes(self, optimization_plan, comparison_data, level, industry=None):
         """
@@ -335,43 +272,12 @@ class ResumeCustomizer:
             Please provide your analysis and plan in the JSON format specified.
             """
             
-            # Generate cache key for this request
-            messages = [
-                {"role": "user", "content": user_message}
-            ]
-            cache_key = self._generate_cache_key(
-                model=self.model,
-                messages=messages,
-                system=system_prompt,
+            # Call Claude with prompt caching through our client
+            response = self.claude.create_message(
+                system=system_prompt,  # The client will automatically add cache_control
+                messages=[{"role": "user", "content": user_message}],
                 max_tokens=8192
             )
-            
-            # Try to get from cache
-            cached_response = self._get_from_cache(cache_key)
-            if cached_response:
-                response = type('obj', (object,), {
-                    'content': cached_response['content']
-                })
-            else:
-                # Call Claude for analysis - FIXED: Moved cache_control inside system array
-                response = self.client.messages.create(
-                    model=self.model,
-                    max_tokens=8192,
-                    system=[
-                        {
-                            "type": "text", 
-                            "text": system_prompt,
-                            "cache_control": {"type": "ephemeral"}
-                        }
-                    ],
-                    messages=messages
-                )
-                
-                # Save to cache
-                response_data = {
-                    "content": [{"text": response.content[0].text}]
-                }
-                self._save_to_cache(cache_key, response_data)
             
             # Extract and parse the optimization plan from Claude's response
             response_text = response.content[0].text
@@ -602,43 +508,12 @@ class ResumeCustomizer:
             Focus on making these improvements while maintaining authenticity and professional standards.
             """
             
-            # Generate cache key for this request
-            messages = [
-                {"role": "user", "content": user_message}
-            ]
-            cache_key = self._generate_cache_key(
-                model=self.model,
-                messages=messages,
-                system=system_prompt,
+            # Call Claude with prompt caching through our client
+            response = self.claude.create_message(
+                system=system_prompt,  # The client will automatically add cache_control
+                messages=[{"role": "user", "content": user_message}],
                 max_tokens=8192
             )
-            
-            # Try to get from cache
-            cached_response = self._get_from_cache(cache_key)
-            if cached_response:
-                response = type('obj', (object,), {
-                    'content': cached_response['content']
-                })
-            else:
-                # Call Claude for implementation - FIXED: Moved cache_control inside system array
-                response = self.client.messages.create(
-                    model=self.model,
-                    max_tokens=8192,
-                    system=[
-                        {
-                            "type": "text", 
-                            "text": system_prompt,
-                            "cache_control": {"type": "ephemeral"}
-                        }
-                    ],
-                    messages=messages
-                )
-                
-                # Save to cache
-                response_data = {
-                    "content": [{"text": response.content[0].text}]
-                }
-                self._save_to_cache(cache_key, response_data)
             
             # Extract the customized resume
             customized_content = response.content[0].text
@@ -974,81 +849,33 @@ class ResumeCustomizer:
             Please provide your analysis and plan in the JSON format specified.
             """
             
-            # Generate cache key for this request
-            messages = [
-                {"role": "user", "content": user_message}
-            ]
-            cache_key = self._generate_cache_key(
-                model=self.model,
-                messages=messages,
-                system=system_prompt,
-                max_tokens=8192,
-                stream=True
-            )
+            # Use centralized Claude client with streaming
+            accumulated_text = ""
             
-            # Try to get from cache
-            cached_response = self._get_from_cache(cache_key)
-            if cached_response:
-                # For streaming, we'll yield the cached content in chunks to simulate streaming
-                response_text = cached_response['content'][0]['text']
-                
-                # First, yield a custom event for the analysis_start
-                yield json.dumps({
-                    'type': 'analysis_start',
-                    'message': 'Starting resume analysis...'
-                }) + "\n"
-                
-                # Yield text in reasonable chunks to simulate streaming
-                accumulated_text = ""
-                chunk_size = 20  # characters per chunk
-                for i in range(0, len(response_text), chunk_size):
-                    chunk = response_text[i:i+chunk_size]
-                    accumulated_text += chunk
+            # Stream the response using our Claude client
+            with self.claude.client.messages.stream(
+                model=self.model,
+                max_tokens=8192,
+                system=[
+                    {
+                        "type": "text", 
+                        "text": system_prompt,
+                        "cache_control": {"type": "ephemeral"}  # Enable caching for static system prompt
+                    }
+                ],
+                messages=[{"role": "user", "content": user_message}]
+            ) as stream:
+                # Forward all the stream events directly, capturing the content for processing
+                for event in stream:
+                    event_dict = event.model_dump()
                     
-                    # Format as Anthropic SSE response
-                    yield json.dumps({
-                        'type': 'content_block_delta',
-                        'index': 0,
-                        'delta': {
-                            'type': 'text_delta',
-                            'text': chunk
-                        }
-                    }) + "\n"
-            else:
-                # Track the accumulated text for parsing later
-                accumulated_text = ""
-                
-                # Stream the response directly from Anthropic API
-                with self.client.messages.stream(
-                    model=self.model,
-                    max_tokens=8192,
-                    stream=True,
-                    system=[
-                        {
-                            "type": "text", 
-                            "text": system_prompt,
-                            "cache_control": {"type": "ephemeral"}
-                        }
-                    ],
-                    messages=messages
-                ) as stream:
-                    # Forward all the stream events directly, capturing the content for processing
-                    for event in stream:
-                        event_dict = event.model_dump()
-                        
-                        # Special handling for content_block_delta events to extract text
-                        if event_dict.get('type') == 'content_block_delta' and event_dict.get('delta', {}).get('type') == 'text_delta':
-                            text_chunk = event_dict['delta']['text']
-                            accumulated_text += text_chunk
-                        
-                        # Forward the event as a properly formatted JSON string
-                        yield json.dumps(event_dict) + "\n"
-                
-                # Save the complete response to cache
-                response_data = {
-                    "content": [{"text": accumulated_text}]
-                }
-                self._save_to_cache(cache_key, response_data)
+                    # Special handling for content_block_delta events to extract text
+                    if event_dict.get('type') == 'content_block_delta' and event_dict.get('delta', {}).get('type') == 'text_delta':
+                        text_chunk = event_dict['delta']['text']
+                        accumulated_text += text_chunk
+                    
+                    # Forward the event as a properly formatted JSON string
+                    yield json.dumps(event_dict) + "\n"
             
             # After streaming is complete, try to parse the accumulated text as JSON
             try:
@@ -1148,109 +975,50 @@ class ResumeCustomizer:
             Focus on making these improvements while maintaining authenticity and professional standards.
             """
             
-            # Generate cache key for this request
-            messages = [
-                {"role": "user", "content": user_message}
-            ]
-            cache_key = self._generate_cache_key(
-                model=self.model,
-                messages=messages,
-                system=system_prompt,
-                max_tokens=8192,
-                stream=True
-            )
+            # Track the accumulated text for parsing later
+            accumulated_text = ""
             
-            # Try to get from cache
-            cached_response = self._get_from_cache(cache_key)
-            if cached_response:
-                # For streaming, we'll yield the cached content in chunks to simulate streaming
-                response_text = cached_response['content'][0]['text']
-
-                # First, yield a custom event for the implementation_start
-                yield json.dumps({
-                    'type': 'implementation_start',
-                    'message': 'Starting resume implementation...'
-                }) + "\n"
-                
-                # Yield text in reasonable chunks to simulate streaming
-                accumulated_text = ""
-                chunk_size = 20  # characters per chunk
-                for i in range(0, len(response_text), chunk_size):
-                    chunk = response_text[i:i+chunk_size]
-                    accumulated_text += chunk
+            # Stream the response directly from Anthropic API with prompt caching
+            with self.claude.client.messages.stream(
+                model=self.model,
+                max_tokens=8192,
+                system=[
+                    {
+                        "type": "text", 
+                        "text": system_prompt,
+                        "cache_control": {"type": "ephemeral"}  # Enable caching for static system prompt
+                    }
+                ],
+                messages=[{"role": "user", "content": user_message}]
+            ) as stream:
+                # Forward all the stream events directly, capturing the content for processing
+                for event in stream:
+                    event_dict = event.model_dump()
                     
-                    # Format as Anthropic SSE response
-                    yield json.dumps({
-                        'type': 'content_block_delta',
-                        'index': 0,
-                        'delta': {
-                            'type': 'text_delta',
-                            'text': chunk
-                        }
-                    }) + "\n"
-                
-                # Return the final content once complete
-                yield json.dumps({
-                    'type': 'message_stop'
-                }) + "\n"
-                
-                # Also yield the complete customized resume
-                yield {
-                    'final_content': accumulated_text,
-                    'sections_modified': [rec.get('section') for rec in recommendations if rec.get('section')]
-                }
-            else:
-                # Track the accumulated text for parsing later
-                accumulated_text = ""
-                
-                # Stream the response directly from Anthropic API
-                with self.client.messages.stream(
-                    model=self.model,
-                    max_tokens=8192,
-                    stream=True,
-                    system=[
-                        {
-                            "type": "text", 
-                            "text": system_prompt,
-                            "cache_control": {"type": "ephemeral"}
-                        }
-                    ],
-                    messages=messages
-                ) as stream:
-                    # Forward all the stream events directly, capturing the content for processing
-                    for event in stream:
-                        event_dict = event.model_dump()
-                        
-                        # Special handling for content_block_delta events to extract text
-                        if event_dict.get('type') == 'content_block_delta' and event_dict.get('delta', {}).get('type') == 'text_delta':
-                            text_chunk = event_dict['delta']['text']
-                            accumulated_text += text_chunk
-                        
-                        # Forward the event as a properly formatted JSON string
-                        yield json.dumps(event_dict) + "\n"
-                
-                # Save the complete response to cache
-                response_data = {
-                    "content": [{"text": accumulated_text}]
-                }
-                self._save_to_cache(cache_key, response_data)
-                
-                # Clean up any markdown code block formatting
-                customized_content = re.sub(r'```markdown\s*', '', accumulated_text)
-                customized_content = re.sub(r'```\s*$', '', customized_content)
-                
-                # Identify modified sections (basic implementation)
-                modified_sections = []
-                for rec in optimization_plan.get('recommendations', []):
-                    section = rec.get('section')
-                    if section and section not in modified_sections:
-                        modified_sections.append(section)
-                
-                # Return the final result
-                yield {
-                    'final_content': customized_content,
-                    'sections_modified': modified_sections
-                }
+                    # Special handling for content_block_delta events to extract text
+                    if event_dict.get('type') == 'content_block_delta' and event_dict.get('delta', {}).get('type') == 'text_delta':
+                        text_chunk = event_dict['delta']['text']
+                        accumulated_text += text_chunk
+                    
+                    # Forward the event as a properly formatted JSON string
+                    yield json.dumps(event_dict) + "\n"
+            
+            # Clean up any markdown code block formatting
+            customized_content = re.sub(r'```markdown\s*', '', accumulated_text)
+            customized_content = re.sub(r'```\s*$', '', customized_content)
+            
+            # Identify modified sections (basic implementation)
+            modified_sections = []
+            for rec in optimization_plan.get('recommendations', []):
+                section = rec.get('section')
+                if section and section not in modified_sections:
+                    modified_sections.append(section)
+            
+            # Return the final result
+            yield {
+                'final_content': customized_content,
+                'sections_modified': modified_sections
+            }
                 
         except Exception as e:
             logger.error(f"Error in streaming resume implementation: {str(e)}")
@@ -1306,43 +1074,12 @@ class ResumeCustomizer:
             Please simulate each major ATS system's evaluation and return the results in JSON format.
             """
             
-            # Generate cache key for this request
-            messages = [
-                {"role": "user", "content": user_message}
-            ]
-            cache_key = self._generate_cache_key(
-                model=self.model,
-                messages=messages,
-                system=system_prompt,
+            # Call Claude with prompt caching through our client
+            response = self.claude.create_message(
+                system=system_prompt,  # The client will automatically add cache_control
+                messages=[{"role": "user", "content": user_message}],
                 max_tokens=8192
             )
-            
-            # Try to get from cache
-            cached_response = self._get_from_cache(cache_key)
-            if cached_response:
-                response = type('obj', (object,), {
-                    'content': cached_response['content']
-                })
-            else:
-                # Call Claude for ATS simulation - FIXED: Moved cache_control inside system array
-                response = self.client.messages.create(
-                    model=self.model,
-                    max_tokens=8192,
-                    system=[
-                        {
-                            "type": "text", 
-                            "text": system_prompt,
-                            "cache_control": {"type": "ephemeral"}
-                        }
-                    ],
-                    messages=messages
-                )
-                
-                # Save to cache
-                response_data = {
-                    "content": [{"text": response.content[0].text}]
-                }
-                self._save_to_cache(cache_key, response_data)
             
             simulation_text = response.content[0].text
             

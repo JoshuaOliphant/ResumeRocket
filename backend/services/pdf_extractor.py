@@ -4,7 +4,7 @@ import logging
 import time
 from typing import Optional, Tuple
 import fitz  # PyMuPDF
-from models import PDFCache
+from backend.models import PDFCache
 from docx import Document
 from docx.shared import Pt
 from io import BytesIO

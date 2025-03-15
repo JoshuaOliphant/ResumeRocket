@@ -5,9 +5,9 @@ import hashlib
 from datetime import datetime, timedelta
 from anthropic import Anthropic
 from sqlalchemy import func
-from models import CustomizedResume, CustomizationEvaluation, OptimizationSuggestion, ABTest
-from services.ats_analyzer import EnhancedATSAnalyzer
-from extensions import db
+from backend.models import CustomizedResume, CustomizationEvaluation, OptimizationSuggestion, ABTest
+from backend.services.ats_analyzer import EnhancedATSAnalyzer
+from backend.extensions import db
 
 logger = logging.getLogger(__name__)
 

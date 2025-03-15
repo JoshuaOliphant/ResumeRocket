@@ -14,10 +14,10 @@ An AI-powered resume customization tool that helps job seekers optimize their re
 
 ## Technology Stack
 
-- **Backend**: Python, Flask
+- **Backend**: Python, Flask, JWT authentication
 - **AI**: Anthropic Claude API for content generation
-- **Frontend**: HTML, CSS, JavaScript with HTMX for dynamic interactions
-- **Authentication**: Flask-Login for user management
+- **Frontend**: Next.js, React, TypeScript, Tailwind CSS, Shadcn UI
+- **API**: RESTful API with Flask-JWT-Extended
 - **Database**: SQLAlchemy with SQLite
 
 ## Getting Started
@@ -66,25 +66,30 @@ An AI-powered resume customization tool that helps job seekers optimize their re
    
    Replace the placeholder values with your actual API keys.
 
-4. Run the application:
+4. Setup the database:
    ```
-   # Make sure you're in the project root directory
-   cd ResumeRocket  # adjust if necessary
-   
-   # Run the app
-   python main.py
+   # Run database migrations
+   flask --app backend.app db upgrade
+   ```
+
+5. Run the application in development mode:
+   ```
+   # Use our development script to run both backend and frontend
+   ./dev.py
    ```
    
-   The application automatically creates the SQLite database file in the project root directory.
+   This script starts:
+   - Backend Flask API at http://localhost:5000
+   - Frontend Next.js app at http://localhost:3000
    
    If you encounter any database issues, try removing the database file and letting the application recreate it:
    ```
    rm resumerocket.db  # Only if you need to reset the database
    ```
 
-5. Open your browser and navigate to `http://localhost:8080`
+6. Open your browser and navigate to `http://localhost:3000` for the frontend interface
 
-   Note: The application runs on port 8080 by default to avoid conflicts with AirPlay on macOS, which uses port 5000.
+   Note: For direct API testing, the backend API is available at http://localhost:5000
 
 ## Usage
 
@@ -187,6 +192,39 @@ The admin dashboard provides:
 
 ## Development
 
+### Project Structure
+
+The project is now organized with a clearer separation of concerns:
+
+```
+ResumeRocket/
+├── backend/               # Flask backend API
+│   ├── routes/            # API route definitions
+│   ├── services/          # Business logic services
+│   ├── app.py             # Flask application
+│   └── models.py          # SQLAlchemy database models
+├── frontend/              # Next.js frontend application
+│   ├── public/            # Static assets
+│   └── src/
+│       ├── app/           # Next.js App Router pages
+│       ├── components/    # React components
+│       ├── hooks/         # Custom React hooks
+│       └── lib/           # Utility functions and API clients
+├── migrations/            # Database migrations
+├── dev.py                 # Development script to run both backend and frontend
+└── main.py                # Production entry point
+```
+
+### Running in Development Mode
+
+For development, use the `dev.py` script which starts both the backend API server and the Next.js development server:
+
+```bash
+./dev.py
+```
+
+This enables hot-reloading for both frontend and backend changes.
+
 ### Package Management with UV
 
 This project uses [UV](https://github.com/astral-sh/uv) instead of pip for Python package management. UV offers several advantages:
@@ -199,6 +237,24 @@ This project uses [UV](https://github.com/astral-sh/uv) instead of pip for Pytho
 To update dependencies or add new ones:
 ```
 uv pip install [package-name]
+```
+
+### Frontend Development
+
+For the Next.js frontend, use standard npm commands:
+
+```bash
+# Navigate to the frontend directory
+cd frontend
+
+# Install dependencies
+npm install
+
+# Start the development server
+npm run dev
+
+# Build for production
+npm run build
 ```
 
 ## Database Migrations
@@ -220,7 +276,7 @@ pip install flask-migrate
 ### Initialize the database (first time)
 
 ```bash
-flask --app app db upgrade
+flask --app backend.app db upgrade
 ```
 
 This will create all necessary tables based on the migrations.
@@ -230,7 +286,7 @@ This will create all necessary tables based on the migrations.
 After making changes to your models, generate a new migration:
 
 ```bash
-flask --app app db migrate -m "Description of changes"
+flask --app backend.app db migrate -m "Description of changes"
 ```
 
 Review the generated migration script in `migrations/versions/` before applying it.
@@ -240,7 +296,7 @@ Review the generated migration script in `migrations/versions/` before applying 
 To apply pending migrations:
 
 ```bash
-flask --app app db upgrade
+flask --app backend.app db upgrade
 ```
 
 ### Rolling back migrations
@@ -248,7 +304,7 @@ flask --app app db upgrade
 To roll back the most recent migration:
 
 ```bash
-flask --app app db downgrade
+flask --app backend.app db downgrade
 ```
 
 ### Getting migration status
@@ -256,7 +312,7 @@ flask --app app db downgrade
 To check the current migration status:
 
 ```bash
-flask --app app db current
+flask --app backend.app db current
 ```
 
 For more details on using Flask-Migrate, refer to the [official documentation](https://flask-migrate.readthedocs.io/).
@@ -269,5 +325,6 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 - [Anthropic Claude API](https://www.anthropic.com/) for AI-powered text generation
 - [Flask](https://flask.palletsprojects.com/) web framework
-- [HTMX](https://htmx.org/) for dynamic frontend interactions
+- [Next.js](https://nextjs.org/) React framework
+- [Shadcn/UI](https://ui.shadcn.com/) for UI components
 - [UV](https://github.com/astral-sh/uv) for fast Python package management

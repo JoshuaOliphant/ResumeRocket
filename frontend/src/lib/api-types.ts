@@ -1,111 +1,149 @@
-// API types for ResumeRocket
+/**
+ * General API response type
+ */
+export interface ApiResponse<T = any> {
+  status: 'success' | 'error';
+  data?: T;
+  error?: string;
+}
 
-// User related types
+/**
+ * User model
+ */
 export interface User {
   id: number;
   username: string;
   email: string;
-  is_admin: boolean;
   created_at: string;
+  is_admin: boolean;
 }
 
-export interface AuthResponse {
-  token: string;
-  user: User;
-}
-
+/**
+ * Login request parameters
+ */
 export interface LoginRequest {
   email: string;
   password: string;
 }
 
+/**
+ * Registration request parameters
+ */
 export interface RegisterRequest {
-  username: string;
+  username?: string;
+  name?: string;
   email: string;
   password: string;
+  password_confirm?: string;
 }
 
-// Resume related types
-export interface Resume {
-  id: number;
-  user_id: number;
-  filename: string;
-  content: string;
-  created_at: string;
-  ats_score?: number;
-}
-
+/**
+ * Job description model
+ */
 export interface JobDescription {
   id: number;
-  user_id: number;
-  title?: string;
-  company?: string;
+  title: string;
   content: string;
-  source_url?: string;
+  url?: string;
+  company?: string;
   created_at: string;
-}
-
-export interface CustomizedResume {
-  id: number;
+  updated_at: string;
   user_id: number;
-  resume_id: number;
-  job_id: number;
+}
+
+/**
+ * Resume model
+ */
+export interface Resume {
+  id: number;
   original_content: string;
-  customized_content: string;
-  original_ats_score?: number;
-  improved_ats_score?: number;
-  customization_level: string;
+  customized_content?: string;
+  file_format: string;
+  ats_score?: number;
+  confidence?: number;
+  improvement?: number;
+  matching_keywords?: string[];
+  missing_keywords?: string[];
   created_at: string;
-  comparison_data?: string; // JSON string containing comparison information
-  optimization_plan?: string; // JSON string containing optimization plan
-  industry?: string;
+  updated_at: string;
+  user_id: number;
+  job_description_id?: number;
+  original_file?: Blob;
+  customized_file?: Blob;
 }
 
+/**
+ * Resume section analysis
+ */
+export interface SectionAnalysis {
+  name: string;
+  score: number;
+  improvement: number;
+  suggestions: string[];
+}
+
+/**
+ * Resume optimization data
+ */
+export interface OptimizationData {
+  summary: string;
+  keywords_added: string[];
+  keywords_removed: string[];
+  formatting_improvements: string[];
+  content_improvements: string[];
+  sections: SectionAnalysis[];
+}
+
+/**
+ * Resume comparison data
+ */
+export interface ComparisonData {
+  added_keywords: string[];
+  removed_keywords: string[];
+  changed_sections: {
+    name: string;
+    changes: string[];
+  }[];
+  diff_html?: string;
+}
+
+/**
+ * Resume optimization result
+ */
 export interface ResumeOptimizationResult {
-  customized_resume: CustomizedResume;
-  original_resume: Resume;
-  job_description: JobDescription;
+  resume: Resume;
+  job: JobDescription;
+  optimization_data: OptimizationData;
+  comparison_data: ComparisonData;
+  improvement: number;
+  original_ats_score: number;
+  customized_ats_score: number;
 }
 
-// Request types
-export interface CustomizeResumeRequest {
-  resume_id: number;
-  job_id: number;
-  customization_level: string;
-  industry?: string;
-}
-
-// Dashboard types
+/**
+ * Dashboard statistics
+ */
 export interface DashboardStats {
   total_resumes: number;
   total_jobs: number;
-  total_customizations: number;
-  average_improvement: number;
+  avg_improvement: number;
+  last_customization: string | null;
 }
 
-export interface RecentOptimization {
-  id: number;
-  job_title?: string;
-  company?: string;
-  match_score: number;
-  date: string;
-  logo_url?: string;
-}
-
-export interface SavedJob {
-  id: number;
-  title?: string;
-  company?: string;
-  date: string;
-  status?: string;
-}
-
+/**
+ * Dashboard data
+ */
 export interface DashboardData {
-  stats: DashboardStats;
-  recent_optimizations: RecentOptimization[];
-  saved_jobs: SavedJob[];
-  optimization_history: {
+  dashboard_data: {
+    resume: Resume;
+    job: {
+      title: string;
+      url?: string;
+    };
+    improvement: number;
     date: string;
-    count: number;
   }[];
+  total_resumes: number;
+  avg_improvement: number;
+  search_query?: string;
 }

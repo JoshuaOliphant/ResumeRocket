@@ -6,7 +6,7 @@ logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
 # Import app directly
-from app import app
+from backend.app import app
 
 if __name__ == "__main__":
     try:

@@ -1,25 +1,24 @@
-"use client"
-
 import "./globals.css";
+import { Inter } from "next/font/google";
+import { Providers } from "@/lib/providers";
 
-import React, { useState } from "react";
-import Layout from "pages/layout";
-import Dashboard from "pages/dashboard";
+const inter = Inter({ subsets: ["latin"] });
 
-export default function App() {
-  const [currentPage, setCurrentPage] = useState("dashboard");
+export const metadata = {
+  title: "ResumeRocket - AI-Powered Resume Optimization",
+  description: "Customize your resume for job descriptions with AI assistance",
+};
 
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
-  <html lang="en">
-    <body>
-      <Layout
-      currentPage={currentPage}
-      setCurrentPage={setCurrentPage}
-    >
-      {currentPage === "dashboard" && <Dashboard />}
-      {/* Other pages would be conditionally rendered here */}
-    </Layout>
-    </body>
-  </html>
-)
+    <html lang="en" suppressHydrationWarning>
+      <body className={inter.className} suppressHydrationWarning>
+        <Providers>{children}</Providers>
+      </body>
+    </html>
+  );
 }
