@@ -1,9 +1,0 @@
-{% extends "base.html" %}
-
-{% block content %}
-<div class="max-w-4xl mx-auto p-4">
-    {% set category = 'error' %}
-    {% set back_url = url_for('index') %}
-    {% include "components/shared/alert.html" with context %}
-</div>
-{% endblock %}

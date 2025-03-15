@@ -1,0 +1,1 @@
+        data = f"event: complete\ndata: {json.dumps({\"message\": \"Test complete\"})}\n\n"
