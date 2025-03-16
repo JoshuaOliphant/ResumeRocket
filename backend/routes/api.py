@@ -1,4 +1,4 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, make_response
 from flask_jwt_extended import jwt_required, get_jwt_identity, create_access_token
 from backend.extensions import db, api_response
 from backend.models import User, JobDescription, CustomizedResume
@@ -117,17 +117,34 @@ def refresh_token():
         logger.error(f"Token refresh failed: {str(e)}")
         return api_response(error="Token refresh failed", status_code=401)
 
-@api_bp.route('/auth/me')
-@jwt_required()
+@api_bp.route('/auth/me', methods=['GET', 'OPTIONS'])
+@jwt_required(optional=True)
 def get_current_user():
     """Get current authenticated user information"""
+    # Handle OPTIONS request for CORS preflight
+    if request.method == 'OPTIONS':
+        response = jsonify({})
+        response.headers.add('Access-Control-Allow-Origin', request.headers.get('Origin', 'http://127.0.0.1:3000'))
+        response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
+        response.headers.add('Access-Control-Allow-Methods', 'GET,OPTIONS')
+        response.headers.add('Access-Control-Allow-Credentials', 'true')
+        return response
+        
     user_id = get_jwt_identity()
     user = User.query.get(user_id)
     
     if not user:
-        return api_response(error="User not found", status_code=404)
-        
-    return api_response(data={"user": user.to_dict()})
+        response_data, status_code = api_response(error="User not found", status_code=404)
+    else:
+        response_data, status_code = api_response(data={"user": user.to_dict()})
+    
+    # Add CORS headers to the response
+    response = make_response(response_data, status_code)
+    response.headers.add('Access-Control-Allow-Origin', request.headers.get('Origin', 'http://127.0.0.1:3000'))
+    response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
+    response.headers.add('Access-Control-Allow-Methods', 'GET,OPTIONS')
+    response.headers.add('Access-Control-Allow-Credentials', 'true')
+    return response
 
 # Dashboard endpoints
 @api_bp.route('/dashboard', methods=['GET'])
@@ -264,51 +281,125 @@ def delete_resume(resume_id):
         logger.error(f"Error deleting resume: {str(e)}")
         return api_response(error="Failed to delete resume", status_code=500)
 
-@api_bp.route('/process-resume', methods=['POST'])
-@jwt_required()
+@api_bp.route('/process-resume', methods=['POST', 'OPTIONS'])
+# Temporarily comment out JWT requirement for debugging
+# @jwt_required()
 def process_resume():
     """API endpoint to process and analyze a resume"""
-    user_id = get_jwt_identity()
+    # Handle OPTIONS request for CORS preflight
+    if request.method == 'OPTIONS':
+        response = jsonify({})
+        response.headers.add('Access-Control-Allow-Origin', request.headers.get('Origin', 'http://localhost:3000'))
+        response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
+        response.headers.add('Access-Control-Allow-Methods', 'POST,OPTIONS')
+        response.headers.add('Access-Control-Allow-Credentials', 'true')
+        return response
+        
+    # Since we commented out @jwt_required(), we need to handle the case where there's no JWT token
+    try:
+        user_id = get_jwt_identity()
+    except RuntimeError:
+        # No JWT token, set user_id to None
+        user_id = None
     
-    data = request.get_json()
+    # Check if this is a file upload (multipart/form-data) or JSON request
+    resume_text = None
+    resume_file = None
     
-    # Check if this is a file upload or text input
-    resume_text = data.get('resume')
-    resume_file = data.get('file')
+    if request.content_type and 'multipart/form-data' in request.content_type:
+        # Handle form data with file upload
+        if 'file' not in request.files:
+            return api_response(error="No file part in the request", status_code=400)
+        
+        file = request.files['file']
+        if file.filename == '':
+            return api_response(error="No file selected", status_code=400)
+        
+        # Get file extension
+        filename = secure_filename(file.filename)
+        file_ext = os.path.splitext(filename)[1].lower()
+        
+        # Extract text based on file type
+        try:
+            if file_ext == '.pdf':
+                resume_text = file_parser.pdf_extractor.extract_text(file.read())
+                file.seek(0)  # Reset file pointer position
+            elif file_ext == '.docx':
+                resume_text = file_parser.parse_to_markdown(file)
+            elif file_ext == '.txt':
+                resume_text = file.read().decode('utf-8')
+            elif file_ext == '.md':
+                resume_text = file.read().decode('utf-8')
+            else:
+                return api_response(error=f"Unsupported file format: {file_ext}", status_code=400)
+        except Exception as e:
+            logger.error(f"Error parsing file: {str(e)}")
+            return api_response(error=f"Error parsing file: {str(e)}", status_code=500)
+    else:
+        # Handle JSON request
+        data = request.get_json()
+        if not data:
+            return api_response(error="No data provided", status_code=400)
+        
+        resume_text = data.get('resume')
+        resume_file = data.get('file')
+        
+        if resume_file:
+            # Handle base64 encoded file
+            try:
+                file_data = base64.b64decode(resume_file.split(',')[1] if ',' in resume_file else resume_file)
+                filename = data.get('filename', 'uploaded_resume.pdf')
+                file_ext = os.path.splitext(filename)[1].lower()
+                
+                # Extract text from file
+                if file_ext == '.pdf':
+                    resume_text = file_parser.pdf_extractor.extract_text(file_data)
+                elif file_ext == '.docx':
+                    # Use BytesIO to create a file-like object from the bytes
+                    file_obj = BytesIO(file_data)
+                    file_obj.name = filename  # Set filename attribute for parse_to_markdown
+                    resume_text = file_parser.parse_to_markdown(file_obj)
+                elif file_ext == '.md':
+                    # For markdown, just decode the text
+                    resume_text = file_data.decode('utf-8')
+                else:
+                    return api_response(error=f"Unsupported file format: {file_ext}", status_code=400)
+            except Exception as e:
+                logger.error(f"Error decoding base64 file: {str(e)}")
+                return api_response(error=f"Error processing file: {str(e)}", status_code=500)
     
-    if not resume_text and not resume_file:
-        return api_response(error="No resume content provided", status_code=400)
+    # Verify we have resume text at this point
+    if not resume_text:
+        return api_response(error="No resume content could be extracted", status_code=400)
     
     # Process the resume
     try:
-        if resume_file:
-            # Handle base64 encoded file
-            file_data = base64.b64decode(resume_file.split(',')[1] if ',' in resume_file else resume_file)
-            filename = data.get('filename', 'uploaded_resume.pdf')
-            file_ext = os.path.splitext(filename)[1].lower()
-            
-            # Extract text from file
-            if file_ext == '.pdf':
-                resume_text = file_parser.parse_pdf(BytesIO(file_data))
-            elif file_ext == '.docx':
-                resume_text = file_parser.parse_docx(BytesIO(file_data))
-            else:
-                return api_response(error="Unsupported file format", status_code=400)
-        
         # Analyze resume with ATS analyzer
-        ats_score, confidence, matching_keywords, missing_keywords = ats_analyzer.analyze(resume_text, "Generic Job Description")
+        ats_result = ats_analyzer.analyze(resume_text, "Generic Job Description")
         
         # Return processed resume data
-        return api_response(data={
+        response_data, status_code = api_response(data={
             'resume_text': resume_text,
-            'ats_score': ats_score,
-            'confidence': confidence,
-            'matching_keywords': matching_keywords,
-            'missing_keywords': missing_keywords
+            'ats_score': ats_result['score'],
+            'confidence': ats_result['confidence'],
+            'matching_keywords': ats_result['matching_keywords'],
+            'missing_keywords': ats_result['missing_keywords']
         })
+        response = make_response(response_data, status_code)
+        response.headers.add('Access-Control-Allow-Origin', request.headers.get('Origin', 'http://localhost:3000'))
+        response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
+        response.headers.add('Access-Control-Allow-Methods', 'POST,OPTIONS')
+        response.headers.add('Access-Control-Allow-Credentials', 'true')
+        return response
     except Exception as e:
         logger.error(f"Resume processing error: {str(e)}")
-        return api_response(error=f"Failed to process resume: {str(e)}", status_code=500)
+        response_data, status_code = api_response(error=f"Failed to process resume: {str(e)}", status_code=500)
+        response = make_response(response_data, status_code)
+        response.headers.add('Access-Control-Allow-Origin', request.headers.get('Origin', 'http://localhost:3000'))
+        response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
+        response.headers.add('Access-Control-Allow-Methods', 'POST,OPTIONS')
+        response.headers.add('Access-Control-Allow-Credentials', 'true')
+        return response
 
 # Job description endpoints
 @api_bp.route('/jobs', methods=['GET'])
@@ -556,3 +647,8 @@ def get_statistics():
         'avg_improvement': round(avg_improvement, 1),
         'last_customization': resumes[0].created_at.isoformat() if resumes else None
     })
+
+@api_bp.route('/test', methods=['GET'])
+def test_api():
+    """Simple endpoint to test API connectivity"""
+    return api_response(data={"message": "API is working correctly"})

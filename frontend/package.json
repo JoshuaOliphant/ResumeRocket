@@ -1,5 +1,5 @@
 {
-  "name": "customer-1",
+  "name": "resume-rocket",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -63,9 +63,7 @@
     "@tailwindcss/forms": "^0.5.7",
     "@tailwindcss/typography": "^0.5.13",
     "@tanstack/react-query": "^5.52.3",
-    "@tanstack/react-query-devtools": "^5.52.3",
     "@tanstack/react-table": "^8.20.1",
-    "axios": "^1.5.0",
     "@tinymce/tinymce-react": "^5.1.1",
     "@tiptap/extension-collaboration": "^2.6.6",
     "@tiptap/extension-collaboration-cursor": "^2.6.6",
@@ -81,9 +79,9 @@
     "@tiptap/starter-kit": "^2.6.6",
     "@tiptap/suggestion": "^2.6.6",
     "@tremor/react": "^3.17.4",
-    "@types/babel-types": "^7.0.15",
     "@types/babel__parser": "^7.1.1",
     "@types/babel__traverse": "^7.20.6",
+    "@types/babel-types": "^7.0.15",
     "@use-gesture/react": "^10.3.1",
     "@xyflow/react": "^12.1.0",
     "ag-grid-react": "^32.1.0",

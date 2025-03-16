@@ -1,229 +1,236 @@
-"use client"
+"use client";
 
-import { useState, useRef } from 'react'
-import { useRouter } from 'next/navigation'
-import { useMutation } from '@tanstack/react-query'
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
-import { Label } from "@/components/ui/label"
-import { Loader2, Upload, File, FileText } from "lucide-react"
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { resumeService } from '@/lib/api-services'
+import React, { useState, useRef } from "react";
+import { useRouter } from "next/navigation";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
+import { FileUploadArea } from "../components/file-upload-area";
+import { PreviousDocuments } from "../components/previous-documents";
+import { CompatibleFormats } from "../components/compatible-formats";
+import { Header } from "../components/header";
+import { Footer } from "../components/footer";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { AlertCircle } from "lucide-react";
+import { uploadFormDataWithAuth } from '@/lib/api';
 
 export default function ResumeUploadPage() {
-  const [fileUploadError, setFileUploadError] = useState<string | null>(null)
-  const [textInputError, setTextInputError] = useState<string | null>(null)
-  const [resumeText, setResumeText] = useState<string>("")
-  const [uploadedFileName, setUploadedFileName] = useState<string | null>(null)
-  const fileInputRef = useRef<HTMLInputElement>(null)
-  const router = useRouter()
+  const [resumeFile, setResumeFile] = useState<File | null>(null);
+  const [resumeText, setResumeText] = useState<string>("");
+  const [jobFile, setJobFile] = useState<File | null>(null);
+  const [jobText, setJobText] = useState<string>("");
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const [error, setError] = useState<string>("");
+  const router = useRouter();
 
-  // File upload mutation
-  const uploadResumeMutation = useMutation({
-    mutationFn: (file: File) => resumeService.uploadResume(file),
-    onSuccess: (response) => {
-      if (response.data?.resume) {
-        // Navigate to resume management page after successful upload
-        router.push('/resume-management')
+  const handleResumeUpload = (file: File | null) => {
+    setResumeFile(file);
+    setResumeText("");
+    setError("");
+  };
+
+  const handleResumeTextInput = (text: string) => {
+    setResumeText(text);
+    setResumeFile(null);
+    setError("");
+  };
+
+  const handleJobUpload = (file: File | null) => {
+    setJobFile(file);
+    setJobText("");
+    setError("");
+  };
+
+  const handleJobTextInput = (text: string) => {
+    setJobText(text);
+    setJobFile(null);
+    setError("");
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setIsSubmitting(true);
+
+    try {
+      const formData = new FormData();
+      
+      // Handle resume input
+      if (resumeFile) {
+        formData.append('resume_file', resumeFile);
+      } else if (resumeText.trim()) {
+        formData.append('resume', resumeText);
       } else {
-        setFileUploadError('Failed to process resume. Please try again.')
+        throw new Error('Please provide a resume file or text');
       }
-    },
-    onError: (error: any) => {
-      setFileUploadError(error?.message || 'Failed to upload resume. Please try again.')
-    }
-  })
 
-  // Text input mutation
-  const submitResumeTextMutation = useMutation({
-    mutationFn: (text: string) => {
-      // Create a file from the text
-      const file = new File([text], "resume.txt", { type: "text/plain" })
-      return resumeService.uploadResume(file)
-    },
-    onSuccess: (response) => {
-      if (response.data?.resume) {
-        // Navigate to resume management page after successful submit
-        router.push('/resume-management')
+      // Handle job description input
+      if (jobFile) {
+        formData.append('job_file', jobFile);
+      } else if (jobText.trim()) {
+        formData.append('job_description', jobText);
       } else {
-        setTextInputError('Failed to process resume text. Please try again.')
+        throw new Error('Please provide a job description file or text');
       }
-    },
-    onError: (error: any) => {
-      setTextInputError(error?.message || 'Failed to submit resume text. Please try again.')
+
+      // Upload resume and job description
+      const analyzeResponse = await uploadFormDataWithAuth('/api/analyze_resume', formData);
+      
+      if (!analyzeResponse.ok) {
+        const errorData = await analyzeResponse.json();
+        throw new Error(errorData.error || 'Error processing resume');
+      }
+
+      const { resume_id, job_id } = await analyzeResponse.json();
+
+      // Customize resume with streaming
+      const customizeResponse = await uploadFormDataWithAuth('/api/customize_resume_streaming', formData);
+      
+      if (!customizeResponse.ok) {
+        const errorData = await customizeResponse.json();
+        throw new Error(errorData.error || 'Error customizing resume');
+      }
+
+      // Redirect to results page
+      router.push(`/results/${resume_id}/${job_id}`);
+    } catch (error) {
+      if (error instanceof Error) {
+        if (error.message === 'Authentication required' || error.message === 'Authentication expired') {
+          router.push('/login');
+          return;
+        }
+        setError(error.message);
+      } else {
+        setError('An unexpected error occurred');
+      }
+    } finally {
+      setIsSubmitting(false);
     }
-  })
+  };
 
-  // Handle file selection
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    if (file) {
-      setUploadedFileName(file.name)
-      setFileUploadError(null)
-    }
-  }
-
-  // Handle file upload
-  const handleFileUpload = () => {
-    const file = fileInputRef.current?.files?.[0]
-    if (!file) {
-      setFileUploadError('Please select a file to upload')
-      return
-    }
-
-    // Check file type (PDF, DOCX, TXT)
-    const validTypes = ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'text/plain']
-    if (!validTypes.includes(file.type)) {
-      setFileUploadError('Please upload a PDF, DOCX, or TXT file')
-      return
-    }
-
-    // Upload file
-    uploadResumeMutation.mutate(file)
-  }
-
-  // Handle text submission
-  const handleTextSubmit = () => {
-    if (!resumeText.trim()) {
-      setTextInputError('Please enter your resume text')
-      return
-    }
-
-    submitResumeTextMutation.mutate(resumeText)
-  }
+  const isFormComplete = () => {
+    return (resumeFile || resumeText.trim().length > 0) && (jobFile || jobText.trim().length > 0);
+  };
 
   return (
-    <div className="container mx-auto py-10">
-      <h1 className="text-3xl font-bold mb-6">Upload Your Resume</h1>
-      <p className="text-gray-500 mb-8">
-        Upload your resume to get started. We'll analyze it and provide suggestions to improve its effectiveness.
-      </p>
+    <div className="flex flex-col min-h-screen">
+      <Header />
+      
+      <main className="flex-1 container mx-auto px-4 py-8">
+        <div className="max-w-4xl mx-auto">
+          <div className="mb-8 text-center">
+            <h1 className="text-3xl font-bold mb-2">Customize Your Resume</h1>
+            <p className="text-gray-600 dark:text-gray-400">
+              Upload your resume and job description to get personalized recommendations
+            </p>
+          </div>
 
-      <Tabs defaultValue="file" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 mb-8">
-          <TabsTrigger value="file">File Upload</TabsTrigger>
-          <TabsTrigger value="text">Text Input</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="file">
-          <Card>
-            <CardHeader>
-              <CardTitle>Upload Resume File</CardTitle>
-              <CardDescription>
-                Upload your resume as a PDF, DOCX, or TXT file. Max size: 5MB.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="flex flex-col gap-6">
-                <div className="grid w-full items-center gap-1.5">
-                  <Label htmlFor="resume-file">Resume File</Label>
-                  <div className="flex items-center gap-4">
-                    <Input
-                      id="resume-file"
-                      type="file"
-                      ref={fileInputRef}
-                      accept=".pdf,.docx,.txt"
-                      onChange={handleFileChange}
+          {error && (
+            <Alert variant="destructive" className="mb-6">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
+          
+          <div className="grid md:grid-cols-2 gap-8">
+            <div className="space-y-4">
+              <div className="bg-white dark:bg-gray-950 rounded-lg border border-gray-200 dark:border-gray-800 p-6">
+                <h2 className="text-xl font-semibold mb-4">Upload Your Resume</h2>
+                <Tabs defaultValue="upload">
+                  <TabsList className="mb-4">
+                    <TabsTrigger value="upload">Upload File</TabsTrigger>
+                    <TabsTrigger value="paste">Paste Text</TabsTrigger>
+                  </TabsList>
+                  
+                  <TabsContent value="upload">
+                    <FileUploadArea
+                      onFileUpload={handleResumeUpload}
+                      acceptedFileTypes=".pdf,.doc,.docx"
+                      fileType="resume"
+                      currentFile={resumeFile}
                     />
-                  </div>
-                  {uploadedFileName && (
-                    <p className="text-sm text-gray-500 mt-2 flex items-center">
-                      <File className="h-4 w-4 mr-1" /> {uploadedFileName}
-                    </p>
-                  )}
-                </div>
-
-                {fileUploadError && (
-                  <Alert variant="destructive">
-                    <AlertTitle>Error</AlertTitle>
-                    <AlertDescription>{fileUploadError}</AlertDescription>
-                  </Alert>
-                )}
+                  </TabsContent>
+                  
+                  <TabsContent value="paste">
+                    <FileUploadArea
+                      onFileUpload={handleResumeUpload}
+                      onTextInput={handleResumeTextInput}
+                      acceptedFileTypes=".pdf,.doc,.docx"
+                      fileType="resume"
+                      allowTextInput={true}
+                      currentFile={resumeFile}
+                      textValue={resumeText}
+                    />
+                  </TabsContent>
+                </Tabs>
+                <CompatibleFormats fileType="resume" />
               </div>
-            </CardContent>
-            <CardFooter className="flex justify-between">
-              <Button variant="outline" onClick={() => router.push('/dashboard')}>
-                Cancel
-              </Button>
-              <Button 
-                onClick={handleFileUpload}
-                disabled={uploadResumeMutation.isPending}
-              >
-                {uploadResumeMutation.isPending ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Uploading...
-                  </>
-                ) : (
-                  <>
-                    <Upload className="mr-2 h-4 w-4" />
-                    Upload Resume
-                  </>
-                )}
-              </Button>
-            </CardFooter>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="text">
-          <Card>
-            <CardHeader>
-              <CardTitle>Enter Resume Text</CardTitle>
-              <CardDescription>
-                Copy and paste your resume text directly.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="flex flex-col gap-6">
-                <div className="grid w-full gap-1.5">
-                  <Label htmlFor="resume-text">Resume Content</Label>
-                  <Textarea
-                    id="resume-text"
-                    placeholder="Paste your resume text here..."
-                    className="min-h-[300px]"
-                    value={resumeText}
-                    onChange={(e) => {
-                      setResumeText(e.target.value)
-                      setTextInputError(null)
-                    }}
-                  />
-                </div>
-
-                {textInputError && (
-                  <Alert variant="destructive">
-                    <AlertTitle>Error</AlertTitle>
-                    <AlertDescription>{textInputError}</AlertDescription>
-                  </Alert>
-                )}
+              
+              <div className="bg-white dark:bg-gray-950 rounded-lg border border-gray-200 dark:border-gray-800 p-6">
+                <h3 className="text-lg font-semibold mb-4">Previous Resumes</h3>
+                <PreviousDocuments 
+                  documentType="resume" 
+                  onSelect={handleResumeUpload} 
+                />
               </div>
-            </CardContent>
-            <CardFooter className="flex justify-between">
-              <Button variant="outline" onClick={() => router.push('/dashboard')}>
-                Cancel
-              </Button>
-              <Button 
-                onClick={handleTextSubmit}
-                disabled={submitResumeTextMutation.isPending}
-              >
-                {submitResumeTextMutation.isPending ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Processing...
-                  </>
-                ) : (
-                  <>
-                    <FileText className="mr-2 h-4 w-4" />
-                    Submit Resume
-                  </>
-                )}
-              </Button>
-            </CardFooter>
-          </Card>
-        </TabsContent>
-      </Tabs>
+            </div>
+            
+            <div className="space-y-4">
+              <div className="bg-white dark:bg-gray-950 rounded-lg border border-gray-200 dark:border-gray-800 p-6">
+                <h2 className="text-xl font-semibold mb-4">Job Description</h2>
+                <Tabs defaultValue="paste">
+                  <TabsList className="mb-4">
+                    <TabsTrigger value="paste">Paste Text</TabsTrigger>
+                    <TabsTrigger value="upload">Upload File</TabsTrigger>
+                  </TabsList>
+                  
+                  <TabsContent value="paste">
+                    <FileUploadArea
+                      onFileUpload={handleJobUpload}
+                      onTextInput={handleJobTextInput}
+                      acceptedFileTypes=".pdf,.doc,.docx,.txt"
+                      fileType="job"
+                      allowTextInput={true}
+                      currentFile={jobFile}
+                      textValue={jobText}
+                    />
+                  </TabsContent>
+                  
+                  <TabsContent value="upload">
+                    <FileUploadArea
+                      onFileUpload={handleJobUpload}
+                      acceptedFileTypes=".pdf,.doc,.docx,.txt"
+                      fileType="job"
+                      currentFile={jobFile}
+                    />
+                  </TabsContent>
+                </Tabs>
+                <CompatibleFormats fileType="job" />
+              </div>
+              
+              <div className="bg-white dark:bg-gray-950 rounded-lg border border-gray-200 dark:border-gray-800 p-6">
+                <h3 className="text-lg font-semibold mb-4">Previous Job Descriptions</h3>
+                <PreviousDocuments 
+                  documentType="job" 
+                  onSelect={handleJobUpload} 
+                />
+              </div>
+            </div>
+          </div>
+          
+          <div className="mt-8 text-center">
+            <Button 
+              size="lg" 
+              onClick={handleSubmit} 
+              disabled={!isFormComplete() || isSubmitting}
+              className="min-w-[200px]"
+            >
+              {isSubmitting ? "Processing..." : "Optimize Resume"}
+            </Button>
+          </div>
+        </div>
+      </main>
+      
+      <Footer />
     </div>
-  )
+  );
 }

@@ -258,9 +258,11 @@ def customize_resume():
         return redirect(streaming_url)
 
 @resume_bp.route('/api/process_resume', methods=['POST'])
-@login_required
+@jwt_required()  # Changed from @login_required
 def process_resume():
     """Process a resume against a job description."""
+    current_user_id = get_jwt_identity()  # Get user ID from JWT
+    
     # Get resume and job from form
     resume_text = request.form.get('resume')
     job_id = request.form.get('job_id')
@@ -302,9 +304,11 @@ def process_resume():
     })
 
 @resume_bp.route('/api/stream_suggestions', methods=['POST'])
-@login_required
+@jwt_required()  # Changed from @login_required
 def stream_suggestions():
     """Stream AI suggestions for resume improvement"""
+    current_user_id = get_jwt_identity()  # Get user ID from JWT
+    
     # First, determine how the resume was provided (file or text)
     resume_text = None
     job_id = None
@@ -369,7 +373,7 @@ def stream_suggestions():
             job = JobDescription(
                 title='Custom Job',
                 content=job_description,
-                user_id=current_user.id,
+                user_id=current_user_id,
                 created_at=datetime.utcnow()
             )
             db.session.add(job)
@@ -424,9 +428,11 @@ def stream_suggestions():
 
 @resume_bp.route('/api/customize_resume_streaming', methods=['POST'])
 @resume_bp.route('/customize-resume/streaming', methods=['POST'])
-@login_required
+@jwt_required()  # Changed from @login_required
 def customize_resume_streaming():
     """Streaming resume customization endpoint using Anthropic's streaming API format"""
+    current_user_id = get_jwt_identity()  # Get user ID from JWT
+    
     # Get form data
     resume_id = request.form.get('resume_id')
     job_id = request.form.get('job_id')
@@ -450,7 +456,7 @@ def customize_resume_streaming():
         return jsonify({'error': 'Resume not found'}), 404
     
     # Check permissions
-    if original_resume.user_id != current_user.id and not current_user.is_admin:
+    if original_resume.user_id != current_user_id and not current_user.is_admin:
         return jsonify({'error': 'You do not have permission to customize this resume'}), 403
     
     # Load job description
@@ -507,9 +513,11 @@ def customize_resume_streaming():
     return response
 
 @resume_bp.route('/save_customized_resume', methods=['POST'])
-@login_required
+@jwt_required()  # Changed from @login_required
 def save_customized_resume():
     """Save a customized resume from streaming result"""
+    current_user_id = get_jwt_identity()  # Get user ID from JWT
+    
     # Get form data
     resume_id = request.form.get('resume_id')
     job_id = request.form.get('job_id')
@@ -538,7 +546,7 @@ def save_customized_resume():
         return jsonify({'error': 'Original resume not found'}), 404
     
     # Check permissions
-    if original_resume.user_id != current_user.id and not current_user.is_admin:
+    if original_resume.user_id != current_user_id and not current_user.is_admin:
         return jsonify({'error': 'You do not have permission to save this resume'}), 403
     
     # Load job description
@@ -552,7 +560,7 @@ def save_customized_resume():
     # Create a new customized resume
     customized_resume = CustomizedResume(
         job_description_id=job_id,
-        user_id=current_user.id,
+        user_id=current_user_id,
         title=f"{original_resume.title} (Customized for {job.title})",
         original_content=original_content,
         customized_content=customized_content,
@@ -581,9 +589,12 @@ def save_customized_resume():
     })
 
 @resume_bp.route('/api/analyze_resume', methods=['POST'])
-@login_required
+@jwt_required()  # Change from @login_required to @jwt_required()
 def analyze_resume():
     """Analyze a resume against a job description."""
+    # Get current user from JWT
+    current_user_id = get_jwt_identity()
+    
     # Debug log the incoming form data
     logger.debug(f"Form data received: {request.form}")
     logger.debug(f"Files received: {request.files}")
@@ -647,7 +658,7 @@ def analyze_resume():
             job = JobDescription(
                 title='Custom Job',
                 content=job_description,
-                user_id=current_user.id,
+                user_id=current_user_id,  # Use JWT identity instead of current_user
                 created_at=datetime.utcnow()
             )
             db.session.add(job)
@@ -668,20 +679,20 @@ def analyze_resume():
     
     logger.debug(f"Generated {len(suggestions)} AI suggestions")
     
-    logger.debug(f"Rendering template with resume_id={resume_id}, job_id={job.id}")
-    
-    # Render the analysis results template
-    return render_template('partials/analysis_results.html', 
-        resume_id=resume_id,
-        job_id=job.id,
-        ats_score=ats_results,
-        suggestions=suggestions
-    )
+    # Return JSON response
+    return jsonify({
+        'resume_id': resume_id,
+        'job_id': job.id,
+        'ats_score': ats_results,
+        'suggestions': suggestions
+    })
 
 @resume_bp.route('/customized-resume/<int:resume_id>')
-@login_required
+@jwt_required()  # Changed from @login_required
 def view_customized_resume(resume_id):
     """Redirect to the comparison view for a more detailed experience."""
+    current_user_id = get_jwt_identity()  # Get user ID from JWT
+    
     # Create a response that redirects to the comparison view
     response = redirect(url_for('resume.compare_resume', resume_id=resume_id))
     
@@ -760,14 +771,16 @@ def resume_to_dict(resume):
     return result
 
 @resume_bp.route('/compare/<int:resume_id>')
-@login_required
+@jwt_required()  # Changed from @login_required
 def compare_resume(resume_id):
     """Compare original and customized resume."""
+    current_user_id = get_jwt_identity()  # Get user ID from JWT
+    
     # Load customized resume from database
     resume = CustomizedResume.query.get_or_404(resume_id)
     
     # Check if resume belongs to current user
-    if resume.user_id != current_user.id and not current_user.is_admin:
+    if resume.user_id != current_user_id and not current_user.is_admin:
         flash('You do not have permission to view this resume.', 'danger')
         return redirect(url_for('dashboard.user_dashboard'))
     
@@ -851,15 +864,17 @@ def compare_resume(resume_id):
     return response
 
 @resume_bp.route('/api/search/<int:resume_id>', methods=['POST'])
-@login_required
+@jwt_required()  # Changed from @login_required
 def search_resume(resume_id):
     """Search within a resume for matching content."""
+    current_user_id = get_jwt_identity()  # Get user ID from JWT
+    
     # Get the customized resume
     resume = CustomizedResume.query.get_or_404(resume_id)
     
     # Check permissions
-    if resume.user_id != current_user.id and not current_user.is_admin:
-        logger.warning(f"Permission denied for resume search: User {current_user.id} attempted to search resume {resume_id}")
+    if resume.user_id != current_user_id and not current_user.is_admin:
+        logger.warning(f"Permission denied for resume search: User {current_user_id} attempted to search resume {resume_id}")
         return jsonify({'error': 'Permission denied'}), 403
     
     # Get original resume
@@ -923,7 +938,7 @@ def search_resume(resume_id):
         highlighted['customized'] = highlight_matches(resume.customized_content, results['matches']['customized'], query)
     
     # Log search activity
-    logger.info(f"Resume search: User {current_user.id} searched for '{query}' in resume {resume_id}, found {results['total']} matches")
+    logger.info(f"Resume search: User {current_user_id} searched for '{query}' in resume {resume_id}, found {results['total']} matches")
     
     # Return the search results component
     return render_template(
@@ -1054,14 +1069,16 @@ def highlight_matches(html_content, matches, query):
     return highlighter.get_result()
 
 @resume_bp.route('/api/client-error', methods=['POST'])
-@login_required
+@jwt_required()  # Changed from @login_required
 def log_client_error():
     """Log client-side errors for monitoring and debugging."""
+    current_user_id = get_jwt_identity()  # Get user ID from JWT
+    
     try:
         error_data = request.json
         
         # Add user info
-        error_data['user_id'] = current_user.id
+        error_data['user_id'] = current_user_id
         error_data['user_email'] = current_user.email
         
         # Add request info
@@ -1077,14 +1094,16 @@ def log_client_error():
         return jsonify({"status": "error", "message": str(e)}), 500
 
 @resume_bp.route('/download/<int:resume_id>/<format>')
-@login_required
+@jwt_required()  # Changed from @login_required
 def download_resume(resume_id, format):
     """Download a resume in specified format."""
+    current_user_id = get_jwt_identity()  # Get user ID from JWT
+    
     # Load resume from database
     resume = CustomizedResume.query.get_or_404(resume_id)
     
     # Check if resume belongs to current user
-    if resume.user_id != current_user.id and not current_user.is_admin:
+    if resume.user_id != current_user_id and not current_user.is_admin:
         flash('You do not have permission to download this resume.', 'danger')
         return redirect(url_for('dashboard.user_dashboard'))
     
@@ -1149,14 +1168,16 @@ def download_resume(resume_id, format):
 
 @resume_bp.route('/export/<int:resume_id>')
 @resume_bp.route('/export/<int:resume_id>/<version>')
-@login_required
+@jwt_required()  # Changed from @login_required
 def export_resume(resume_id, version=None):
     """Export a resume to various formats."""
+    current_user_id = get_jwt_identity()  # Get user ID from JWT
+    
     # Load resume from database
     resume = CustomizedResume.query.get_or_404(resume_id)
     
     # Check if resume belongs to current user
-    if resume.user_id != current_user.id and not current_user.is_admin:
+    if resume.user_id != current_user_id and not current_user.is_admin:
         flash('You do not have permission to export this resume.', 'danger')
         return redirect(url_for('dashboard.user_dashboard'))
     
@@ -1179,13 +1200,16 @@ def export_resume(resume_id, version=None):
         return redirect(url_for('resume.view_customized_resume', resume_id=resume_id))
 
 @resume_bp.route('/api/resume_export/<int:resume_id>/<format>', methods=['GET'])
-@login_required
+@jwt_required()  # Changed from @login_required
 def api_resume_export(resume_id, format):
     """HTMX-compatible API endpoint for resume export.
     Returns HTML fragment for success/error messages."""
+    current_user_id = get_jwt_identity()  # Get user ID from JWT
+    
     try:
         # Load resume from database
         resume = CustomizedResume.query.get_or_404(resume_id)
+        
         
         # Check if resume belongs to current user
         if resume.user_id != current_user.id and not current_user.is_admin:

@@ -1,13 +1,14 @@
 from flask import Blueprint, request, jsonify, render_template, redirect, url_for, flash, make_response
 from flask_login import login_user, logout_user, login_required, current_user
 from backend.models import User, db
-from flask_jwt_extended import create_access_token, get_jwt_identity, jwt_required, verify_jwt_in_request
+from flask_jwt_extended import create_access_token, get_jwt_identity, jwt_required, verify_jwt_in_request, create_refresh_token
 from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField
 from wtforms.validators import DataRequired, Email, EqualTo, Length, ValidationError
 import logging
 from backend.extensions import api_response, is_api_request, api_route
 from datetime import datetime, timedelta
+from werkzeug.security import check_password_hash
 
 logger = logging.getLogger(__name__)
 
@@ -52,71 +53,49 @@ def web_register():
 
     return render_template('register.html', form=form)
 
-@auth_bp.route('/login', methods=['GET', 'POST'])
-@api_route
+@auth_bp.route('/api/login', methods=['POST'])
 def login():
-    # Check if this is an API request or a browser request
-    if is_api_request():
-        # API login
-        data = request.get_json()
-        email = data.get('email')
-        password = data.get('password')
-        
-        user = User.query.filter_by(email=email).first()
-        
-        if not user or not user.check_password(password):
-            return api_response(error="Invalid email or password", status_code=401)
-        
-        # Generate access token
-        access_token = create_access_token(identity=user.id)
-        
-        # Create response with both token and user data
-        response_data = {
-            "token": access_token,
-            "user": user.to_dict()
+    data = request.get_json()
+    email = data.get('email')
+    password = data.get('password')
+
+    if not email or not password:
+        return jsonify({'error': 'Email and password are required'}), 400
+
+    user = User.query.filter_by(email=email).first()
+
+    if not user or not check_password_hash(user.password_hash, password):
+        return jsonify({'error': 'Invalid email or password'}), 401
+
+    # Create access and refresh tokens
+    access_token = create_access_token(identity=user.id)
+    refresh_token = create_refresh_token(identity=user.id)
+
+    return jsonify({
+        'access_token': access_token,
+        'refresh_token': refresh_token,
+        'user': {
+            'id': user.id,
+            'email': user.email,
+            'name': user.name
         }
-        
-        # For session-based auth too (optional)
-        login_user(user)
-        
-        return response_data, 200
-    else:
-        # Browser form-based login
-        form = LoginForm()
-        if form.validate_on_submit():
-            user = User.query.filter_by(email=form.email.data).first()
-            if user and user.check_password(form.password.data):
-                login_user(user)
-                access_token = create_access_token(identity=user.id)
-                
-                response = make_response(redirect(url_for('index')))
-                # Set JWT cookie for frontend use
-                response.set_cookie(
-                    'access_token_cookie',
-                    access_token,
-                    httponly=True,
-                    secure=False,  # Set to True in production with HTTPS
-                    max_age=86400  # 1 day
-                )
-                
-                flash('Logged in successfully!', 'success')
-                return response
+    }), 200
 
-            flash('Invalid email or password', 'danger')
-            return redirect(url_for('auth.login'))
-
-        return render_template('login.html', form=form)
-
-@auth_bp.route('/logout', methods=['GET', 'POST'])
+@auth_bp.route('/logout', methods=['GET', 'POST', 'OPTIONS'])
 @api_route
 def logout():
+    # Handle OPTIONS request for CORS preflight
+    if request.method == 'OPTIONS':
+        response = jsonify({})
+        return add_cors_headers(response)
+        
     # Check if this is an API request or a browser request
     if is_api_request():
         # API logout
         logout_user()
         response = make_response(api_response(data={"message": "Successfully logged out"})[0])
         response.delete_cookie('access_token_cookie')
-        return response
+        return add_cors_headers(response)
     else:
         # Browser logout
         logout_user()
@@ -125,55 +104,57 @@ def logout():
         flash('Logged out successfully', 'success')
         return response
 
-@auth_bp.route('/me')
+@auth_bp.route('/me', methods=['GET', 'OPTIONS'])
 @jwt_required(optional=True)
 def get_current_user():
+    # Handle OPTIONS request for CORS preflight
+    if request.method == 'OPTIONS':
+        response = jsonify({})
+        return add_cors_headers(response)
+        
     # Get user from JWT token
     user_id = get_jwt_identity()
     
     if user_id:
         user = User.query.get(user_id)
         if user:
-            return api_response(data={"user": user.to_dict()})
+            response_data, status_code = api_response(data={"user": user.to_dict()})
+            return add_cors_headers(response_data), status_code
     
     # Fall back to session-based auth
     if current_user.is_authenticated:
-        return api_response(data={"user": current_user.to_dict()})
+        response_data, status_code = api_response(data={"user": current_user.to_dict()})
+        return add_cors_headers(response_data), status_code
     
-    return api_response(error="Not authenticated", status_code=401)
+    response_data, status_code = api_response(error="Not authenticated", status_code=401)
+    return add_cors_headers(response_data), status_code
 
-@auth_bp.route('/refresh', methods=['POST'])
-@jwt_required()
-def refresh_token():
-    """
-    Refresh the JWT token for authenticated users.
-    This endpoint exchanges a valid but aging JWT token for a new one.
-    """
+@auth_bp.route('/api/refresh', methods=['POST'])
+def refresh():
     try:
-        # Get the identity from the current token
-        current_user_id = get_jwt_identity()
-        user = User.query.get(current_user_id)
-        
-        if not user:
-            return api_response(error="User not found", status_code=404)
-            
-        # Create a new token with a fresh expiration date
-        access_token = create_access_token(identity=current_user_id)
-        
-        # Return the new token
-        return api_response(data={
-            "token": access_token,
-            "user": user.to_dict()
-        })
-        
-    except Exception as e:
-        logger.error(f"Token refresh failed: {str(e)}")
-        return api_response(error="Token refresh failed", status_code=401)
+        current_user = get_jwt_identity()
+        new_token = create_access_token(identity=current_user)
+        return jsonify({'access_token': new_token}), 200
+    except:
+        return jsonify({'error': 'Invalid refresh token'}), 401
 
+# Helper function to add CORS headers to response
+def add_cors_headers(response):
+    origin = request.headers.get('Origin', 'http://127.0.0.1:3000')
+    response.headers.add('Access-Control-Allow-Origin', origin)
+    response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
+    response.headers.add('Access-Control-Allow-Methods', 'POST,OPTIONS')
+    response.headers.add('Access-Control-Allow-Credentials', 'true')
+    return response
 
-@auth_bp.route('/register', methods=['POST'])
+@auth_bp.route('/register', methods=['POST', 'OPTIONS'])
 def api_register():
     """API endpoint for user registration"""
+    # Handle OPTIONS request for CORS preflight
+    if request.method == 'OPTIONS':
+        response = jsonify({})
+        return add_cors_headers(response)
+        
     if not is_api_request():
         # Redirect non-API requests to the web registration form
         return redirect(url_for('auth.web_register'))
@@ -215,12 +196,17 @@ def api_register():
         # Generate access token for immediate login
         access_token = create_access_token(identity=user.id)
         
-        return api_response(data={
+        # Get API response
+        response_data, status_code = api_response(data={
             "message": "Registration successful",
             "token": access_token,
             "user": user.to_dict()
         }, status_code=201)
+        
+        # Add CORS headers to the response
+        return add_cors_headers(response_data), status_code
     except Exception as e:
         db.session.rollback()
         logger.error(f"Registration error: {str(e)}")
-        return api_response(error="Registration failed", status_code=500)
+        response_data, status_code = api_response(error="Registration failed", status_code=500)
+        return add_cors_headers(response_data), status_code
